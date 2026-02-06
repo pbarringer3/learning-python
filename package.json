@@ -38,5 +38,15 @@
 		"vite": "^6.0.7",
 		"vitest": "^4.0.18"
 	},
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"@codemirror/commands": "^6.10.2",
+		"@codemirror/lang-python": "^6.2.1",
+		"@codemirror/language": "^6.12.1",
+		"@codemirror/state": "^6.5.4",
+		"@codemirror/view": "^6.39.12",
+		"codemirror": "^6.0.2",
+		"mdsvex": "^0.12.6",
+		"pyodide": "^0.29.3"
+	}
 }

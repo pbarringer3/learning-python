@@ -1,3 +1,7 @@
+<script>
+	import { base } from '$app/paths';
+</script>
+
 <div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
 	<div class="text-center">
 		<h1 class="mb-4 text-6xl font-bold text-white">Learning Python</h1>
@@ -5,7 +9,7 @@
 		
 		<div class="mt-8 flex justify-center gap-4">
 			<a 
-				href="/karel/playground" 
+				href="{base}/karel/playground" 
 				class="rounded-lg bg-white px-6 py-3 text-lg font-semibold text-blue-600 transition hover:bg-blue-50 hover:shadow-lg"
 			>
 				Try Karel Playground →

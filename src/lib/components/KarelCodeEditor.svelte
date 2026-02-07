@@ -2,13 +2,14 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { EditorView, basicSetup } from 'codemirror';
 	import { python } from '@codemirror/lang-python';
-	import { EditorState, type Extension } from '@codemirror/state';
+	import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
 	import { Decoration, type DecorationSet } from '@codemirror/view';
 
 	interface Props {
 		value: string;
 		onchange?: (value: string) => void;
 		highlightedLine?: number | null;
+		isError?: boolean;
 		readonly?: boolean;
 		class?: string;
 	}
@@ -17,6 +18,7 @@
 		value = $bindable(''),
 		onchange,
 		highlightedLine = null,
+		isError = false,
 		readonly = false,
 		class: className = ''
 	}: Props = $props();
@@ -24,15 +26,50 @@
 	let editorContainer: HTMLDivElement;
 	let editorView: EditorView | null = null;
 
+	// Effect for updating highlighted line
+	const setHighlightedLineEffect = StateEffect.define<number | null>();
+
+	// Store whether this is an error highlight
+	let isErrorHighlight = $state(false);
+
+	// State field for line highlighting
+	const highlightedLineField = StateField.define<DecorationSet>({
+		create() {
+			return Decoration.none;
+		},
+		update(decorations, tr) {
+			decorations = decorations.map(tr.changes);
+			
+			for (let effect of tr.effects) {
+				if (effect.is(setHighlightedLineEffect)) {
+					if (effect.value === null) {
+						decorations = Decoration.none;
+					} else {
+						const line = tr.state.doc.line(Math.min(effect.value, tr.state.doc.lines));
+						const className = isErrorHighlight ? 'cm-error-line' : 'cm-highlighted-line';
+						decorations = Decoration.set([
+							Decoration.line({ class: className }).range(line.from)
+						]);
+					}
+				}
+			}
+			return decorations;
+		},
+		provide: (f) => EditorView.decorations.from(f)
+	});
+
 	onMount(() => {
 		const extensions: Extension[] = [
 			basicSetup,
 			python(),
+			highlightedLineField,
 			EditorView.updateListener.of((update) => {
-				if (update.docChanged && onchange) {
+				if (update.docChanged) {
 					const newValue = update.state.doc.toString();
-					onchange(newValue);
 					value = newValue;
+					if (onchange) {
+						onchange(newValue);
+					}
 				}
 			}),
 			EditorView.editable.of(!readonly)
@@ -64,6 +101,16 @@
 					to: editorView.state.doc.length,
 					insert: value
 				}
+			});
+		}
+	});
+
+	// Update highlighted line
+	$effect(() => {
+		if (editorView) {
+			isErrorHighlight = isError;
+			editorView.dispatch({
+				effects: setHighlightedLineEffect.of(highlightedLine)
 			});
 		}
 	});
@@ -101,6 +148,10 @@
 	}
 
 	:global(.cm-highlighted-line) {
-		background-color: #ffeb3b !important;
+		background-color: #ffeb3b80 !important;
+	}
+
+	:global(.cm-error-line) {
+		background-color: #ff000040 !important;
 	}
 </style>

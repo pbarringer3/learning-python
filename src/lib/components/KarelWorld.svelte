@@ -31,11 +31,11 @@
 		switch (world.karel.direction.type) {
 			case 'east':
 				return 0;
-			case 'north':
+			case 'south':
 				return 90;
 			case 'west':
 				return 180;
-			case 'south':
+			case 'north':
 				return 270;
 		}
 	}

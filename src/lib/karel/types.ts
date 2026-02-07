@@ -49,6 +49,7 @@ export type ExecutionStatus = 'idle' | 'running' | 'paused' | 'error' | 'success
 export interface ExecutionState {
 	status: ExecutionStatus;
 	currentLine: number | null; // For step highlighting
+	errorLine: number | null; // For error highlighting
 	stepCount: number;
 	error: string | null;
 	animationSpeed: number; // milliseconds per command
@@ -96,6 +97,7 @@ export function createDefaultExecutionState(): ExecutionState {
 	return {
 		status: 'idle',
 		currentLine: null,
+		errorLine: null,
 		stepCount: 0,
 		error: null,
 		animationSpeed: 300 // Normal speed

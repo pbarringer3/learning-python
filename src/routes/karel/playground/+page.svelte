@@ -45,6 +45,12 @@ move()
 	// Command step limit
 	const MAX_STEPS = 10000;
 
+	// Step-through execution state
+	let codeLines: string[] = [];
+	let currentLineIndex = $state(0);
+	let executionGenerator: AsyncGenerator<number, void, unknown> | null = null;
+	let functionDefinitions: Map<string, { startLine: number; endLine: number; lines: string[] }> = new Map();
+
 	// Load Pyodide on mount
 	onMount(async () => {
 		try {
@@ -292,6 +298,254 @@ move()
 		return currentWorld.karel.direction.type !== 'west';
 	}
 
+	// Prepare Karel callbacks
+	function getKarelCallbacks(): KarelCallbacks {
+		return {
+			move,
+			turn_left,
+			pick_beeper,
+			put_beeper,
+			front_is_clear,
+			front_is_blocked,
+			beepers_present,
+			no_beepers_present,
+			left_is_clear,
+			left_is_blocked,
+			right_is_clear,
+			right_is_blocked,
+			beepers_in_bag,
+			no_beepers_in_bag,
+			facing_north,
+			not_facing_north,
+			facing_south,
+			not_facing_south,
+			facing_east,
+			not_facing_east,
+			facing_west,
+			not_facing_west
+		};
+	}
+
+	// Create step-through execution generator
+	async function* createStepExecutor(code: string): AsyncGenerator<number, void, unknown> {
+		if (!pyodide) return;
+
+		// Inject Karel commands that track execution
+		const trackedCallbacks = createTrackedCallbacks();
+		injectKarelCommands(pyodide, trackedCallbacks);
+
+		// Split code into lines for tracking
+		codeLines = code.split('\n');
+
+		// Parse code and extract function definitions (but don't register them yet)
+		const statements = await parseCodeIntoStatements(code);
+		
+		// Clear function definitions - we'll add them as they're executed
+		functionDefinitions.clear();
+		
+		// Execute statements in order (definitions and calls mixed)
+		for (const stmt of statements) {
+			// If this is a function definition, define it (without yielding)
+			if (stmt.isDefinition) {
+				try {
+					await pyodide.runPythonAsync(stmt.code);
+					// NOW register it in our map for stepping
+					const funcStmt = stmt as typeof stmt & { 
+						functionName: string;
+						functionStartLine: number;
+						functionEndLine: number;
+						functionLines: string[];
+					};
+					if (funcStmt.functionName) {
+						functionDefinitions.set(funcStmt.functionName, {
+							startLine: funcStmt.functionStartLine,
+							endLine: funcStmt.functionEndLine,
+							lines: funcStmt.functionLines
+						});
+					}
+				} catch (err) {
+					executionState.currentLine = stmt.lineNumber;
+					throw err;
+				}
+				continue;
+			}
+
+			// This is an executable statement
+			executionState.currentLine = stmt.lineNumber;
+			yield stmt.lineNumber;
+
+			try {
+				// Execute this statement, potentially stepping into functions
+				yield* await executeStatementWithStepping(stmt.code);
+			} catch (err) {
+				// Keep error line highlighted
+				executionState.errorLine = executionState.currentLine;
+				throw err;
+			}
+
+			if (executionState.animationSpeed > 0) {
+				await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
+			}
+		}
+
+		executionState.currentLine = null;
+	}
+
+	// Execute a statement, stepping into user-defined functions if called
+	async function* executeStatementWithStepping(statement: string): AsyncGenerator<number, void, unknown> {
+		const trimmed = statement.trim();
+		const funcMatch = trimmed.match(/^(\w+)\s*\(/);
+		
+		if (funcMatch) {
+			const funcName = funcMatch[1];
+			const funcDef = functionDefinitions.get(funcName);
+			
+			if (funcDef) {
+				// Step through the function body
+				for (let i = 0; i < funcDef.lines.length; i++) {
+					const funcLine = funcDef.lines[i];
+					const funcTrimmed = funcLine.trim();
+					
+					// Skip empty lines and comments
+					if (!funcTrimmed || funcTrimmed.startsWith('#')) continue;
+					
+					// Calculate actual line number in original code
+					const actualLineNum = funcDef.startLine + i + 2;
+					
+					executionState.currentLine = actualLineNum;
+					yield actualLineNum;
+					
+					// Recursively execute this line (might call another function)
+					yield* await executeStatementWithStepping(funcLine);
+					
+					if (executionState.animationSpeed > 0) {
+						await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
+					}
+				}
+				return;
+			}
+		}
+
+		// Not a user function call, execute normally
+		await pyodide!.runPythonAsync(statement);
+	}
+
+	// Create callbacks that track execution
+	function createTrackedCallbacks(): KarelCallbacks {
+		return {
+			move: () => { move(); },
+			turn_left: () => { turn_left(); },
+			pick_beeper: () => { pick_beeper(); },
+			put_beeper: () => { put_beeper(); },
+			front_is_clear,
+			front_is_blocked,
+			beepers_present,
+			no_beepers_present,
+			left_is_clear,
+			left_is_blocked,
+			right_is_clear,
+			right_is_blocked,
+			beepers_in_bag,
+			no_beepers_in_bag,
+			facing_north,
+			not_facing_north,
+			facing_south,
+			not_facing_south,
+			facing_east,
+			not_facing_east,
+			facing_west,
+			not_facing_west
+		};
+	}
+
+	// Parse code into individual executable statements with line numbers
+	async function parseCodeIntoStatements(code: string): Promise<Array<{ 
+		lineNumber: number; 
+		code: string; 
+		isDefinition: boolean;
+		functionName?: string;
+		functionStartLine?: number;
+		functionEndLine?: number;
+		functionLines?: string[];
+	}>> {
+		const lines = code.split('\n');
+		const statements: Array<{ 
+			lineNumber: number; 
+			code: string; 
+			isDefinition: boolean;
+			functionName?: string;
+			functionStartLine?: number;
+			functionEndLine?: number;
+			functionLines?: string[];
+		}> = [];
+		let i = 0;
+
+		while (i < lines.length) {
+			const line = lines[i];
+			const trimmed = line.trim();
+
+			// Skip empty lines and comments
+			if (!trimmed || trimmed.startsWith('#')) {
+				i++;
+				continue;
+			}
+
+			// Check if this is a function definition
+			if (trimmed.startsWith('def ')) {
+				// Extract function name
+				const funcNameMatch = trimmed.match(/def\s+(\w+)\s*\(/);
+				const funcName = funcNameMatch ? funcNameMatch[1] : null;
+				
+				// Collect the entire function definition
+				const functionLines = [line];
+				const bodyLines: string[] = [];
+				const defIndent = line.length - line.trimStart().length;
+				const startLine = i;
+				i++;
+
+				while (i < lines.length) {
+					const nextLine = lines[i];
+					const nextTrimmed = nextLine.trim();
+
+					if (nextTrimmed && !nextTrimmed.startsWith('#')) {
+						const nextIndent = nextLine.length - nextLine.trimStart().length;
+						if (nextIndent <= defIndent) {
+							break;
+						}
+					}
+
+					functionLines.push(nextLine);
+					if (nextTrimmed && !nextTrimmed.startsWith('#')) {
+						bodyLines.push(nextLine);
+					}
+					i++;
+				}
+
+				// Add function definition as one statement with metadata
+				statements.push({
+					lineNumber: startLine + 1,
+					code: functionLines.join('\n'),
+					isDefinition: true,
+					functionName: funcName || undefined,
+					functionStartLine: startLine,
+					functionEndLine: i - 1,
+					functionLines: bodyLines
+				});
+				continue;
+			}
+
+			// Regular statement - add it
+			statements.push({
+				lineNumber: i + 1,
+				code: line,
+				isDefinition: false
+			});
+			i++;
+		}
+
+		return statements;
+	}
+
 	// Control handlers
 	async function handlePlay() {
 		if (!pyodide) {
@@ -303,36 +557,12 @@ move()
 		executionState.status = 'running';
 		executionState.error = null;
 		executionState.stepCount = 0;
+		executionState.currentLine = null;
 		currentWorld = cloneWorld(initialWorld);
 
 		try {
 			// Inject Karel commands
-			const callbacks: KarelCallbacks = {
-				move,
-				turn_left,
-				pick_beeper,
-				put_beeper,
-				front_is_clear,
-				front_is_blocked,
-				beepers_present,
-				no_beepers_present,
-				left_is_clear,
-				left_is_blocked,
-				right_is_clear,
-				right_is_blocked,
-				beepers_in_bag,
-				no_beepers_in_bag,
-				facing_north,
-				not_facing_north,
-				facing_south,
-				not_facing_south,
-				facing_east,
-				not_facing_east,
-				facing_west,
-				not_facing_west
-			};
-
-			injectKarelCommands(pyodide, callbacks);
+			injectKarelCommands(pyodide, getKarelCallbacks());
 
 			// Execute code
 			await pyodide.runPythonAsync(code);
@@ -348,14 +578,92 @@ move()
 		executionState.status = 'paused';
 	}
 
-	function handleStep() {
-		// TODO: Implement step-through execution
-		console.log('Step not yet implemented');
+	async function handleStep() {
+		if (!pyodide) {
+			executionState.error = 'Pyodide not loaded yet';
+			executionState.status = 'error';
+			return;
+		}
+
+		// If we're idle or have an error, start fresh
+		if (executionState.status === 'idle' || executionState.status === 'error') {
+			executionState.status = 'paused';
+			executionState.error = null;
+			executionState.stepCount = 0;
+			executionState.currentLine = null;
+			currentWorld = cloneWorld(initialWorld);
+			currentLineIndex = 0;
+
+			// Create new execution generator
+			executionGenerator = createStepExecutor(code);
+		}
+
+		// Execute one step
+		if (executionGenerator) {
+			try {
+				const result = await executionGenerator.next();
+				
+				if (result.done) {
+					executionState.status = 'success';
+					executionState.currentLine = null;
+					executionState.errorLine = null;
+					executionGenerator = null;
+				} else {
+					executionState.status = 'paused';
+					currentLineIndex = result.value;
+				}
+			} catch (err) {
+				executionState.status = 'error';
+				// Extract clean error message from Python traceback
+				const errorMsg = err instanceof Error ? err.message : String(err);
+				const lines = errorMsg.split('\n');
+				// Get the last non-empty line which contains the actual error
+				const lastLine = lines.filter(l => l.trim()).pop() || errorMsg;
+				executionState.error = lastLine;
+				// Keep the error line highlighted (it was set in the catch block)
+				executionState.currentLine = executionState.errorLine;
+				executionGenerator = null;
+			}
+		}
 	}
 
 	function handleReset() {
 		currentWorld = cloneWorld(initialWorld);
-		executionState = createDefaultExecutionState();
+		const newState = createDefaultExecutionState();
+		newState.animationSpeed = executionState.animationSpeed; // Preserve speed setting
+		executionState = newState;
+		executionGenerator = null;
+		currentLineIndex = 0;
+		functionDefinitions.clear();
+		
+		// Clear Python namespace
+		if (pyodide) {
+			try {
+				pyodide.runPython(`
+# Clear user-defined functions and variables
+import sys
+user_vars = [k for k in list(globals().keys()) if not k.startswith('_') and k not in sys.modules and k not in dir(__builtins__)]
+for var in user_vars:
+    # Don't delete Karel commands
+    if var not in ['move', 'turn_left', 'pick_beeper', 'put_beeper', 
+                   'front_is_clear', 'front_is_blocked', 
+                   'beepers_present', 'no_beepers_present',
+                   'left_is_clear', 'left_is_blocked',
+                   'right_is_clear', 'right_is_blocked',
+                   'beepers_in_bag', 'no_beepers_in_bag',
+                   'facing_north', 'not_facing_north',
+                   'facing_south', 'not_facing_south',
+                   'facing_east', 'not_facing_east',
+                   'facing_west', 'not_facing_west']:
+        try:
+            del globals()[var]
+        except:
+            pass
+`);
+			} catch (err) {
+				console.error('Error clearing Python namespace:', err);
+			}
+		}
 	}
 
 	function handleSpeedChange(newSpeed: number) {
@@ -394,6 +702,8 @@ move()
 					<KarelCodeEditor
 						bind:value={code}
 						readonly={executionState.status === 'running'}
+						highlightedLine={executionState.currentLine}
+						isError={executionState.status === 'error'}
 						class="editor"
 					/>
 				</div>

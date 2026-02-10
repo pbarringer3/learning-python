@@ -22,6 +22,7 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 ### ✅ Core Infrastructure
 
 1. **Type Definitions** ([src/lib/karel/types.ts](src/lib/karel/types.ts))
+
    - `KarelWorld`, `Position`, `Direction`, `Wall`, `BeeperLocation` interfaces
    - `ExecutionState` with support for error line tracking
    - Helper functions: `createDefaultWorld()`, `cloneWorld()`, `createDefaultExecutionState()`
@@ -35,6 +36,7 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 ### ✅ Display Components
 
 3. **KarelWorld Component** ([src/lib/components/KarelWorld.svelte](src/lib/components/KarelWorld.svelte))
+
    - SVG-based rendering (scalable, interactive-ready)
    - Grid with corner markers
    - Walls (horizontal and vertical)
@@ -44,6 +46,7 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - **Fixed:** North/south directions now correct (north=270°, south=90°)
 
 4. **KarelCodeEditor Component** ([src/lib/components/KarelCodeEditor.svelte](src/lib/components/KarelCodeEditor.svelte))
+
    - CodeMirror 6 integration
    - Python syntax highlighting
    - Line highlighting (yellow for current, red for errors)
@@ -51,12 +54,14 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - Bindable value with proper change detection
 
 5. **KarelControls Component** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
+
    - Play/Pause/Step/Reset buttons
    - Speed slider (Instant to Very Slow, 0-1000ms)
    - Visual feedback for execution state
    - Disabled states when appropriate
 
 6. **KarelOutput Component** ([src/lib/components/KarelOutput.svelte](src/lib/components/KarelOutput.svelte))
+
    - Error messages (clean, no stack traces)
    - Success notifications
    - Running status with step count
@@ -270,11 +275,13 @@ src/
 ### Not Yet Implemented
 
 1. **Play mode with animation**
+
    - Currently only Step works
    - Play button doesn't animate through code with delays
    - Pause functionality not implemented
 
 2. **Advanced Python Features**
+
    - No `if` statement support
    - No `while` loops
    - No `for` loops
@@ -282,14 +289,17 @@ src/
    - Feature restriction per lesson not implemented
 
 3. **Interactive World Editing**
+
    - Can't click grid to place walls/beepers directly
    - Edit modes exist but not wired up to SVG clicks
 
 4. **Validation Functions**
+
    - No exercise validation system
    - Success criteria not implemented
 
 5. **Lessons & Content**
+
    - No lesson data structures
    - No MDsveX integration for instructions
    - No progress tracking

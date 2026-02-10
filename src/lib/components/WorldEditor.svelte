@@ -126,11 +126,7 @@
 		<div class="karel-config">
 			<label>
 				Position:
-				<input
-					type="text"
-					readonly
-					value="({world.karel.position.x}, {world.karel.position.y})"
-				/>
+				<input type="text" readonly value="({world.karel.position.x}, {world.karel.position.y})" />
 			</label>
 			<label>
 				Direction:

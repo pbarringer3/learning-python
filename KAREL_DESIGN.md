@@ -127,40 +127,40 @@ Chapter
 
 ```typescript
 interface Exercise {
-	id: string;
-	title: string;
+  id: string;
+  title: string;
 
-	// World definition
-	world: {
-		dimensions: { width: number; height: number }; // Max 30x30
-		karel: {
-			position: { x: number; y: number };
-			direction: 'north' | 'east' | 'south' | 'west';
-			beepers: number; // -1 for infinite
-		};
-		walls: Wall[]; // Wall segment definitions
-		beepers: { x: number; y: number; count: number }[];
-	};
+  // World definition
+  world: {
+    dimensions: { width: number; height: number }; // Max 30x30
+    karel: {
+      position: { x: number; y: number };
+      direction: 'north' | 'east' | 'south' | 'west';
+      beepers: number; // -1 for infinite
+    };
+    walls: Wall[]; // Wall segment definitions
+    beepers: { x: number; y: number; count: number }[];
+  };
 
-	// Lesson configuration
-	allowedFeatures: string[]; // e.g., ['functions', 'while', 'if']
-	starterCode?: string;
+  // Lesson configuration
+  allowedFeatures: string[]; // e.g., ['functions', 'while', 'if']
+  starterCode?: string;
 
-	// Validation
-	validate: (world: KarelWorld) => { passed: boolean; message: string };
+  // Validation
+  validate: (world: KarelWorld) => { passed: boolean; message: string };
 }
 
 interface Lesson {
-	id: string;
-	title: string;
-	exercises: Exercise[];
-	markdownPath: string; // Path to .svx file with instructions
+  id: string;
+  title: string;
+  exercises: Exercise[];
+  markdownPath: string; // Path to .svx file with instructions
 }
 
 interface Chapter {
-	id: string;
-	title: string;
-	lessons: Lesson[];
+  id: string;
+  title: string;
+  lessons: Lesson[];
 }
 ```
 
@@ -324,7 +324,7 @@ Available speeds (via slider):
 
 ### Infinite Loop Protection
 
-- **Step limit**: 10,000 Karel commands maximum per execution
+- **Step limit**: 2,500 Karel commands maximum per execution
 - Configurable as a constant for easy adjustment
 - Prevents browser freezing from runaway code
 - Error message displayed when limit exceeded
@@ -432,12 +432,12 @@ Karel commands exposed as Python functions via JavaScript callbacks:
 ```javascript
 // Example implementation approach
 pyodide.globals.set('move', () => {
-	// Update Svelte component state
-	karelState.move();
+  // Update Svelte component state
+  karelState.move();
 });
 
 pyodide.globals.set('turn_left', () => {
-	karelState.turnLeft();
+  karelState.turnLeft();
 });
 
 // etc. for all Karel commands
@@ -600,40 +600,40 @@ SVG/UI Updates
 
 ```typescript
 interface Position {
-	x: number; // 1-indexed
-	y: number; // 1-indexed
+  x: number; // 1-indexed
+  y: number; // 1-indexed
 }
 
 interface Direction {
-	type: 'north' | 'east' | 'south' | 'west';
+  type: 'north' | 'east' | 'south' | 'west';
 }
 
 interface Wall {
-	type: 'horizontal' | 'vertical';
-	x: number;
-	y: number;
-	// horizontal wall: below cell (x,y)
-	// vertical wall: to right of cell (x,y)
+  type: 'horizontal' | 'vertical';
+  x: number;
+  y: number;
+  // horizontal wall: below cell (x,y)
+  // vertical wall: to right of cell (x,y)
 }
 
 interface BeeperLocation {
-	x: number;
-	y: number;
-	count: number;
+  x: number;
+  y: number;
+  count: number;
 }
 
 interface KarelWorld {
-	dimensions: {
-		width: number; // 1 to 30
-		height: number; // 1 to 30
-	};
-	karel: {
-		position: Position;
-		direction: Direction;
-		beepers: number; // -1 for infinite
-	};
-	walls: Wall[];
-	beepers: BeeperLocation[];
+  dimensions: {
+    width: number; // 1 to 30
+    height: number; // 1 to 30
+  };
+  karel: {
+    position: Position;
+    direction: Direction;
+    beepers: number; // -1 for infinite
+  };
+  walls: Wall[];
+  beepers: BeeperLocation[];
 }
 ```
 
@@ -643,11 +643,11 @@ interface KarelWorld {
 type ExecutionStatus = 'idle' | 'running' | 'paused' | 'error' | 'success';
 
 interface ExecutionState {
-	status: ExecutionStatus;
-	currentLine: number | null; // For step highlighting
-	stepCount: number;
-	error: string | null;
-	animationSpeed: number; // milliseconds per command
+  status: ExecutionStatus;
+  currentLine: number | null; // For step highlighting
+  stepCount: number;
+  error: string | null;
+  animationSpeed: number; // milliseconds per command
 }
 ```
 

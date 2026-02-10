@@ -39,7 +39,7 @@
 		},
 		update(decorations, tr) {
 			decorations = decorations.map(tr.changes);
-			
+
 			for (let effect of tr.effects) {
 				if (effect.is(setHighlightedLineEffect)) {
 					if (effect.value === null) {
@@ -47,9 +47,7 @@
 					} else {
 						const line = tr.state.doc.line(Math.min(effect.value, tr.state.doc.lines));
 						const className = isErrorHighlight ? 'cm-error-line' : 'cm-highlighted-line';
-						decorations = Decoration.set([
-							Decoration.line({ class: className }).range(line.from)
-						]);
+						decorations = Decoration.set([Decoration.line({ class: className }).range(line.from)]);
 					}
 				}
 			}

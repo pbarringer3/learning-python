@@ -113,9 +113,7 @@
 
 	// Check if Karel is on a beeper
 	const karelOnBeeper = $derived(
-		world.beepers.some(
-			(b) => b.x === world.karel.position.x && b.y === world.karel.position.y
-		)
+		world.beepers.some((b) => b.x === world.karel.position.x && b.y === world.karel.position.y)
 	);
 </script>
 
@@ -155,7 +153,14 @@
 	<!-- Beepers -->
 	<g class="beepers">
 		{#each beeperPositions as beeper}
-			<circle cx={beeper.cx} cy={beeper.cy} r={BEEPER_RADIUS} fill="#4ade80" stroke="#22c55e" stroke-width="2" />
+			<circle
+				cx={beeper.cx}
+				cy={beeper.cy}
+				r={BEEPER_RADIUS}
+				fill="#4ade80"
+				stroke="#22c55e"
+				stroke-width="2"
+			/>
 			{#if beeper.count > 1}
 				<text
 					x={beeper.cx}
@@ -175,12 +180,7 @@
 	<!-- Karel -->
 	<g class="karel" transform={karelTransform}>
 		<!-- Karel's body (triangle pointing right/east) -->
-		<path
-			d="M -12 -12 L 12 0 L -12 12 Z"
-			fill="#3b82f6"
-			stroke="#1e40af"
-			stroke-width="2"
-		/>
+		<path d="M -12 -12 L 12 0 L -12 12 Z" fill="#3b82f6" stroke="#1e40af" stroke-width="2" />
 		<!-- Transparent gap to show underlying beeper -->
 		{#if karelOnBeeper}
 			<circle cx="-4" cy="0" r="6" fill="white" opacity="0.7" />

@@ -53,13 +53,7 @@
 	{:else if isRunning}
 		<div class="output-message info">
 			<div class="message-header">
-				<svg
-					width="20"
-					height="20"
-					viewBox="0 0 24 24"
-					fill="currentColor"
-					class="spinner"
-				>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="spinner">
 					<path
 						d="M12 4V2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10h-2c0 4.41-3.59 8-8 8s-8-3.59-8-8 3.59-8 8-8z"
 					/>

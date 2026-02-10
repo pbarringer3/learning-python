@@ -306,11 +306,19 @@ Available speeds (via slider):
 
 ### Step-Through Execution
 
-- **Granularity**: One Python statement per step
-  - Steps through each line of user-written code, including inside user-defined functions
-  - Example: When stepping through code that calls `turn_right()` (a user-defined function), the debugger steps into the function and executes each `turn_left()` line individually
-  - Built-in Karel commands (`move()`, `turn_left()`, etc.) execute as atomic operations
-- **Visual feedback**: Current line highlighted in code editor when paused or stepping. Highlighting turned off during normal play mode.
+- **Architecture**: Record-and-replay using Python's `sys.settrace`
+  - **Phase 1 (Record)**: Execute entire program with tracing enabled, recording line numbers and world snapshots
+  - **Phase 2 (Replay)**: Yield recorded steps one-by-one for visualization
+- **Granularity**: One Karel action command per step
+  - Each `move()`, `turn_left()`, `pick_beeper()`, `put_beeper()` is one step
+  - Control flow statements (if/while/for) highlight but don't pause execution
+  - Only lines Python actually executes are shown (no dead code highlighting)
+  - Works correctly with functions, loops, conditionals, and any nesting
+- **Visual feedback**:
+  - Current line highlighted in code editor during step-through
+  - World state updates with each step to show Karel's actions
+  - Play mode: Animation delay between steps
+  - Step mode: Instant execution for responsive debugging
 
 ### Execution Flow
 
@@ -669,21 +677,22 @@ interface ExecutionState {
 
 ## 17. Implementation Phases
 
-### Phase 1: Core Infrastructure (Playground)
+### Phase 1: Core Infrastructure (Playground) ✅ COMPLETE
 
-1. Set up mdsvex
-2. Create SVG-based KarelWorld component
-3. Integrate Pyodide
-4. Build WorldEditor
-5. Implement basic playground page
+1. ✅ Set up mdsvex
+2. ✅ Create SVG-based KarelWorld component
+3. ✅ Integrate Pyodide
+4. ✅ Build WorldEditor
+5. ✅ Implement basic playground page
 
-### Phase 2: Execution & Controls
+### Phase 2: Execution & Controls ✅ COMPLETE
 
-1. Implement Karel command callbacks
-2. Build animation system
-3. Create control panel (play/pause/step/reset)
-4. Add speed control
-5. Step-through debugging with line highlighting
+1. ✅ Implement Karel command callbacks
+2. ✅ Build animation system with record-and-replay architecture
+3. ✅ Create control panel (play/pause/step/reset)
+4. ✅ Add speed control
+5. ✅ Step-through debugging with line highlighting
+6. ✅ Full control flow support (if/else, while, for loops)
 
 ### Phase 3: Lessons & Content
 

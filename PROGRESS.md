@@ -11,9 +11,11 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 - Complete Karel world visualization
 - Python code execution via Pyodide
 - Step-through debugging with line highlighting
+- **Full control flow support** (if/else/elif, while, for loops)
 - Error handling with red error highlighting
 - All Karel commands and sensors
 - Interactive world editor
+- Record-and-replay execution architecture
 
 ---
 
@@ -102,30 +104,38 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 
 ### ✅ Step-Through Execution
 
-**Advanced Implementation:**
+**Record-and-Replay Architecture:**
 
-- Steps through executable statements one at a time
-- Function definitions executed as single unit (no stepping through def)
-- **Steps INTO user-defined functions** when called
-- Recursive stepping: functions calling functions work correctly
-- Handles nested function calls at any depth
-- Respects Python execution order (functions must be defined before use)
-- Shows `NameError` if function called before definition
+- **Phase 1 - Record:** Entire program executes once with `sys.settrace` monitoring
+- Karel command callbacks record `{ line, worldSnapshot }` for each action
+- **Phase 2 - Replay:** Generator yields each recorded step with highlighting
+- World snapshots applied during replay for accurate visualization
+- Only lines Python actually executes are highlighted (no dead code)
+
+**Control Flow Support:**
+
+- **if/elif/else statements:** Only executed branches highlighted
+- **while loops:** Each iteration's lines highlighted correctly
+- **for loops:** Loop body lines highlighted per iteration
+- **User-defined functions:** Lines inside functions highlighted when called
+- **Nested structures:** All combinations work correctly (if inside while, etc.)
 
 **Play Mode with Animation:**
 
-- Animated execution using the same step-through generator
+- Animated execution using recorded steps
 - Respects animation speed slider (50ms to 1000ms per step)
 - **Instant mode (0ms):** Executes entire program without animation, shows final state only
 - Pause/Resume functionality works mid-execution
-- Can switch between Play and Step modes seamlessly
+- **Step button:** Instant execution (no delay) for responsive debugging
 
 **Technical Details:**
 
-- Uses `functionDefinitions` Map to track defined functions
-- Functions only added to map when their `def` statement executes
-- Recursive generator pattern (`yield*`) for nested calls
-- Line number tracking with correct offsets inside functions
+- Uses Python's `sys.settrace` for accurate line tracking
+- Compiles code with `compile(code, '<user>', 'exec')` for precise line numbers
+- World state cloned after each Karel action command
+- No parsing required - Python tells us exactly what executed
+- Animation delay only applied during Play mode (continueExecution)
+- Step mode executes instantly for responsive debugging
 
 ### ✅ Error Handling
 
@@ -182,19 +192,21 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 - East = 0° (points right)
 - West = 180° (points left)
 
-### 2. **Function Definition Timing**
+### 2. **Record-and-Replay Execution**
 
-- Functions are NOT pre-defined
-- Definitions execute in order with rest of code
-- Matches Python's actual behavior
-- Enables proper `NameError` for undefined functions
+- Entire program runs once to record execution trace
+- `sys.settrace` monitors which lines Python actually executes
+- Karel commands record world snapshots during trace
+- Replay phase yields recorded steps for visualization
+- Eliminates need for complex parsing or stepping logic
 
-### 3. **Stepping Into Functions**
+### 3. **Control Flow Handling**
 
-- User-defined functions are stepped into line-by-line
-- Built-in Karel commands execute atomically
-- Recursive calls work correctly
-- Call stack managed by JavaScript generators
+- Only executed lines are highlighted (if branch taken, else branch skipped)
+- Control flow headers (if/while/for) highlighted but don't execute Karel actions
+- Loop bodies correctly highlight on each iteration
+- Nested control structures work naturally
+- No special handling needed - Python's trace tells us everything
 
 ### 4. **Error Display**
 
@@ -293,11 +305,9 @@ src/
 ### Not Yet Implemented
 
 1. **Advanced Python Features**
-   - No `if` statement support
-   - No `while` loops
-   - No `for` loops
-   - No variables
+   - Variables work but not explicitly tested
    - Feature restriction per lesson not implemented
+   - Custom error messages for educational feedback
 
 2. **Interactive World Editing**
    - Can't click grid to place walls/beepers directly
@@ -324,11 +334,12 @@ src/
 
 ### Priority 1: Python Language Features
 
-1. Add `if`/`else` support to step execution
-2. Add `while` loop support
-3. Add `for` loop with `range()` support
-4. Add variable support
-5. Implement feature restriction system
+1. ✅ `if`/`else`/`elif` support (implemented)
+2. ✅ `while` loop support (implemented)
+3. ✅ `for` loop with `range()` support (implemented)
+4. ✅ Variables work (implementation complete)
+5. Implement feature restriction system per lesson
+6. Add custom educational error messages
 
 ### Priority 2: Interactive World Editor
 
@@ -363,30 +374,74 @@ src/
 
 ## Important Code Patterns
 
-### Stepping Into Functions
+### Record-and-Replay Architecture
 
 ```typescript
-async function* executeStatementWithStepping(statement: string) {
-  const funcMatch = trimmed.match(/^(\w+)\s*\(/);
-  if (funcMatch && functionDefinitions.has(funcName)) {
-    // Step through function body
-    for (const line of funcDef.lines) {
-      yield lineNumber;
-      yield* await executeStatementWithStepping(line); // Recursive!
+// Phase 1: Record execution with sys.settrace
+async function recordExecution(code: string) {
+  const steps: RecordedStep[] = [];
+  let lastTracedLine = 0;
+
+  // Karel callbacks record world snapshots
+  const recordingCallbacks = {
+    move: () => {
+      move();
+      steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
     }
+    // ... other commands
+  };
+
+  // Trace callback updates current line
+  pyodide.globals.set('__js_trace_cb__', (lineNo) => {
+    lastTracedLine = lineNo;
+  });
+
+  // Execute with tracing
+  await pyodide.runPythonAsync(`
+    import sys
+    def tracer(frame, event, arg):
+      if event == 'line':
+        __js_trace_cb__(frame.f_lineno)
+      return tracer
+    sys.settrace(tracer)
+    exec(compile(code, '<user>', 'exec'))
+  `);
+
+  return { steps };
+}
+
+// Phase 2: Replay recorded steps
+async function* createStepExecutor(code: string) {
+  const recording = await recordExecution(code);
+  currentWorld = cloneWorld(initialWorld);
+
+  for (const step of recording.steps) {
+    executionState.currentLine = step.line;
+    yield step.line;
+    currentWorld = cloneWorld(step.world);
   }
-  await pyodide.runPythonAsync(statement);
 }
 ```
 
-### Error Handling Pattern
+### Animation Delay (Play vs Step)
 
 ```typescript
-try {
-  yield * (await executeStatementWithStepping(stmt.code));
-} catch (err) {
-  executionState.errorLine = executionState.currentLine;
-  throw err;
+// In generator: no delay - just yield
+async function* createStepExecutor(code: string) {
+  for (const step of recording.steps) {
+    yield step.line; // Instant for Step button
+    currentWorld = cloneWorld(step.world);
+  }
+}
+
+// In continueExecution: add delay for Play mode
+async function continueExecution() {
+  while (executionState.status === 'running') {
+    const result = await executionGenerator.next();
+    if (executionState.animationSpeed > 0) {
+      await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
+    }
+  }
 }
 ```
 

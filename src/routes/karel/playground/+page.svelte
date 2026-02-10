@@ -17,6 +17,7 @@
   import type { PyodideInterface } from 'pyodide';
 
   // State
+  let mode = $state<'play' | 'edit'>('play');
   let initialWorld = $state(createDefaultWorld());
   let currentWorld = $state(createDefaultWorld());
   let executionState = $state(createDefaultExecutionState());
@@ -652,7 +653,6 @@ for var in user_vars:
 <div class="playground-container">
   <header class="playground-header">
     <h1>Karel the Robot - Playground</h1>
-    <p>Experiment with Karel in an interactive environment!</p>
   </header>
 
   {#if pyodideLoading}
@@ -664,52 +664,78 @@ for var in user_vars:
       <p>Error loading Python: {pyodideError}</p>
     </div>
   {:else}
-    <div class="playground-content">
-      <div class="editor-panel">
-        <div class="code-section">
-          <h2>Code Editor</h2>
-          <KarelCodeEditor
-            bind:value={code}
-            readonly={executionState.status === 'running'}
-            highlightedLine={executionState.currentLine}
-            isError={executionState.status === 'error'}
-            class="editor"
-          />
-        </div>
-
-        <div class="output-section">
-          <h2>Output</h2>
-          <KarelOutput
-            status={executionState.status}
-            error={executionState.error}
-            stepCount={executionState.stepCount}
-          />
-        </div>
-      </div>
-
-      <div class="world-panel">
-        <div class="world-display">
-          <h2>Karel World</h2>
-          <KarelWorld world={currentWorld} />
-        </div>
-
-        <div class="controls-section">
-          <KarelControls
-            status={executionState.status}
-            bind:speed={executionState.animationSpeed}
-            onplay={handlePlay}
-            onpause={handlePause}
-            onstep={handleStep}
-            onreset={handleReset}
-          />
-        </div>
-
-        <div class="editor-section">
-          <h2>World Editor</h2>
-          <WorldEditor bind:world={initialWorld} onupdate={handleWorldUpdate} />
-        </div>
+    <!-- Mode Toggle -->
+    <div class="mode-toggle-container">
+      <div class="mode-toggle">
+        <button class="mode-button" class:active={mode === 'play'} onclick={() => (mode = 'play')}>
+          Play
+        </button>
+        <button class="mode-button" class:active={mode === 'edit'} onclick={() => (mode = 'edit')}>
+          Edit
+        </button>
+        <div class="slider" class:edit-mode={mode === 'edit'}></div>
       </div>
     </div>
+
+    {#if mode === 'play'}
+      <div class="playground-content">
+        <div class="editor-panel">
+          <div class="code-section">
+            <h2>Code Editor</h2>
+            <KarelCodeEditor
+              bind:value={code}
+              readonly={executionState.status === 'running'}
+              highlightedLine={executionState.currentLine}
+              isError={executionState.status === 'error'}
+              class="editor"
+            />
+          </div>
+
+          <div class="output-section">
+            <h2>Output</h2>
+            <KarelOutput
+              status={executionState.status}
+              error={executionState.error}
+              stepCount={executionState.stepCount}
+            />
+          </div>
+        </div>
+
+        <div class="world-panel">
+          <div class="world-display">
+            <h2>Karel World</h2>
+            <KarelWorld world={currentWorld} />
+          </div>
+
+          <div class="controls-section">
+            <KarelControls
+              status={executionState.status}
+              bind:speed={executionState.animationSpeed}
+              onplay={handlePlay}
+              onpause={handlePause}
+              onstep={handleStep}
+              onreset={handleReset}
+            />
+          </div>
+        </div>
+      </div>
+    {:else}
+      <div class="playground-content">
+        <div class="editor-panel">
+          <div class="editor-section">
+            <h2>World Editor</h2>
+            <WorldEditor bind:world={initialWorld} onupdate={handleWorldUpdate} />
+          </div>
+        </div>
+
+        <div class="world-panel">
+          <div class="world-display">
+            <h2>Karel World</h2>
+            <KarelWorld world={initialWorld} />
+          </div>
+        </div>
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -727,14 +753,57 @@ for var in user_vars:
 
   .playground-header h1 {
     font-size: 2.5rem;
-    margin: 0 0 0.5rem 0;
+    margin: 0;
     color: #1e293b;
   }
 
-  .playground-header p {
-    font-size: 1.125rem;
+  .mode-toggle-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+
+  .mode-toggle {
+    position: relative;
+    display: inline-flex;
+    background: #e2e8f0;
+    border-radius: 9999px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .mode-button {
+    position: relative;
+    z-index: 1;
+    padding: 0.5rem 1.5rem;
+    border: none;
+    background: transparent;
     color: #64748b;
-    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 9999px;
+    transition: color 0.3s ease;
+  }
+
+  .mode-button.active {
+    color: white;
+  }
+
+  .slider {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: #3b82f6;
+    border-radius: 9999px;
+    transition: transform 0.3s ease;
+    z-index: 0;
+  }
+
+  .slider.edit-mode {
+    transform: translateX(100%);
   }
 
   .loading-message,
@@ -771,9 +840,23 @@ for var in user_vars:
     height: 400px;
   }
 
+  .world-display {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .world-display :global(.karel-world) {
+    max-height: 400px;
+    width: 100%;
+  }
+
   @media (max-width: 1024px) {
     .playground-content {
       grid-template-columns: 1fr;
+    }
+
+    .world-display :global(.karel-world) {
+      max-height: none;
     }
   }
 </style>

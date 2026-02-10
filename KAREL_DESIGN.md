@@ -465,6 +465,9 @@ pyodide.globals.set('turn_left', () => {
 ### Playground Page
 
 - Dedicated route (e.g., `/karel/playground`)
+- **Mode Toggle**: Slider button to switch between Play and Edit modes
+  - **Play Mode** (default): Code editor + execution controls + world display
+  - **Edit Mode**: World editor + world preview for setup
 - Combines world editor + code editor + Karel world display
 - Target users: Both instructors (lesson authoring) and students (experimentation)
 

@@ -14,6 +14,7 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 - **Full control flow support** (if/else/elif, while, for loops)
 - Error handling with red error highlighting
 - All Karel commands and sensors
+- **Play/Edit mode toggle** with clean interface separation
 - Interactive world editor
 - Record-and-replay execution architecture
 
@@ -53,7 +54,7 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - Bindable value with proper change detection
 
 5. **KarelControls Component** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
-   - Play/Pause/Step/Reset buttons
+   - Play/Pause/Step/Reset buttons (centered within container)
    - Speed slider with 6 discrete presets (Instant, Very Fast, Fast, Normal, Slow, Very Slow)
    - Index-based slider (0-5) prevents "Custom" values between presets
    - Visual feedback for execution state
@@ -75,6 +76,9 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 ### ✅ Main Playground Page
 
 8. **Playground Container** ([src/routes/karel/playground/+page.svelte](src/routes/karel/playground/+page.svelte))
+   - **Play/Edit Mode Toggle** - Centered slider button to switch between modes
+   - **Play Mode** - Code editor, output panel, world display, and execution controls
+   - **Edit Mode** - World editor and world preview for setting up initial state
    - Orchestrates all components
    - Python code execution via Pyodide
    - Full implementation of all 22 Karel commands

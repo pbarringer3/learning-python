@@ -22,20 +22,14 @@
   let executionState = $state(createDefaultExecutionState());
   let code = $state(`# Welcome to Karel the Robot Playground!
 # Write your code here
-
-def spin():
-  turn_left()
-  turn_left()
-  turn_left()
-  spin()
-  turn_left()
-
 # Try moving Karel around
-move()
 turn_left()
-move()
-spin()
-move()
+turn_left()
+if front_is_clear():
+  move()
+else:
+  turn_left()
+  turn_left()
 `);
 
   let pyodide: PyodideInterface | null = $state(null);
@@ -45,12 +39,15 @@ move()
   // Command step limit
   const MAX_STEPS = 2500;
 
+  // Execution recording types
+  type RecordedStep = {
+    line: number;
+    world: KarelWorldType; // snapshot of world AFTER this step executed
+  };
+
   // Step-through execution state
-  let codeLines: string[] = [];
   let currentLineIndex = $state(0);
   let executionGenerator: AsyncGenerator<number, void, unknown> | null = null;
-  let functionDefinitions: Map<string, { startLine: number; endLine: number; lines: string[] }> =
-    new Map();
 
   // Load Pyodide on mount
   onMount(async () => {
@@ -349,135 +346,33 @@ move()
     };
   }
 
-  // Create step-through execution generator
-  async function* createStepExecutor(code: string): AsyncGenerator<number, void, unknown> {
-    if (!pyodide) return;
+  // Record the full program execution: run with sys.settrace to capture every
+  // line + Karel action, then return the recording for replay.
+  async function recordExecution(
+    code: string
+  ): Promise<{ steps: RecordedStep[]; error?: string; errorLine?: number }> {
+    if (!pyodide) throw new Error('Pyodide not loaded');
 
-    // Inject Karel commands that track execution
-    const trackedCallbacks = createTrackedCallbacks();
-    injectKarelCommands(pyodide, trackedCallbacks);
+    const steps: RecordedStep[] = [];
+    let lastTracedLine = 0;
 
-    // Split code into lines for tracking
-    codeLines = code.split('\n');
-
-    // Parse code and extract function definitions (but don't register them yet)
-    const statements = await parseCodeIntoStatements(code);
-
-    // Clear function definitions - we'll add them as they're executed
-    functionDefinitions.clear();
-
-    // Execute statements in order (definitions and calls mixed)
-    for (const stmt of statements) {
-      // If this is a function definition, define it (without yielding)
-      if (stmt.isDefinition) {
-        try {
-          await pyodide.runPythonAsync(stmt.code);
-          // NOW register it in our map for stepping
-          const funcStmt = stmt as typeof stmt & {
-            functionName: string;
-            functionStartLine: number;
-            functionEndLine: number;
-            functionLines: string[];
-          };
-          if (funcStmt.functionName) {
-            functionDefinitions.set(funcStmt.functionName, {
-              startLine: funcStmt.functionStartLine,
-              endLine: funcStmt.functionEndLine,
-              lines: funcStmt.functionLines
-            });
-          }
-        } catch (err) {
-          executionState.currentLine = stmt.lineNumber;
-          throw err;
-        }
-        continue;
-      }
-
-      // This is an executable statement
-      executionState.currentLine = stmt.lineNumber;
-      yield stmt.lineNumber;
-
-      // Allow UI to update (highlight line) before executing the command
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-
-      try {
-        // Execute this statement, potentially stepping into functions
-        yield* await executeStatementWithStepping(stmt.code);
-      } catch (err) {
-        // Keep error line highlighted
-        executionState.errorLine = executionState.currentLine;
-        throw err;
-      }
-
-      if (executionState.animationSpeed > 0) {
-        await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
-      }
-    }
-
-    executionState.currentLine = null;
-  }
-
-  // Execute a statement, stepping into user-defined functions if called
-  async function* executeStatementWithStepping(
-    statement: string
-  ): AsyncGenerator<number, void, unknown> {
-    const trimmed = statement.trim();
-    const funcMatch = trimmed.match(/^(\w+)\s*\(/);
-
-    if (funcMatch) {
-      const funcName = funcMatch[1];
-      const funcDef = functionDefinitions.get(funcName);
-
-      if (funcDef) {
-        // Step through the function body
-        for (let i = 0; i < funcDef.lines.length; i++) {
-          const funcLine = funcDef.lines[i];
-          const funcTrimmed = funcLine.trim();
-
-          // Skip empty lines and comments
-          if (!funcTrimmed || funcTrimmed.startsWith('#')) continue;
-
-          // Calculate actual line number in original code
-          const actualLineNum = funcDef.startLine + i + 2;
-
-          executionState.currentLine = actualLineNum;
-          yield actualLineNum;
-
-          // Allow UI to update before executing the command
-          await new Promise((resolve) => requestAnimationFrame(resolve));
-
-          // Recursively execute this line (might call another function)
-          yield* await executeStatementWithStepping(funcLine);
-
-          if (executionState.animationSpeed > 0) {
-            await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
-          }
-        }
-        return;
-      }
-    }
-
-    // Allow UI to update before executing the command
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-
-    // Not a user function call, execute normally
-    await pyodide!.runPythonAsync(statement);
-  }
-
-  // Create callbacks that track execution
-  function createTrackedCallbacks(): KarelCallbacks {
-    return {
+    // Karel callbacks that record world snapshots after each action
+    const recordingCallbacks: KarelCallbacks = {
       move: () => {
         move();
+        steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
       },
       turn_left: () => {
         turn_left();
+        steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
       },
       pick_beeper: () => {
         pick_beeper();
+        steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
       },
       put_beeper: () => {
         put_beeper();
+        steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
       },
       front_is_clear,
       front_is_blocked,
@@ -498,96 +393,92 @@ move()
       facing_west,
       not_facing_west
     };
+
+    injectKarelCommands(pyodide, recordingCallbacks);
+
+    // Line trace callback — updates lastTracedLine so Karel callbacks know where we are
+    const traceCallback = (lineNo: number) => {
+      lastTracedLine = lineNo;
+    };
+    pyodide.globals.set('__js_trace_cb__', traceCallback);
+
+    const escapedCode = code.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+
+    try {
+      await pyodide.runPythonAsync(`
+import sys as _ts
+def _tt(frame, event, arg):
+    if event == 'line' and frame.f_code.co_filename == '<user>':
+        __js_trace_cb__(frame.f_lineno)
+    return _tt
+_code = compile('${escapedCode}', '<user>', 'exec')
+_ts.settrace(_tt)
+try:
+    exec(_code)
+finally:
+    _ts.settrace(None)
+    del _tt, _code
+`);
+      return { steps };
+    } catch (err) {
+      return {
+        steps,
+        error: extractErrorMessage(err),
+        errorLine: lastTracedLine > 0 ? lastTracedLine : undefined
+      };
+    } finally {
+      // Clean up
+      pyodide.runPython(`
+try:
+    del __js_trace_cb__
+except:
+    pass
+`);
+    }
   }
 
-  // Parse code into individual executable statements with line numbers
-  async function parseCodeIntoStatements(code: string): Promise<
-    Array<{
-      lineNumber: number;
-      code: string;
-      isDefinition: boolean;
-      functionName?: string;
-      functionStartLine?: number;
-      functionEndLine?: number;
-      functionLines?: string[];
-    }>
-  > {
-    const lines = code.split('\n');
-    const statements: Array<{
-      lineNumber: number;
-      code: string;
-      isDefinition: boolean;
-      functionName?: string;
-      functionStartLine?: number;
-      functionEndLine?: number;
-      functionLines?: string[];
-    }> = [];
-    let i = 0;
+  // Create step-through execution generator using record-and-replay
+  async function* createStepExecutor(code: string): AsyncGenerator<number, void, unknown> {
+    if (!pyodide) return;
 
-    while (i < lines.length) {
-      const line = lines[i];
-      const trimmed = line.trim();
+    // Reset world to initial state for the recording run
+    currentWorld = cloneWorld(initialWorld);
+    executionState.stepCount = 0;
 
-      // Skip empty lines and comments
-      if (!trimmed || trimmed.startsWith('#')) {
-        i++;
-        continue;
+    // Phase 1: Record the entire execution
+    const recording = await recordExecution(code);
+
+    // Phase 2: Reset world back to initial for animated replay
+    currentWorld = cloneWorld(initialWorld);
+    executionState.stepCount = 0;
+
+    // Phase 3: Replay each recorded step
+    for (const step of recording.steps) {
+      executionState.currentLine = step.line;
+      yield step.line;
+
+      // Allow UI to update (highlight line)
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      if (executionState.animationSpeed > 0) {
+        await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
       }
 
-      // Check if this is a function definition
-      if (trimmed.startsWith('def ')) {
-        // Extract function name
-        const funcNameMatch = trimmed.match(/def\s+(\w+)\s*\(/);
-        const funcName = funcNameMatch ? funcNameMatch[1] : null;
-
-        // Collect the entire function definition
-        const functionLines = [line];
-        const bodyLines: string[] = [];
-        const defIndent = line.length - line.trimStart().length;
-        const startLine = i;
-        i++;
-
-        while (i < lines.length) {
-          const nextLine = lines[i];
-          const nextTrimmed = nextLine.trim();
-
-          if (nextTrimmed && !nextTrimmed.startsWith('#')) {
-            const nextIndent = nextLine.length - nextLine.trimStart().length;
-            if (nextIndent <= defIndent) {
-              break;
-            }
-          }
-
-          functionLines.push(nextLine);
-          if (nextTrimmed && !nextTrimmed.startsWith('#')) {
-            bodyLines.push(nextLine);
-          }
-          i++;
-        }
-
-        // Add function definition as one statement with metadata
-        statements.push({
-          lineNumber: startLine + 1,
-          code: functionLines.join('\n'),
-          isDefinition: true,
-          functionName: funcName || undefined,
-          functionStartLine: startLine,
-          functionEndLine: i - 1,
-          functionLines: bodyLines
-        });
-        continue;
-      }
-
-      // Regular statement - add it
-      statements.push({
-        lineNumber: i + 1,
-        code: line,
-        isDefinition: false
-      });
-      i++;
+      // Apply the world snapshot
+      currentWorld = cloneWorld(step.world);
+      executionState.stepCount++;
     }
 
-    return statements;
+    // If the recording ended with an error, throw it now
+    if (recording.error) {
+      if (recording.errorLine) {
+        executionState.currentLine = recording.errorLine;
+        executionState.errorLine = recording.errorLine;
+      }
+      throw new Error(recording.error);
+    }
+
+    executionState.currentLine = null;
   }
 
   // Control handlers
@@ -718,7 +609,6 @@ move()
     executionState = newState;
     executionGenerator = null;
     currentLineIndex = 0;
-    functionDefinitions.clear();
 
     // Clear Python namespace
     if (pyodide) {

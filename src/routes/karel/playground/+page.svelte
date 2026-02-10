@@ -457,13 +457,6 @@ except:
       executionState.currentLine = step.line;
       yield step.line;
 
-      // Allow UI to update (highlight line)
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-
-      if (executionState.animationSpeed > 0) {
-        await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
-      }
-
       // Apply the world snapshot
       currentWorld = cloneWorld(step.world);
       executionState.stepCount++;
@@ -544,6 +537,12 @@ except:
           break;
         } else {
           currentLineIndex = result.value;
+
+          // Delay between steps for animated playback
+          if (executionState.animationSpeed > 0) {
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+            await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
+          }
         }
       }
     } catch (err) {

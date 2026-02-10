@@ -22,7 +22,6 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 ### ✅ Core Infrastructure
 
 1. **Type Definitions** ([src/lib/karel/types.ts](src/lib/karel/types.ts))
-
    - `KarelWorld`, `Position`, `Direction`, `Wall`, `BeeperLocation` interfaces
    - `ExecutionState` with support for error line tracking
    - Helper functions: `createDefaultWorld()`, `cloneWorld()`, `createDefaultExecutionState()`
@@ -36,7 +35,6 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 ### ✅ Display Components
 
 3. **KarelWorld Component** ([src/lib/components/KarelWorld.svelte](src/lib/components/KarelWorld.svelte))
-
    - SVG-based rendering (scalable, interactive-ready)
    - Grid with corner markers
    - Walls (horizontal and vertical)
@@ -46,7 +44,6 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - **Fixed:** North/south directions now correct (north=270°, south=90°)
 
 4. **KarelCodeEditor Component** ([src/lib/components/KarelCodeEditor.svelte](src/lib/components/KarelCodeEditor.svelte))
-
    - CodeMirror 6 integration
    - Python syntax highlighting
    - Line highlighting (yellow for current, red for errors)
@@ -54,14 +51,13 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - Bindable value with proper change detection
 
 5. **KarelControls Component** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
-
    - Play/Pause/Step/Reset buttons
-   - Speed slider (Instant to Very Slow, 0-1000ms)
+   - Speed slider with 6 discrete presets (Instant, Very Fast, Fast, Normal, Slow, Very Slow)
+   - Index-based slider (0-5) prevents "Custom" values between presets
    - Visual feedback for execution state
    - Disabled states when appropriate
 
 6. **KarelOutput Component** ([src/lib/components/KarelOutput.svelte](src/lib/components/KarelOutput.svelte))
-
    - Error messages (clean, no stack traces)
    - Success notifications
    - Running status with step count
@@ -80,6 +76,8 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - Orchestrates all components
    - Python code execution via Pyodide
    - Full implementation of all 22 Karel commands
+   - **Animated Play mode** with speed control
+   - **Instant execution mode** (speed=0) runs entire program without animation
 
 ### ✅ Karel Commands Implementation
 
@@ -113,6 +111,14 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 - Handles nested function calls at any depth
 - Respects Python execution order (functions must be defined before use)
 - Shows `NameError` if function called before definition
+
+**Play Mode with Animation:**
+
+- Animated execution using the same step-through generator
+- Respects animation speed slider (50ms to 1000ms per step)
+- **Instant mode (0ms):** Executes entire program without animation, shows final state only
+- Pause/Resume functionality works mid-execution
+- Can switch between Play and Step modes seamlessly
 
 **Technical Details:**
 
@@ -204,6 +210,14 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 - Singleton pattern prevents multiple loads
 - Loading indicator shown to users
 
+### 6. **Animation Speed Control**
+
+- Speed slider uses indices (0-5) instead of raw millisecond values
+- Prevents "Custom" speeds between defined presets
+- Instant mode (0ms) bypasses all animation for immediate results
+- Other speeds (50ms-1000ms) animate through each step
+- Speed preserved on reset
+
 ---
 
 ## File Structure
@@ -233,14 +247,14 @@ src/
 
 ```json
 {
-	"pyodide": "^0.24.1",
-	"codemirror": "^6.x",
-	"@codemirror/lang-python": "^6.x",
-	"@codemirror/state": "^6.x",
-	"@codemirror/view": "^6.x",
-	"@codemirror/commands": "^6.x",
-	"@codemirror/language": "^6.x",
-	"mdsvex": "latest"
+  "pyodide": "^0.24.1",
+  "codemirror": "^6.x",
+  "@codemirror/lang-python": "^6.x",
+  "@codemirror/state": "^6.x",
+  "@codemirror/view": "^6.x",
+  "@codemirror/commands": "^6.x",
+  "@codemirror/language": "^6.x",
+  "mdsvex": "latest"
 }
 ```
 
@@ -261,6 +275,10 @@ src/
 - [x] Step into user-defined functions
 - [x] Nested function calls work
 - [x] Functions called before definition show NameError
+- [x] Animated Play mode with speed control
+- [x] Pause/Resume during Play execution
+- [x] Instant execution mode (no animation)
+- [x] Speed slider with discrete presets (no "Custom" values)
 - [x] Error line highlighted in red
 - [x] Error messages clean (no stack traces)
 - [x] Reset clears world and Python namespace
@@ -274,38 +292,28 @@ src/
 
 ### Not Yet Implemented
 
-1. **Play mode with animation**
-
-   - Currently only Step works
-   - Play button doesn't animate through code with delays
-   - Pause functionality not implemented
-
-2. **Advanced Python Features**
-
+1. **Advanced Python Features**
    - No `if` statement support
    - No `while` loops
    - No `for` loops
    - No variables
    - Feature restriction per lesson not implemented
 
-3. **Interactive World Editing**
-
+2. **Interactive World Editing**
    - Can't click grid to place walls/beepers directly
    - Edit modes exist but not wired up to SVG clicks
 
-4. **Validation Functions**
-
+3. **Validation Functions**
    - No exercise validation system
    - Success criteria not implemented
 
-5. **Lessons & Content**
-
+4. **Lessons & Content**
    - No lesson data structures
    - No MDsveX integration for instructions
    - No progress tracking
    - No localStorage persistence
 
-6. **Polish**
+5. **Polish**
    - No animations between Karel movements
    - No sound effects
    - No achievement system
@@ -314,14 +322,7 @@ src/
 
 ## Next Steps (Phase 2)
 
-### Priority 1: Animation & Play Mode
-
-1. Implement animation queue system
-2. Add delays between Karel commands
-3. Make Play button work (animate through entire program)
-4. Implement Pause/Resume during Play
-
-### Priority 2: Python Language Features
+### Priority 1: Python Language Features
 
 1. Add `if`/`else` support to step execution
 2. Add `while` loop support
@@ -329,14 +330,14 @@ src/
 4. Add variable support
 5. Implement feature restriction system
 
-### Priority 3: Interactive World Editor
+### Priority 2: Interactive World Editor
 
 1. Make grid cells clickable to set Karel position
 2. Click between cells to add/remove walls
 3. Click cells to add/remove beepers
 4. Visual feedback for edit modes
 
-### Priority 4: Lessons System
+### Priority 3: Lessons System
 
 1. Define lesson/exercise data structures
 2. Create sample lessons
@@ -344,7 +345,7 @@ src/
 4. Build lesson navigation
 5. Add validation functions
 
-### Priority 5: Polish
+### Priority 4: Polish
 
 1. Smooth animations for Karel movements
 2. Visual effects (beeper pickup/place)
@@ -366,15 +367,15 @@ src/
 
 ```typescript
 async function* executeStatementWithStepping(statement: string) {
-	const funcMatch = trimmed.match(/^(\w+)\s*\(/);
-	if (funcMatch && functionDefinitions.has(funcName)) {
-		// Step through function body
-		for (const line of funcDef.lines) {
-			yield lineNumber;
-			yield* await executeStatementWithStepping(line); // Recursive!
-		}
-	}
-	await pyodide.runPythonAsync(statement);
+  const funcMatch = trimmed.match(/^(\w+)\s*\(/);
+  if (funcMatch && functionDefinitions.has(funcName)) {
+    // Step through function body
+    for (const line of funcDef.lines) {
+      yield lineNumber;
+      yield* await executeStatementWithStepping(line); // Recursive!
+    }
+  }
+  await pyodide.runPythonAsync(statement);
 }
 ```
 
@@ -382,10 +383,10 @@ async function* executeStatementWithStepping(statement: string) {
 
 ```typescript
 try {
-	yield * (await executeStatementWithStepping(stmt.code));
+  yield * (await executeStatementWithStepping(stmt.code));
 } catch (err) {
-	executionState.errorLine = executionState.currentLine;
-	throw err;
+  executionState.errorLine = executionState.currentLine;
+  throw err;
 }
 ```
 

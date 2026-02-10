@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import KarelWorld from '$lib/components/KarelWorld.svelte';
   import KarelCodeEditor from '$lib/components/KarelCodeEditor.svelte';
   import KarelControls from '$lib/components/KarelControls.svelte';
@@ -37,6 +37,22 @@ else:
   let pyodideLoading = $state(true);
   let pyodideError: string | null = $state(null);
 
+  // Mode toggle slider
+  let playButton: HTMLButtonElement;
+  let editButton: HTMLButtonElement;
+  let toggleContainer: HTMLDivElement;
+  let mounted = $state(false);
+  let sliderStyle = $derived.by(() => {
+    void mounted; // re-evaluate after mount
+    const btn = mode === 'play' ? playButton : editButton;
+    if (!btn || !toggleContainer) return '';
+    const containerRect = toggleContainer.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    const left = btnRect.left - containerRect.left;
+    const width = btnRect.width;
+    return `left: ${left}px; width: ${width}px;`;
+  });
+
   // Command step limit
   const MAX_STEPS = 2500;
 
@@ -55,9 +71,13 @@ else:
     try {
       pyodide = await loadPyodide();
       pyodideLoading = false;
+      await tick();
+      mounted = true;
     } catch (err) {
       pyodideError = err instanceof Error ? err.message : 'Failed to load Pyodide';
       pyodideLoading = false;
+      await tick();
+      mounted = true;
     }
   });
 
@@ -666,14 +686,24 @@ for var in user_vars:
   {:else}
     <!-- Mode Toggle -->
     <div class="mode-toggle-container">
-      <div class="mode-toggle">
-        <button class="mode-button" class:active={mode === 'play'} onclick={() => (mode = 'play')}>
+      <div class="mode-toggle" bind:this={toggleContainer}>
+        <button
+          class="mode-button"
+          class:active={mode === 'play'}
+          bind:this={playButton}
+          onclick={() => (mode = 'play')}
+        >
           Play
         </button>
-        <button class="mode-button" class:active={mode === 'edit'} onclick={() => (mode = 'edit')}>
-          Edit
+        <button
+          class="mode-button"
+          class:active={mode === 'edit'}
+          bind:this={editButton}
+          onclick={() => (mode = 'edit')}
+        >
+          Setup
         </button>
-        <div class="slider" class:edit-mode={mode === 'edit'}></div>
+        <div class="slider" style={sliderStyle}></div>
       </div>
     </div>
 
@@ -769,7 +799,6 @@ for var in user_vars:
     background: #e2e8f0;
     border-radius: 9999px;
     padding: 4px;
-    gap: 4px;
   }
 
   .mode-button {
@@ -793,17 +822,13 @@ for var in user_vars:
   .slider {
     position: absolute;
     top: 4px;
-    left: 4px;
-    width: calc(50% - 4px);
     height: calc(100% - 8px);
     background: #3b82f6;
     border-radius: 9999px;
-    transition: transform 0.3s ease;
+    transition:
+      left 0.3s ease,
+      width 0.3s ease;
     z-index: 0;
-  }
-
-  .slider.edit-mode {
-    transform: translateX(100%);
   }
 
   .loading-message,

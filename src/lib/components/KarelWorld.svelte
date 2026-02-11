@@ -178,12 +178,14 @@
   <!-- Beepers -->
   <g class="beepers">
     {#each beeperPositions as beeper}
-      <circle
-        cx={beeper.cx}
-        cy={beeper.cy}
-        r={BEEPER_RADIUS}
-        fill="#4ade80"
-        stroke="#22c55e"
+      <!-- Teal diamond -->
+      <path
+        d="M {beeper.cx} {beeper.cy - BEEPER_RADIUS * 1.2} 
+           L {beeper.cx + BEEPER_RADIUS * 1.2} {beeper.cy} 
+           L {beeper.cx} {beeper.cy + BEEPER_RADIUS * 1.2} 
+           L {beeper.cx - BEEPER_RADIUS * 1.2} {beeper.cy} Z"
+        fill="#14b8a6"
+        stroke="#0d9488"
         stroke-width="2"
       />
       {#if beeper.count > 1}
@@ -204,12 +206,32 @@
 
   <!-- Karel -->
   <g class="karel" transform={karelTransform}>
-    <!-- Karel's body (triangle pointing right/east) -->
-    <path d="M -12 -12 L 12 0 L -12 12 Z" fill="#3b82f6" stroke="#1e40af" stroke-width="2" />
-    <!-- Transparent gap to show underlying beeper -->
-    {#if karelOnBeeper}
-      <circle cx="-4" cy="0" r="6" fill="white" opacity="0.7" />
-    {/if}
+    <!-- Classic Stanford Karel - scaled to fit cell -->
+    <g transform="scale(0.22) translate(-67.5, -80.5)">
+      <g
+        transform="translate(67.500000, 80.500000) scale(-1, 1) rotate(-180.000000) translate(-67.500000, -80.500000)"
+      >
+        <path
+          d="M26,118 L26,75 L13,75 L0,75 L0,59.5 L0,44 L6.5,44 L13,44 L13,52.5 L13,61 L19.5,61 L26,61 L26,50.3 L26,39.5 L34.7,30.8 L43.5,22 L58.8,22 L74,22 L73.8,11.3 L73.5,0.5 L91.3,0.2 L109.1,0 L108.8,6.7 L108.5,13.5 L97.8,13.8 L87,14.1 L87,18 L87,22 L110.8,22.2 L134.5,22.5 L134.8,79 L135,135.5 L122.3,148.2 L109.5,161 L67.8,161 L26,161 L26,118 Z M117.3,144.2 L130,131.5 L129.8,79 L129.5,26.5 L89,26.4 L48.5,26.3 L39.3,35.3 L30,44.4 L30,100.7 L30,157 L67.3,157 L104.5,157 L117.3,144.2 Z"
+          fill="#000000"
+          fill-rule="nonzero"
+        />
+        <path
+          d="M130,26 L130,131.5 L104.5,157 L30,157 L30,44.4 L48,26.3 L130,26 Z M100,70 L48,70 L48,144 L100,144 L100,70 Z"
+          fill="#FFFFFF"
+        />
+        <path
+          d="M48,107 L48,70 L74,70 L100,70 L100,107 L100,144 L74,144 L48,144 L48,107 Z M95.5,107 L95.5,74.5 L74,74.5 L52.5,74.5 L52.2,107.3 L52,140 L73.7,139.8 L95.5,139.5 L95.5,107 Z"
+          fill="#000000"
+          fill-rule="nonzero"
+        />
+        <path
+          d="M74,50.5 L74,48 L91.3,48.2 C107.7,48.5 108.5,48.6 108.5,50.5 C108.5,52.4 107.7,52.5 91.3,52.8 L74,53 L74,50.5 Z"
+          fill="#000000"
+          fill-rule="nonzero"
+        />
+      </g>
+    </g>
   </g>
 
   <!-- Interactive cells overlay -->

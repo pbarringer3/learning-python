@@ -46,12 +46,14 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
      - Row numbers along left side, column numbers along bottom
      - Karel rendered as classic Stanford robot with transparent window (SVG from karelhelper.com)
      - Beepers displayed as teal diamond shapes
-   - Walls (horizontal and vertical) rendered as solid lines
+   - Walls (horizontal and vertical) rendered as solid lines (1px thickness)
    - Beepers with count display when multiple present
    - Karel robot with directional orientation (rotates correctly)
-   - **Interactive mode** - Optional clickable cells with onCellClick callback
-   - **Accessibility** - Full keyboard support (Enter/Space) for cell interactions
-   - **Visual feedback** - Hover effects for interactive cells
+   - **Interactive mode** - Optional clickable cells and walls with separate callbacks
+   - **Wall interaction** - Clickable wall segments (8px hotspot width) with hover feedback
+   - **Accessibility** - Full keyboard support (Enter/Space) for cell and wall interactions
+   - **Visual feedback** - Blue hover highlights for interactive elements, crosshair cursor for walls
+   - **Auto-blur on click** - Elements blur after interaction to immediately show results without hover state
    - **Fixed:** North/south directions now correct (north=270°, south=90°)
 
 4. **KarelCodeEditor Component** ([src/lib/components/KarelCodeEditor.svelte](src/lib/components/KarelCodeEditor.svelte))
@@ -79,7 +81,8 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - Karel configuration (position, direction, beeper bag)
    - Edit modes: Move Karel, Add/Remove Walls, Place Beepers
    - **Contextual instructions** - Shows mode-specific help under edit mode buttons
-   - **Exposes click handler** - Bindable prop for external components to use
+   - **Exposes click handlers** - Bindable props for cell and wall interactions
+   - **Wall editing** - Toggle walls by clicking between cells
    - Export to clipboard/download JSON
    - Import from JSON file
 
@@ -90,7 +93,8 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - **Auto-reset on Setup** - Switching to Setup mode automatically resets execution state
    - **Play Mode** - Code editor, output panel, world display, and execution controls
    - **Edit Mode** - World editor with interactive Karel World for setup
-   - **Interactive grid** - Click cells to move Karel in edit mode
+   - **Interactive grid** - Click cells to move Karel or place beepers, click wall segments to toggle walls
+   - **Mode-based interactions** - Different overlays shown based on edit mode (karel/walls/beepers)
    - **State synchronization** - World changes persist when switching between modes
    - Orchestrates all components
    - Python code execution via Pyodide
@@ -352,8 +356,8 @@ src/
    - Custom error messages for educational feedback
 
 2. **Interactive World Editing**
-   - ✅ **Move Karel mode** - Click grid to move Karel (IMPLEMENTED)
-   - Add/Remove Walls mode not yet wired up
+   - ✅ **Move Karel mode** - Click grid to move Karel (COMPLETE)
+   - ✅ **Add/Remove Walls mode** - Click wall segments to toggle walls (COMPLETE)
    - Place Beepers mode not yet wired up
 
 3. **Validation Functions**
@@ -387,11 +391,11 @@ src/
 ### Priority 2: Interactive World Editor
 
 1. ✅ Make grid cells clickable to set Karel position (COMPLETE)
-2. Wire up Add/Remove Walls mode with click detection on grid edges
-3. Wire up Place Beepers mode with click detection and beeper count
-4. Click between cells to add/remove walls
-5. Click cells to add/remove beepers
-6. Visual feedback for edit modes
+2. ✅ Wire up Add/Remove Walls mode with click detection on grid edges (COMPLETE)
+3. ✅ Click between cells to add/remove walls (COMPLETE)
+4. ✅ Visual feedback for edit modes - mode-specific overlays and hover effects (COMPLETE)
+5. Wire up Place Beepers mode with click detection and beeper count
+6. Click cells to add/remove beepers with configurable count
 
 ### Priority 3: Lessons System
 

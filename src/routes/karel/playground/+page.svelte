@@ -22,6 +22,9 @@
   let currentWorld = $state(createDefaultWorld());
   let editorMode = $state<'karel' | 'walls' | 'beepers'>('karel');
   let editorCellClickHandler: ((x: number, y: number) => void) | undefined = $state();
+  let editorWallClickHandler:
+    | ((type: 'horizontal' | 'vertical', x: number, y: number) => void)
+    | undefined = $state();
   let executionState = $state(createDefaultExecutionState());
   let code = $state(`# Welcome to Karel the Robot Playground!
 # Write your code here
@@ -768,6 +771,7 @@ for var in user_vars:
               onupdate={handleWorldUpdate}
               bind:editMode={editorMode}
               bind:handleCellClick={editorCellClickHandler}
+              bind:handleWallClick={editorWallClickHandler}
             />
           </div>
         </div>
@@ -778,7 +782,8 @@ for var in user_vars:
             <KarelWorld
               world={initialWorld}
               interactive={true}
-              onCellClick={editorCellClickHandler}
+              onCellClick={editorMode !== 'walls' ? editorCellClickHandler : undefined}
+              onWallClick={editorMode === 'walls' ? editorWallClickHandler : undefined}
             />
           </div>
         </div>

@@ -12,6 +12,7 @@
     class?: string;
     editMode?: 'karel' | 'walls' | 'beepers';
     handleCellClick?: (x: number, y: number) => void;
+    handleWallClick?: (type: 'horizontal' | 'vertical', x: number, y: number) => void;
   }
 
   let {
@@ -19,7 +20,8 @@
     onupdate,
     class: className = '',
     editMode = $bindable('karel'),
-    handleCellClick = $bindable()
+    handleCellClick = $bindable(),
+    handleWallClick = $bindable()
   }: Props = $props();
 
   let internalEditMode: 'karel' | 'walls' | 'beepers' = $state('karel');
@@ -79,15 +81,63 @@
     }));
   }
 
+  function toggleWall(type: 'horizontal' | 'vertical', x: number, y: number) {
+    updateWorld((w) => {
+      const existingIndex = w.walls.findIndex(
+        (wall) => wall.type === type && wall.x === x && wall.y === y
+      );
+
+      if (existingIndex >= 0) {
+        // Remove wall
+        return {
+          ...w,
+          walls: w.walls.filter((_, i) => i !== existingIndex)
+        };
+      } else {
+        // Add wall
+        return {
+          ...w,
+          walls: [...w.walls, { type, x, y }]
+        };
+      }
+    });
+  }
+
   function handleInternalCellClick(x: number, y: number) {
     if (internalEditMode === 'karel') {
       setKarelPosition(x, y);
+    } else if (internalEditMode === 'beepers') {
+      // Toggle beepers at this position
+      updateWorld((w) => {
+        const existingIndex = w.beepers.findIndex((beeper) => beeper.x === x && beeper.y === y);
+
+        if (existingIndex >= 0) {
+          // Remove beeper
+          return {
+            ...w,
+            beepers: w.beepers.filter((_, i) => i !== existingIndex)
+          };
+        } else {
+          // Add beeper
+          return {
+            ...w,
+            beepers: [...w.beepers, { x, y, count: beeperCount }]
+          };
+        }
+      });
     }
-    // TODO: Implement walls and beepers editing
+    // Note: wall clicks are handled by handleWallClick
   }
 
-  // Expose the handler
+  function handleInternalWallClick(type: 'horizontal' | 'vertical', x: number, y: number) {
+    if (internalEditMode === 'walls') {
+      toggleWall(type, x, y);
+    }
+  }
+
+  // Expose the handlers
   handleCellClick = handleInternalCellClick;
+  handleWallClick = handleInternalWallClick;
 
   function clearWorld() {
     updateWorld((w) => ({
@@ -223,9 +273,9 @@
       {#if internalEditMode === 'karel'}
         <p>Click on a cell in the Karel World to move Karel there</p>
       {:else if internalEditMode === 'walls'}
-        <p>Click between cells to toggle walls</p>
+        <p>Click on the wall segments between cells to add/remove walls</p>
       {:else if internalEditMode === 'beepers'}
-        <p>Click on cells to add/remove beepers</p>
+        <p>Click on cells to add/remove beepers (count: {beeperCount})</p>
       {/if}
     </div>
 

@@ -483,19 +483,23 @@ pyodide.globals.set('turn_left', () => {
    - Visual grid display
 
 2. **Interactive Editing**
-   - **✅ Move Karel Mode** (IMPLEMENTED): Click cells to move Karel to new position
-   - Click to place/remove walls between cells (TODO)
+   - **✅ Move Karel Mode** (COMPLETE): Click cells to move Karel to new position
+   - **✅ Add/Remove Walls Mode** (COMPLETE): Click wall segments between cells to toggle walls
    - Click to add/remove beepers with count selector (TODO)
    - Direction selector for Karel (working via dropdown)
    - **Interactive Karel World**: Right-side world display is clickable in edit mode
+   - **Mode-based overlays**: Shows cell hotspots or wall hotspots based on active mode
+   - **Visual feedback**: Blue hover highlights with crosshair cursor for walls
    - **Contextual Help**: Mode-specific instructions shown under edit mode buttons
 
 3. **Technical Implementation**
-   - KarelWorld component supports `interactive` prop for clickable cells
-   - WorldEditor exposes `handleCellClick` function via bindable prop
-   - Playground orchestrates interaction between WorldEditor and KarelWorld
-   - Full keyboard accessibility (Enter/Space keys)
-   - Visual hover feedback for interactive cells
+   - KarelWorld component supports `interactive` prop with separate `onCellClick` and `onWallClick` callbacks
+   - Wall hotspots: 8px wide clickable areas with 1px visual wall thickness
+   - WorldEditor exposes `handleCellClick` and `handleWallClick` functions via bindable props
+   - Playground conditionally passes callbacks based on active edit mode
+   - Full keyboard accessibility (Enter/Space keys) for both cells and walls
+   - Visual hover feedback: blue fill for cells, blue stroke with crosshair cursor for walls
+   - Elements automatically blur after click to remove hover state and show results clearly
    - State synchronization ensures changes persist between Play/Edit modes
 
 4. **Export**

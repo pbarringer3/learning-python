@@ -6,14 +6,21 @@
     class?: string;
     interactive?: boolean;
     onCellClick?: (x: number, y: number) => void;
+    onWallClick?: (type: 'horizontal' | 'vertical', x: number, y: number) => void;
   }
 
-  let { world, class: className = '', interactive = false, onCellClick }: Props = $props();
+  let {
+    world,
+    class: className = '',
+    interactive = false,
+    onCellClick,
+    onWallClick
+  }: Props = $props();
 
   // SVG dimensions
   const CELL_SIZE = 40;
   const PADDING = 40; // Increased for labels
-  const WALL_THICKNESS = 3;
+  const WALL_THICKNESS = 1;
   const BEEPER_RADIUS = 8;
   const PLUS_SIZE = 4; // Size of plus signs at intersections
 
@@ -149,6 +156,50 @@
       onCellClick(x, y);
     }
   }
+
+  function handleWallSegmentClick(type: 'horizontal' | 'vertical', x: number, y: number) {
+    if (onWallClick) {
+      onWallClick(type, x, y);
+    }
+  }
+
+  // Generate interactive wall segments
+  const interactiveWallSegments = $derived(
+    interactive
+      ? [
+          // Horizontal walls
+          ...Array.from({ length: world.dimensions.width * world.dimensions.height }, (_, i) => {
+            const gridX = (i % world.dimensions.width) + 1;
+            const gridY = Math.floor(i / world.dimensions.width) + 1;
+            const pos = gridToSvg(gridX, gridY);
+            return {
+              type: 'horizontal' as const,
+              x1: pos.x,
+              y1: pos.y + CELL_SIZE,
+              x2: pos.x + CELL_SIZE,
+              y2: pos.y + CELL_SIZE,
+              gridX,
+              gridY
+            };
+          }),
+          // Vertical walls
+          ...Array.from({ length: world.dimensions.width * world.dimensions.height }, (_, i) => {
+            const gridX = (i % world.dimensions.width) + 1;
+            const gridY = Math.floor(i / world.dimensions.width) + 1;
+            const pos = gridToSvg(gridX, gridY);
+            return {
+              type: 'vertical' as const,
+              x1: pos.x + CELL_SIZE,
+              y1: pos.y,
+              x2: pos.x + CELL_SIZE,
+              y2: pos.y + CELL_SIZE,
+              gridX,
+              gridY
+            };
+          })
+        ]
+      : []
+  );
 </script>
 
 <svg
@@ -281,8 +332,38 @@
     </g>
   </g>
 
+  <!-- Interactive wall segments overlay -->
+  {#if interactive && onWallClick}
+    <g class="interactive-walls">
+      {#each interactiveWallSegments as wall}
+        <line
+          x1={wall.x1}
+          y1={wall.y1}
+          x2={wall.x2}
+          y2={wall.y2}
+          stroke="transparent"
+          stroke-width="8"
+          class="wall-hotspot"
+          role="button"
+          tabindex="0"
+          onclick={(e) => {
+            handleWallSegmentClick(wall.type, wall.gridX, wall.gridY);
+            e.currentTarget.blur();
+          }}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleWallSegmentClick(wall.type, wall.gridX, wall.gridY);
+              e.currentTarget.blur();
+            }
+          }}
+        />
+      {/each}
+    </g>
+  {/if}
+
   <!-- Interactive cells overlay -->
-  {#if interactive}
+  {#if interactive && onCellClick}
     <g class="interactive-cells">
       {#each interactiveCells as cell}
         <rect
@@ -294,11 +375,15 @@
           class="cell-hotspot"
           role="button"
           tabindex="0"
-          onclick={() => handleCellClick(cell.gridX, cell.gridY)}
+          onclick={(e) => {
+            handleCellClick(cell.gridX, cell.gridY);
+            e.currentTarget.blur();
+          }}
           onkeydown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               handleCellClick(cell.gridX, cell.gridY);
+              e.currentTarget.blur();
             }
           }}
         />
@@ -327,5 +412,20 @@
   .cell-hotspot:focus {
     outline: none;
     fill: rgba(59, 130, 246, 0.2);
+  }
+
+  .wall-hotspot {
+    cursor: crosshair;
+    stroke: transparent;
+    transition: stroke 0.2s;
+  }
+
+  .wall-hotspot:hover {
+    stroke: rgba(59, 130, 246, 0.6);
+  }
+
+  .wall-hotspot:focus {
+    outline: none;
+    stroke: rgba(59, 130, 246, 0.8);
   }
 </style>

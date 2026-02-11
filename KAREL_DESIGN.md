@@ -67,11 +67,13 @@ Karel the Robot is an interactive, browser-based module for teaching Python prog
 
 ### World Features
 
-- Grid-based world with walls between cells
-- Beepers (colored objects) that can be picked up and placed
+- Grid-based world with solid border walls
+- Grid intersections marked with blue plus signs at cell centers
+- Row and column numbers displayed along left side and bottom
+- Beepers are teal diamond shapes that can be picked up and placed
 - Karel has a beeper bag (can be limited or unlimited per lesson)
-- Karel's body has transparent gap to show underlying beeper
-- World boundaries act as walls
+- Karel rendered as classic Stanford Karel robot with transparent window
+- World boundaries act as solid walls
 
 ---
 

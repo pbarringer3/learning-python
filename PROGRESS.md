@@ -40,11 +40,15 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 
 3. **KarelWorld Component** ([src/lib/components/KarelWorld.svelte](src/lib/components/KarelWorld.svelte))
    - SVG-based rendering (scalable, interactive-ready)
-   - Grid with corner markers
-   - Walls (horizontal and vertical)
-   - Beepers with count display
-   - Karel robot with directional orientation
-   - Transparent body gap to show underlying beepers
+   - Classic Stanford Karel visual design:
+     - Solid border wall around world perimeter
+     - Blue plus signs (+) at center of each grid cell
+     - Row numbers along left side, column numbers along bottom
+     - Karel rendered as classic Stanford robot with transparent window (SVG from karelhelper.com)
+     - Beepers displayed as teal diamond shapes
+   - Walls (horizontal and vertical) rendered as solid lines
+   - Beepers with count display when multiple present
+   - Karel robot with directional orientation (rotates correctly)
    - **Interactive mode** - Optional clickable cells with onCellClick callback
    - **Accessibility** - Full keyboard support (Enter/Space) for cell interactions
    - **Visual feedback** - Hover effects for interactive cells

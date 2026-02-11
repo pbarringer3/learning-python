@@ -12,9 +12,10 @@
 
   // SVG dimensions
   const CELL_SIZE = 40;
-  const PADDING = 20;
+  const PADDING = 40; // Increased for labels
   const WALL_THICKNESS = 3;
   const BEEPER_RADIUS = 8;
+  const PLUS_SIZE = 4; // Size of plus signs at intersections
 
   // Calculate SVG dimensions
   const svgWidth = $derived(world.dimensions.width * CELL_SIZE + PADDING * 2);
@@ -48,33 +49,41 @@
     `translate(${karelPos.x + CELL_SIZE / 2}, ${karelPos.y + CELL_SIZE / 2}) rotate(${getKarelRotation()})`
   );
 
-  // Generate grid lines
-  const verticalLines = $derived(
-    Array.from({ length: world.dimensions.width + 1 }, (_, i) => ({
-      x: PADDING + i * CELL_SIZE,
-      y1: PADDING,
-      y2: PADDING + world.dimensions.height * CELL_SIZE
-    }))
-  );
-
-  const horizontalLines = $derived(
-    Array.from({ length: world.dimensions.height + 1 }, (_, i) => ({
-      y: PADDING + i * CELL_SIZE,
-      x1: PADDING,
-      x2: PADDING + world.dimensions.width * CELL_SIZE
-    }))
-  );
-
-  // Generate corner markers
-  const corners = $derived(
-    Array.from({ length: (world.dimensions.width + 1) * (world.dimensions.height + 1) }, (_, i) => {
-      const col = i % (world.dimensions.width + 1);
-      const row = Math.floor(i / (world.dimensions.width + 1));
+  // Generate plus signs at cell centers
+  const plusSigns = $derived(
+    Array.from({ length: world.dimensions.width * world.dimensions.height }, (_, i) => {
+      const col = i % world.dimensions.width;
+      const row = Math.floor(i / world.dimensions.width);
       return {
-        x: PADDING + col * CELL_SIZE,
-        y: PADDING + row * CELL_SIZE
+        x: PADDING + (col + 0.5) * CELL_SIZE,
+        y: PADDING + (row + 0.5) * CELL_SIZE
       };
     })
+  );
+
+  // Generate border wall
+  const borderWall = $derived({
+    x: PADDING,
+    y: PADDING,
+    width: world.dimensions.width * CELL_SIZE,
+    height: world.dimensions.height * CELL_SIZE
+  });
+
+  // Generate row and column labels
+  const columnLabels = $derived(
+    Array.from({ length: world.dimensions.width }, (_, i) => ({
+      x: PADDING + (i + 0.5) * CELL_SIZE,
+      y: PADDING + world.dimensions.height * CELL_SIZE + 20,
+      label: i + 1
+    }))
+  );
+
+  const rowLabels = $derived(
+    Array.from({ length: world.dimensions.height }, (_, i) => ({
+      x: PADDING - 10,
+      y: PADDING + (world.dimensions.height - i - 0.5) * CELL_SIZE,
+      label: i + 1
+    }))
   );
 
   // Generate wall segments
@@ -151,20 +160,58 @@
   <!-- Background -->
   <rect width={svgWidth} height={svgHeight} fill="white" />
 
-  <!-- Grid lines -->
-  <g class="grid" stroke="#ddd" stroke-width="1">
-    {#each verticalLines as line}
-      <line x1={line.x} y1={line.y1} x2={line.x} y2={line.y2} />
-    {/each}
-    {#each horizontalLines as line}
-      <line x1={line.x1} y1={line.y} x2={line.x2} y2={line.y} />
+  <!-- Row labels -->
+  <g class="row-labels">
+    {#each rowLabels as label}
+      <text
+        x={label.x}
+        y={label.y}
+        text-anchor="middle"
+        dominant-baseline="middle"
+        fill="#666"
+        font-size="14"
+        font-family="sans-serif"
+      >
+        {label.label}
+      </text>
     {/each}
   </g>
 
-  <!-- Corner markers -->
-  <g class="corners" fill="#999">
-    {#each corners as corner}
-      <circle cx={corner.x} cy={corner.y} r="2" />
+  <!-- Column labels -->
+  <g class="column-labels">
+    {#each columnLabels as label}
+      <text
+        x={label.x}
+        y={label.y}
+        text-anchor="middle"
+        dominant-baseline="middle"
+        fill="#666"
+        font-size="14"
+        font-family="sans-serif"
+      >
+        {label.label}
+      </text>
+    {/each}
+  </g>
+
+  <!-- Border wall -->
+  <rect
+    x={borderWall.x}
+    y={borderWall.y}
+    width={borderWall.width}
+    height={borderWall.height}
+    fill="none"
+    stroke="#333"
+    stroke-width={WALL_THICKNESS}
+  />
+
+  <!-- Plus signs at intersections -->
+  <g class="intersections" stroke="#4169e1" stroke-width="1.5" stroke-linecap="round">
+    {#each plusSigns as plus}
+      <!-- Horizontal line of plus -->
+      <line x1={plus.x - PLUS_SIZE} y1={plus.y} x2={plus.x + PLUS_SIZE} y2={plus.y} />
+      <!-- Vertical line of plus -->
+      <line x1={plus.x} y1={plus.y - PLUS_SIZE} x2={plus.x} y2={plus.y + PLUS_SIZE} />
     {/each}
   </g>
 

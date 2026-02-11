@@ -4,9 +4,11 @@
   interface Props {
     world: KarelWorld;
     class?: string;
+    interactive?: boolean;
+    onCellClick?: (x: number, y: number) => void;
   }
 
-  let { world, class: className = '' }: Props = $props();
+  let { world, class: className = '', interactive = false, onCellClick }: Props = $props();
 
   // SVG dimensions
   const CELL_SIZE = 40;
@@ -115,6 +117,29 @@
   const karelOnBeeper = $derived(
     world.beepers.some((b) => b.x === world.karel.position.x && b.y === world.karel.position.y)
   );
+
+  // Generate interactive cells if needed
+  const interactiveCells = $derived(
+    interactive
+      ? Array.from({ length: world.dimensions.width * world.dimensions.height }, (_, i) => {
+          const gridX = (i % world.dimensions.width) + 1;
+          const gridY = Math.floor(i / world.dimensions.width) + 1;
+          const pos = gridToSvg(gridX, gridY);
+          return {
+            x: pos.x,
+            y: pos.y,
+            gridX,
+            gridY
+          };
+        })
+      : []
+  );
+
+  function handleCellClick(x: number, y: number) {
+    if (onCellClick) {
+      onCellClick(x, y);
+    }
+  }
 </script>
 
 <svg
@@ -186,6 +211,31 @@
       <circle cx="-4" cy="0" r="6" fill="white" opacity="0.7" />
     {/if}
   </g>
+
+  <!-- Interactive cells overlay -->
+  {#if interactive}
+    <g class="interactive-cells">
+      {#each interactiveCells as cell}
+        <rect
+          x={cell.x}
+          y={cell.y}
+          width={CELL_SIZE}
+          height={CELL_SIZE}
+          fill="transparent"
+          class="cell-hotspot"
+          role="button"
+          tabindex="0"
+          onclick={() => handleCellClick(cell.gridX, cell.gridY)}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleCellClick(cell.gridX, cell.gridY);
+            }
+          }}
+        />
+      {/each}
+    </g>
+  {/if}
 </svg>
 
 <style>
@@ -194,5 +244,19 @@
     border-radius: 4px;
     max-width: 100%;
     height: auto;
+  }
+
+  .cell-hotspot {
+    cursor: pointer;
+    stroke: none;
+  }
+
+  .cell-hotspot:hover {
+    fill: rgba(59, 130, 246, 0.1);
+  }
+
+  .cell-hotspot:focus {
+    outline: none;
+    fill: rgba(59, 130, 246, 0.2);
   }
 </style>

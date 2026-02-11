@@ -20,6 +20,8 @@
   let mode = $state<'play' | 'edit'>('play');
   let initialWorld = $state(createDefaultWorld());
   let currentWorld = $state(createDefaultWorld());
+  let editorMode = $state<'karel' | 'walls' | 'beepers'>('karel');
+  let editorCellClickHandler: ((x: number, y: number) => void) | undefined = $state();
   let executionState = $state(createDefaultExecutionState());
   let code = $state(`# Welcome to Karel the Robot Playground!
 # Write your code here
@@ -38,9 +40,9 @@ else:
   let pyodideError: string | null = $state(null);
 
   // Mode toggle slider
-  let playButton: HTMLButtonElement;
-  let editButton: HTMLButtonElement;
-  let toggleContainer: HTMLDivElement;
+  let playButton: HTMLButtonElement | undefined = $state();
+  let editButton: HTMLButtonElement | undefined = $state();
+  let toggleContainer: HTMLDivElement | undefined = $state();
   let mounted = $state(false);
   let sliderStyle = $derived.by(() => {
     void mounted; // re-evaluate after mount
@@ -664,6 +666,13 @@ for var in user_vars:
     initialWorld = cloneWorld(newWorld);
     currentWorld = cloneWorld(newWorld);
   }
+
+  function handleModeChange(newMode: 'play' | 'edit') {
+    if (newMode === 'edit') {
+      handleReset();
+    }
+    mode = newMode;
+  }
 </script>
 
 <svelte:head>
@@ -691,7 +700,7 @@ for var in user_vars:
           class="mode-button"
           class:active={mode === 'play'}
           bind:this={playButton}
-          onclick={() => (mode = 'play')}
+          onclick={() => handleModeChange('play')}
         >
           Play
         </button>
@@ -699,7 +708,7 @@ for var in user_vars:
           class="mode-button"
           class:active={mode === 'edit'}
           bind:this={editButton}
-          onclick={() => (mode = 'edit')}
+          onclick={() => handleModeChange('edit')}
         >
           Setup
         </button>
@@ -754,14 +763,14 @@ for var in user_vars:
         <div class="editor-panel">
           <div class="editor-section">
             <h2>World Editor</h2>
-            <WorldEditor bind:world={initialWorld} onupdate={handleWorldUpdate} />
+            <WorldEditor bind:world={initialWorld} onupdate={handleWorldUpdate} bind:editMode={editorMode} bind:handleCellClick={editorCellClickHandler} />
           </div>
         </div>
 
         <div class="world-panel">
           <div class="world-display">
             <h2>Karel World</h2>
-            <KarelWorld world={initialWorld} />
+            <KarelWorld world={initialWorld} interactive={true} onCellClick={editorCellClickHandler} />
           </div>
         </div>
       </div>

@@ -1,18 +1,30 @@
 <script lang="ts">
-  import type { KarelWorld, Wall, BeeperLocation, DirectionType } from '$lib/karel/types';
+  import type { KarelWorld as KarelWorldType, Wall, BeeperLocation, DirectionType } from '$lib/karel/types';
 
   interface Props {
-    world: KarelWorld;
-    onupdate?: (world: KarelWorld) => void;
+    world: KarelWorldType;
+    onupdate?: (world: KarelWorldType) => void;
     class?: string;
+    editMode?: 'karel' | 'walls' | 'beepers';
+    handleCellClick?: (x: number, y: number) => void;
   }
 
-  let { world = $bindable(), onupdate, class: className = '' }: Props = $props();
+  let { world = $bindable(), onupdate, class: className = '', editMode = $bindable('karel'), handleCellClick = $bindable() }: Props = $props();
 
-  let editMode: 'karel' | 'walls' | 'beepers' = $state('karel');
+  let internalEditMode: 'karel' | 'walls' | 'beepers' = $state('karel');
+  $effect(() => {
+    if (editMode !== undefined) {
+      internalEditMode = editMode;
+    }
+  });
+  $effect(() => {
+    if (editMode !== undefined) {
+      editMode = internalEditMode;
+    }
+  });
   let beeperCount = $state(1);
 
-  function updateWorld(updater: (w: KarelWorld) => KarelWorld) {
+  function updateWorld(updater: (w: KarelWorldType) => KarelWorldType) {
     world = updater(world);
     if (onupdate) {
       onupdate(world);
@@ -45,6 +57,26 @@
       }
     }));
   }
+
+  function setKarelPosition(x: number, y: number) {
+    updateWorld((w) => ({
+      ...w,
+      karel: {
+        ...w.karel,
+        position: { x, y }
+      }
+    }));
+  }
+
+  function handleInternalCellClick(x: number, y: number) {
+    if (internalEditMode === 'karel') {
+      setKarelPosition(x, y);
+    }
+    // TODO: Implement walls and beepers editing
+  }
+
+  // Expose the handler
+  handleCellClick = handleInternalCellClick;
 
   function clearWorld() {
     updateWorld((w) => ({
@@ -157,26 +189,36 @@
     <h3>Edit Mode</h3>
     <div class="mode-buttons">
       <button
-        class="mode-btn {editMode === 'karel' ? 'active' : ''}"
-        onclick={() => (editMode = 'karel')}
+        class="mode-btn {internalEditMode === 'karel' ? 'active' : ''}"
+        onclick={() => (internalEditMode = 'karel')}
       >
         Move Karel
       </button>
       <button
-        class="mode-btn {editMode === 'walls' ? 'active' : ''}"
-        onclick={() => (editMode = 'walls')}
+        class="mode-btn {internalEditMode === 'walls' ? 'active' : ''}"
+        onclick={() => (internalEditMode = 'walls')}
       >
         Add/Remove Walls
       </button>
       <button
-        class="mode-btn {editMode === 'beepers' ? 'active' : ''}"
-        onclick={() => (editMode = 'beepers')}
+        class="mode-btn {internalEditMode === 'beepers' ? 'active' : ''}"
+        onclick={() => (internalEditMode = 'beepers')}
       >
         Place Beepers
       </button>
     </div>
 
-    {#if editMode === 'beepers'}
+    <div class="mode-instruction">
+      {#if internalEditMode === 'karel'}
+        <p>Click on a cell in the Karel World to move Karel there</p>
+      {:else if internalEditMode === 'walls'}
+        <p>Click between cells to toggle walls</p>
+      {:else if internalEditMode === 'beepers'}
+        <p>Click on cells to add/remove beepers</p>
+      {/if}
+    </div>
+
+    {#if internalEditMode === 'beepers'}
       <div class="beeper-config">
         <label>
           Beeper Count:
@@ -194,15 +236,6 @@
       <button onclick={downloadWorld} class="action-btn">Download JSON</button>
       <button onclick={importWorld} class="action-btn">Import JSON</button>
     </div>
-  </div>
-
-  <div class="editor-section instructions">
-    <h4>Instructions:</h4>
-    <ul>
-      <li><strong>Move Karel:</strong> Click on a cell to move Karel there</li>
-      <li><strong>Add/Remove Walls:</strong> Click between cells to toggle walls</li>
-      <li><strong>Place Beepers:</strong> Click on cells to add/remove beepers</li>
-    </ul>
   </div>
 </div>
 
@@ -227,12 +260,6 @@
     margin: 0 0 0.75rem 0;
     font-size: 16px;
     color: #333;
-  }
-
-  .editor-section h4 {
-    margin: 0 0 0.5rem 0;
-    font-size: 14px;
-    color: #555;
   }
 
   .dimension-controls,
@@ -313,17 +340,17 @@
     transform: translateY(0);
   }
 
-  .instructions {
-    font-size: 13px;
-    color: #666;
+  .mode-instruction {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: #f0f9ff;
+    border-left: 3px solid #3b82f6;
+    border-radius: 4px;
   }
 
-  .instructions ul {
+  .mode-instruction p {
     margin: 0;
-    padding-left: 1.5rem;
-  }
-
-  .instructions li {
-    margin-bottom: 0.25rem;
+    font-size: 14px;
+    color: #1e40af;
   }
 </style>

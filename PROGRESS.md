@@ -1,6 +1,6 @@
 # Karel the Robot - Implementation Progress
 
-**Status:** Phase 1 Complete - Playground Fully Functional
+**Status:** Phase 1+ Complete - Playground Fully Functional with Interactive Editor
 
 ---
 
@@ -15,8 +15,9 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 - Error handling with red error highlighting
 - All Karel commands and sensors
 - **Play/Edit mode toggle** with clean interface separation
-- Interactive world editor
+- **Interactive world editor** with clickable grid for Karel placement
 - Record-and-replay execution architecture
+- State persistence between Play/Edit modes
 
 ---
 
@@ -44,6 +45,9 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - Beepers with count display
    - Karel robot with directional orientation
    - Transparent body gap to show underlying beepers
+   - **Interactive mode** - Optional clickable cells with onCellClick callback
+   - **Accessibility** - Full keyboard support (Enter/Space) for cell interactions
+   - **Visual feedback** - Hover effects for interactive cells
    - **Fixed:** North/south directions now correct (north=270°, south=90°)
 
 4. **KarelCodeEditor Component** ([src/lib/components/KarelCodeEditor.svelte](src/lib/components/KarelCodeEditor.svelte))
@@ -70,6 +74,8 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - Grid dimension controls (1-30x30)
    - Karel configuration (position, direction, beeper bag)
    - Edit modes: Move Karel, Add/Remove Walls, Place Beepers
+   - **Contextual instructions** - Shows mode-specific help under edit mode buttons
+   - **Exposes click handler** - Bindable prop for external components to use
    - Export to clipboard/download JSON
    - Import from JSON file
 
@@ -77,8 +83,11 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 
 8. **Playground Container** ([src/routes/karel/playground/+page.svelte](src/routes/karel/playground/+page.svelte))
    - **Play/Edit Mode Toggle** - Centered slider button to switch between modes
+   - **Auto-reset on Setup** - Switching to Setup mode automatically resets execution state
    - **Play Mode** - Code editor, output panel, world display, and execution controls
-   - **Edit Mode** - World editor and world preview for setting up initial state
+   - **Edit Mode** - World editor with interactive Karel World for setup
+   - **Interactive grid** - Click cells to move Karel in edit mode
+   - **State synchronization** - World changes persist when switching between modes
    - Orchestrates all components
    - Python code execution via Pyodide
    - Full implementation of all 22 Karel commands
@@ -162,6 +171,31 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 - Putting beeper with empty bag
 - Calling undefined function
 - Infinite loops (step limit)
+
+### ✅ Interactive World Editing
+
+**Move Karel Mode:**
+
+- Click any cell in Karel World to move Karel there
+- Works in Edit mode using right-side Karel World display
+- Full keyboard accessibility (Enter/Space keys)
+- Visual hover feedback for clickable cells
+- Position updates persist when switching to Play mode
+
+**Architecture:**
+
+- WorldEditor exposes `handleCellClick` function via bindable prop
+- Playground binds the handler and passes to KarelWorld component
+- KarelWorld renders transparent interactive overlay when `interactive={true}`
+- Proper state synchronization through `handleWorldUpdate` callback
+- Direction changes already worked; position changes now also synchronized
+
+**UX Improvements:**
+
+- Contextual instructions show under Edit Mode buttons
+- Only relevant instruction displayed based on selected mode
+- Removed separate Instructions section for cleaner UI
+- Auto-reset when switching to Setup mode prevents confusion
 
 ### ✅ State Management
 
@@ -314,8 +348,9 @@ src/
    - Custom error messages for educational feedback
 
 2. **Interactive World Editing**
-   - Can't click grid to place walls/beepers directly
-   - Edit modes exist but not wired up to SVG clicks
+   - ✅ **Move Karel mode** - Click grid to move Karel (IMPLEMENTED)
+   - Add/Remove Walls mode not yet wired up
+   - Place Beepers mode not yet wired up
 
 3. **Validation Functions**
    - No exercise validation system
@@ -347,7 +382,9 @@ src/
 
 ### Priority 2: Interactive World Editor
 
-1. Make grid cells clickable to set Karel position
+1. ✅ Make grid cells clickable to set Karel position (COMPLETE)
+2. Wire up Add/Remove Walls mode with click detection on grid edges
+3. Wire up Place Beepers mode with click detection and beeper count
 2. Click between cells to add/remove walls
 3. Click cells to add/remove beepers
 4. Visual feedback for edit modes

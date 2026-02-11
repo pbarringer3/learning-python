@@ -467,7 +467,10 @@ pyodide.globals.set('turn_left', () => {
 - Dedicated route (e.g., `/karel/playground`)
 - **Mode Toggle**: Slider button to switch between Play and Edit modes
   - **Play Mode** (default): Code editor + execution controls + world display
-  - **Edit Mode**: World editor + world preview for setup
+  - **Edit Mode**: World editor + interactive world display for setup
+  - **Auto-reset**: Switching to Setup mode automatically resets execution state
+- **Interactive Grid**: In Edit mode, click cells in Karel World to move Karel
+- **State Persistence**: World changes (position, direction, beepers) persist when switching modes
 - Combines world editor + code editor + Karel world display
 - Target users: Both instructors (lesson authoring) and students (experimentation)
 
@@ -478,17 +481,27 @@ pyodide.globals.set('turn_left', () => {
    - Visual grid display
 
 2. **Interactive Editing**
-   - Click to place/remove walls between cells
-   - Click to add/remove beepers (with count selector)
-   - Click to set Karel's starting position
-   - Direction selector for Karel
+   - **✅ Move Karel Mode** (IMPLEMENTED): Click cells to move Karel to new position
+   - Click to place/remove walls between cells (TODO)
+   - Click to add/remove beepers with count selector (TODO)
+   - Direction selector for Karel (working via dropdown)
+   - **Interactive Karel World**: Right-side world display is clickable in edit mode
+   - **Contextual Help**: Mode-specific instructions shown under edit mode buttons
 
-3. **Export**
+3. **Technical Implementation**
+   - KarelWorld component supports `interactive` prop for clickable cells
+   - WorldEditor exposes `handleCellClick` function via bindable prop
+   - Playground orchestrates interaction between WorldEditor and KarelWorld
+   - Full keyboard accessibility (Enter/Space keys)
+   - Visual hover feedback for interactive cells
+   - State synchronization ensures changes persist between Play/Edit modes
+
+4. **Export**
    - Generate JSON matching TypeScript data structure
    - Copy to clipboard button
    - Download as .json file button
 
-4. **Import**
+5. **Import**
    - Upload .json file
    - Load world state into editor
 

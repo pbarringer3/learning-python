@@ -385,9 +385,9 @@ src/
 1. ✅ Make grid cells clickable to set Karel position (COMPLETE)
 2. Wire up Add/Remove Walls mode with click detection on grid edges
 3. Wire up Place Beepers mode with click detection and beeper count
-2. Click between cells to add/remove walls
-3. Click cells to add/remove beepers
-4. Visual feedback for edit modes
+4. Click between cells to add/remove walls
+5. Click cells to add/remove beepers
+6. Visual feedback for edit modes
 
 ### Priority 3: Lessons System
 

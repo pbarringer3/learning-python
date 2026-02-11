@@ -1,5 +1,10 @@
 <script lang="ts">
-  import type { KarelWorld as KarelWorldType, Wall, BeeperLocation, DirectionType } from '$lib/karel/types';
+  import type {
+    KarelWorld as KarelWorldType,
+    Wall,
+    BeeperLocation,
+    DirectionType
+  } from '$lib/karel/types';
 
   interface Props {
     world: KarelWorldType;
@@ -9,7 +14,13 @@
     handleCellClick?: (x: number, y: number) => void;
   }
 
-  let { world = $bindable(), onupdate, class: className = '', editMode = $bindable('karel'), handleCellClick = $bindable() }: Props = $props();
+  let {
+    world = $bindable(),
+    onupdate,
+    class: className = '',
+    editMode = $bindable('karel'),
+    handleCellClick = $bindable()
+  }: Props = $props();
 
   let internalEditMode: 'karel' | 'walls' | 'beepers' = $state('karel');
   $effect(() => {

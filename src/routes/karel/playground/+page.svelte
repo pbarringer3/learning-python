@@ -763,14 +763,23 @@ for var in user_vars:
         <div class="editor-panel">
           <div class="editor-section">
             <h2>World Editor</h2>
-            <WorldEditor bind:world={initialWorld} onupdate={handleWorldUpdate} bind:editMode={editorMode} bind:handleCellClick={editorCellClickHandler} />
+            <WorldEditor
+              bind:world={initialWorld}
+              onupdate={handleWorldUpdate}
+              bind:editMode={editorMode}
+              bind:handleCellClick={editorCellClickHandler}
+            />
           </div>
         </div>
 
         <div class="world-panel">
           <div class="world-display">
             <h2>Karel World</h2>
-            <KarelWorld world={initialWorld} interactive={true} onCellClick={editorCellClickHandler} />
+            <KarelWorld
+              world={initialWorld}
+              interactive={true}
+              onCellClick={editorCellClickHandler}
+            />
           </div>
         </div>
       </div>

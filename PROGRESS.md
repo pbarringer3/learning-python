@@ -78,13 +78,19 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 
 7. **WorldEditor Component** ([src/lib/components/WorldEditor.svelte](src/lib/components/WorldEditor.svelte))
    - Grid dimension controls (1-30x30)
-   - Karel configuration (position, direction, beeper bag)
-   - Edit modes: Move Karel, Add/Remove Walls, Place Beepers
-   - **Contextual instructions** - Shows mode-specific help under edit mode buttons
+   - Karel configuration (direction, beeper bag count)
+   - **Unified Actions section** - All editing and utility buttons in one organized section
+   - **Edit modes**: Move Karel, Add/Remove Walls, Add Beepers, Remove Beepers
+   - **Separate beeper controls** - Independent add and remove buttons for clarity
+   - **Incremental beeper editing** - Always adds/removes exactly 1 beeper per click
+   - **Smart beeper removal** - Clicking to remove when no beepers present does nothing
    - **Exposes click handlers** - Bindable props for cell and wall interactions
    - **Wall editing** - Toggle walls by clicking between cells
+   - **Reset button** - Resets entire world to default state (10x10, Karel at (1,1) facing East)
+   - **Code reuse** - Uses `createDefaultWorld()` from types.ts for consistency
    - Export to clipboard/download JSON
    - Import from JSON file
+   - **Clean UI** - No position display, no instruction text (intuitive button-based interface)
 
 ### ✅ Main Playground Page
 

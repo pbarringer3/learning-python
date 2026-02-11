@@ -490,7 +490,7 @@ pyodide.globals.set('turn_left', () => {
    - **Interactive Karel World**: Right-side world display is clickable in edit mode
    - **Mode-based overlays**: Shows cell hotspots or wall hotspots based on active mode
    - **Visual feedback**: Blue hover highlights with crosshair cursor for walls
-   - **Contextual Help**: Mode-specific instructions shown under edit mode buttons
+   - **Streamlined UI**: Clean interface without instruction text (intuitive button labels)
 
 3. **Technical Implementation**
    - KarelWorld component supports `interactive` prop with separate `onCellClick` and `onWallClick` callbacks
@@ -501,6 +501,10 @@ pyodide.globals.set('turn_left', () => {
    - Visual hover feedback: blue fill for cells, blue stroke with crosshair cursor for walls
    - Elements automatically blur after click to remove hover state and show results clearly
    - State synchronization ensures changes persist between Play/Edit modes
+   - **Separate beeper controls**: Independent "Add Beepers" and "Remove Beepers" buttons
+   - **Incremental beeper management**: Always add/remove exactly 1 beeper at a time
+   - **Smart beeper removal**: Prevents removing beepers when none are present
+   - **Reset functionality**: Uses `createDefaultWorld()` from types.ts to restore initial state
 
 4. **Export**
    - Generate JSON matching TypeScript data structure

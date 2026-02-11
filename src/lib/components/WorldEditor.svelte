@@ -5,12 +5,13 @@
     BeeperLocation,
     DirectionType
   } from '$lib/karel/types';
+  import { createDefaultWorld } from '$lib/karel/types';
 
   interface Props {
     world: KarelWorldType;
     onupdate?: (world: KarelWorldType) => void;
     class?: string;
-    editMode?: 'karel' | 'walls' | 'beepers';
+    editMode?: 'karel' | 'walls' | 'addBeepers' | 'removeBeepers';
     handleCellClick?: (x: number, y: number) => void;
     handleWallClick?: (type: 'horizontal' | 'vertical', x: number, y: number) => void;
   }
@@ -24,7 +25,7 @@
     handleWallClick = $bindable()
   }: Props = $props();
 
-  let internalEditMode: 'karel' | 'walls' | 'beepers' = $state('karel');
+  let internalEditMode: 'karel' | 'walls' | 'addBeepers' | 'removeBeepers' = $state('karel');
   $effect(() => {
     if (editMode !== undefined) {
       internalEditMode = editMode;
@@ -35,7 +36,6 @@
       editMode = internalEditMode;
     }
   });
-  let beeperCount = $state(1);
 
   function updateWorld(updater: (w: KarelWorldType) => KarelWorldType) {
     world = updater(world);
@@ -106,24 +106,58 @@
   function handleInternalCellClick(x: number, y: number) {
     if (internalEditMode === 'karel') {
       setKarelPosition(x, y);
-    } else if (internalEditMode === 'beepers') {
-      // Toggle beepers at this position
+    } else if (internalEditMode === 'addBeepers') {
+      // Add beeper at this position (or increment count if exists)
       updateWorld((w) => {
         const existingIndex = w.beepers.findIndex((beeper) => beeper.x === x && beeper.y === y);
 
         if (existingIndex >= 0) {
-          // Remove beeper
+          // Increment existing beeper count
+          const updatedBeepers = [...w.beepers];
+          updatedBeepers[existingIndex] = {
+            ...updatedBeepers[existingIndex],
+            count: updatedBeepers[existingIndex].count + 1
+          };
           return {
             ...w,
-            beepers: w.beepers.filter((_, i) => i !== existingIndex)
+            beepers: updatedBeepers
           };
         } else {
-          // Add beeper
+          // Add new beeper with count 1
           return {
             ...w,
-            beepers: [...w.beepers, { x, y, count: beeperCount }]
+            beepers: [...w.beepers, { x, y, count: 1 }]
           };
         }
+      });
+    } else if (internalEditMode === 'removeBeepers') {
+      // Remove beeper at this position (or decrement count if > 1)
+      updateWorld((w) => {
+        const existingIndex = w.beepers.findIndex((beeper) => beeper.x === x && beeper.y === y);
+
+        if (existingIndex >= 0) {
+          const existingBeeper = w.beepers[existingIndex];
+          if (existingBeeper.count > 1) {
+            // Decrement count
+            const updatedBeepers = [...w.beepers];
+            updatedBeepers[existingIndex] = {
+              ...updatedBeepers[existingIndex],
+              count: updatedBeepers[existingIndex].count - 1
+            };
+            return {
+              ...w,
+              beepers: updatedBeepers
+            };
+          } else {
+            // Remove beeper entirely
+            return {
+              ...w,
+              beepers: w.beepers.filter((_, i) => i !== existingIndex)
+            };
+          }
+        }
+        // No beeper at this position, do nothing
+        return w;
       });
     }
     // Note: wall clicks are handled by handleWallClick
@@ -139,12 +173,11 @@
   handleCellClick = handleInternalCellClick;
   handleWallClick = handleInternalWallClick;
 
-  function clearWorld() {
-    updateWorld((w) => ({
-      ...w,
-      walls: [],
-      beepers: []
-    }));
+  function resetWorld() {
+    world = createDefaultWorld();
+    if (onupdate) {
+      onupdate(world);
+    }
   }
 
   function exportWorld() {
@@ -218,10 +251,6 @@
     <h3>Karel Configuration</h3>
     <div class="karel-config">
       <label>
-        Position:
-        <input type="text" readonly value="({world.karel.position.x}, {world.karel.position.y})" />
-      </label>
-      <label>
         Direction:
         <select
           value={world.karel.direction.type}
@@ -247,8 +276,8 @@
   </div>
 
   <div class="editor-section">
-    <h3>Edit Mode</h3>
-    <div class="mode-buttons">
+    <h3>Actions</h3>
+    <div class="action-buttons">
       <button
         class="mode-btn {internalEditMode === 'karel' ? 'active' : ''}"
         onclick={() => (internalEditMode = 'karel')}
@@ -262,37 +291,18 @@
         Add/Remove Walls
       </button>
       <button
-        class="mode-btn {internalEditMode === 'beepers' ? 'active' : ''}"
-        onclick={() => (internalEditMode = 'beepers')}
+        class="mode-btn {internalEditMode === 'addBeepers' ? 'active' : ''}"
+        onclick={() => (internalEditMode = 'addBeepers')}
       >
-        Place Beepers
+        Add Beepers
       </button>
-    </div>
-
-    <div class="mode-instruction">
-      {#if internalEditMode === 'karel'}
-        <p>Click on a cell in the Karel World to move Karel there</p>
-      {:else if internalEditMode === 'walls'}
-        <p>Click on the wall segments between cells to add/remove walls</p>
-      {:else if internalEditMode === 'beepers'}
-        <p>Click on cells to add/remove beepers (count: {beeperCount})</p>
-      {/if}
-    </div>
-
-    {#if internalEditMode === 'beepers'}
-      <div class="beeper-config">
-        <label>
-          Beeper Count:
-          <input type="number" min="1" bind:value={beeperCount} />
-        </label>
-      </div>
-    {/if}
-  </div>
-
-  <div class="editor-section">
-    <h3>Actions</h3>
-    <div class="action-buttons">
-      <button onclick={clearWorld} class="action-btn">Clear Walls & Beepers</button>
+      <button
+        class="mode-btn {internalEditMode === 'removeBeepers' ? 'active' : ''}"
+        onclick={() => (internalEditMode = 'removeBeepers')}
+      >
+        Remove Beepers
+      </button>
+      <button onclick={resetWorld} class="action-btn">Reset</button>
       <button onclick={exportWorld} class="action-btn">Copy to Clipboard</button>
       <button onclick={downloadWorld} class="action-btn">Download JSON</button>
       <button onclick={importWorld} class="action-btn">Import JSON</button>
@@ -354,7 +364,7 @@
 
   .mode-btn {
     padding: 0.5rem 1rem;
-    border: 2px solid #ccc;
+    border: 1px solid #ccc;
     border-radius: 4px;
     background: white;
     cursor: pointer;
@@ -380,6 +390,7 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    margin-top: 0.75rem;
   }
 
   .action-btn {
@@ -393,25 +404,10 @@
   }
 
   .action-btn:hover {
-    background: #e5e5e5;
-    transform: translateY(-1px);
+    background: #f0f0f0;
   }
 
   .action-btn:active {
     transform: translateY(0);
-  }
-
-  .mode-instruction {
-    margin-top: 0.75rem;
-    padding: 0.75rem;
-    background: #f0f9ff;
-    border-left: 3px solid #3b82f6;
-    border-radius: 4px;
-  }
-
-  .mode-instruction p {
-    margin: 0;
-    font-size: 14px;
-    color: #1e40af;
   }
 </style>

@@ -77,34 +77,95 @@ Karel the Robot is an interactive, browser-based module for teaching Python prog
 
 ---
 
-## 3. Python Language Feature Progression
+## 3. Python Language Feature Restrictions
 
-Features introduced gradually across lessons:
+### Playground Environment
 
-### Level 1: Basics
+The Karel playground enforces strict language restrictions to maintain educational focus. Code is validated using Python AST (Abstract Syntax Tree) parsing before execution, providing immediate, educational feedback.
+
+### Allowed Features
+
+**✅ Karel Functions:**
+
+- All Karel commands: `move()`, `turn_left()`, `pick_beeper()`, `put_beeper()`
+- All sensor functions: `front_is_clear()`, `beepers_present()`, etc.
+
+**✅ User-Defined Functions:**
+
+- Function definitions with **no parameters**: `def turn_right():`
+- Function calls to user-defined functions
+
+**✅ Control Flow:**
+
+- `while` loops with conditions
+- `for` loops with `range()`
+- `if`, `elif`, `else` statements
+- Boolean operators: `and`, `or`, `not`
+
+**✅ Loop Variables:**
+
+- Only context: loop iteration variables (e.g., `i` in `for i in range(5):`)
+
+**✅ Comments:**
+
+- Single-line comments with `#`
+
+### Disallowed Features
+
+All other Python features are blocked with educational error messages:
+
+- ❌ Variable assignments (except loop variables)
+- ❌ Function parameters: `def move_n(n):` — must be `def move_n():`
+- ❌ `print()` and other built-in functions (except `range()`)
+- ❌ `import` statements
+- ❌ Classes
+- ❌ Lists, dictionaries, sets
+- ❌ List/dict comprehensions
+- ❌ Indexing and subscripting
+- ❌ Lambda functions
+- ❌ Exception handling (`try`/`except`)
+- ❌ Context managers (`with`)
+- ❌ Async/await
+- ❌ Generators (`yield`)
+- ❌ `global`/`nonlocal` keywords
+- ❌ `del` statements
+
+### Validation & Error Messages
+
+**Implementation:**
+
+- Python AST parser analyzes code structure before execution
+- Violations trigger immediate, user-friendly error messages
+- Error messages include line numbers for easy debugging
+
+**Example Error Messages:**
+
+- "Variable assignments are not allowed. Use loops and Karel functions instead."
+- "Function parameters are not allowed. Define 'turn_right()' with no parameters."
+- "Function 'print()' is not allowed. Use only Karel functions, your own functions, or range()."
+
+### Future: Progressive Feature Levels
+
+_Note: Current implementation enforces one restriction level for all playground use. Future enhancement will support per-lesson feature control:_
+
+#### Level 1: Basics
 
 - Function calls: `move()`, `turn_left()`
 - Function definitions: `def turn_right():`
 - Sequential execution only
 
-### Level 2: Control Flow
+#### Level 2: Control Flow
 
 - `while` loops with conditions
 - `if/else` statements
 - Boolean operators: `and`, `or`, `not`
 
-### Level 3: Advanced
+#### Level 3: Advanced
 
 - `for` loops with `range()`
 - Function parameters: `def move_n_times(n):`
 - Variables and arithmetic
 - Nested control structures
-
-### Feature Control
-
-- Each lesson explicitly declares allowed Python features
-- Students can use any allowed feature plus basic function definition
-- Disallowed features generate Python syntax/runtime errors (custom educational messages as future enhancement)
 
 ---
 

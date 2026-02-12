@@ -13,14 +13,20 @@
     type ExecutionState,
     type DirectionType
   } from '$lib/karel/types';
-  import { loadPyodide, injectKarelCommands, type KarelCallbacks } from '$lib/karel/pyodide';
+  import {
+    loadPyodide,
+    injectKarelCommands,
+    installCodeValidator,
+    validateKarelCode,
+    type KarelCallbacks
+  } from '$lib/karel/pyodide';
   import type { PyodideInterface } from 'pyodide';
 
   // State
   let mode = $state<'play' | 'edit'>('play');
   let initialWorld = $state(createDefaultWorld());
   let currentWorld = $state(createDefaultWorld());
-  let editorMode = $state<'karel' | 'walls' | 'beepers'>('karel');
+  let editorMode = $state<'karel' | 'walls' | 'addBeepers' | 'removeBeepers'>('karel');
   let editorCellClickHandler: ((x: number, y: number) => void) | undefined = $state();
   let editorWallClickHandler:
     | ((type: 'horizontal' | 'vertical', x: number, y: number) => void)
@@ -75,6 +81,8 @@ else:
   onMount(async () => {
     try {
       pyodide = await loadPyodide();
+      // Install the code validator
+      installCodeValidator(pyodide);
       pyodideLoading = false;
       await tick();
       mounted = true;
@@ -379,6 +387,16 @@ else:
   ): Promise<{ steps: RecordedStep[]; error?: string; errorLine?: number }> {
     if (!pyodide) throw new Error('Pyodide not loaded');
 
+    // Validate code first
+    const validation = await validateKarelCode(pyodide, code);
+    if (!validation.valid) {
+      return {
+        steps: [],
+        error: validation.error,
+        errorLine: validation.line
+      };
+    }
+
     const steps: RecordedStep[] = [];
     let lastTracedLine = 0;
 
@@ -526,6 +544,17 @@ except:
     // If speed is instant (0), run everything at once without animation
     if (executionState.animationSpeed === 0) {
       try {
+        // Validate code first
+        const validation = await validateKarelCode(pyodide, code);
+        if (!validation.valid) {
+          executionState.status = 'error';
+          executionState.error = validation.error || 'Invalid code';
+          if (validation.line) {
+            executionState.errorLine = validation.line;
+          }
+          return;
+        }
+
         // Inject Karel commands
         injectKarelCommands(pyodide, getKarelCallbacks());
 
@@ -643,7 +672,7 @@ except:
 import sys
 user_vars = [k for k in list(globals().keys()) if not k.startswith('_') and k not in sys.modules and k not in dir(__builtins__)]
 for var in user_vars:
-    # Don't delete Karel commands
+    # Don't delete Karel commands or the validator
     if var not in ['move', 'turn_left', 'pick_beeper', 'put_beeper', 
                    'front_is_clear', 'front_is_blocked', 
                    'beepers_present', 'no_beepers_present',
@@ -653,7 +682,8 @@ for var in user_vars:
                    'facing_north', 'not_facing_north',
                    'facing_south', 'not_facing_south',
                    'facing_east', 'not_facing_east',
-                   'facing_west', 'not_facing_west']:
+                   'facing_west', 'not_facing_west',
+                   'validate_karel_code', 'ast', 'sys']:
         try:
             del globals()[var]
         except:

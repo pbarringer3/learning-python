@@ -32,9 +32,11 @@ Karel the Robot is an interactive, browser-based module for teaching Python prog
 
 ### Language Feature Restrictions
 
-- Control Python environment via restricted globals dictionary
-- Block disallowed features per lesson (e.g., no `import`, `open()`, etc.)
-- Built-in Python errors shown to users (custom educational messages as future enhancement)
+- **Implementation**: Python AST (Abstract Syntax Tree) parsing before execution
+- Two-pass validation algorithm for accurate function detection
+- Educational error messages with line numbers
+- Validator preserved during namespace resets
+- Current implementation enforces single restriction level for playground
 
 ---
 

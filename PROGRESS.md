@@ -34,6 +34,10 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
    - Dynamic script loading (no CDN script tag needed)
    - Singleton pattern for Pyodide instance
    - Karel command injection into Python global namespace
+   - **Python AST-based code validator** for language feature restrictions
+   - Educational error messages for disallowed syntax
+   - Two-pass validation (collect functions first, then validate)
+   - Validator persists through namespace resets
    - Version: Pyodide 0.24.1
 
 ### ✅ Display Components
@@ -185,6 +189,45 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 - Putting beeper with empty bag
 - Calling undefined function
 - Infinite loops (step limit)
+- **Disallowed Python syntax** (validated before execution)
+
+### ✅ Python Language Restrictions
+
+**AST-Based Validation:**
+
+- Code validated using Python's `ast` module before execution
+- Two-pass algorithm: collect user functions, then validate syntax
+- Validation happens before both animated and instant execution
+- Clear, educational error messages with line numbers
+
+**Allowed Features:**
+
+- All 22 Karel commands (move, turn_left, sensors, etc.)
+- User-defined functions with **no parameters**: `def turn_right():`
+- Control flow: `if`/`elif`/`else`, `while`, `for` with `range()`
+- Boolean operators: `and`, `or`, `not`
+- Loop variables: `for i in range(5):`
+- Comments: `#`
+
+**Disallowed Features:**
+
+- Variable assignments (except loop variables)
+- Function parameters: `def move_n(n):` ❌
+- `print()` and other built-ins (except `range()`)
+- `import` statements
+- Classes, lists, dicts, sets
+- Comprehensions, lambdas
+- Exception handling (`try`/`except`)
+- Context managers (`with`)
+- Async/await, generators
+- `global`/`nonlocal`/`del`
+
+**Implementation Details:**
+
+- Validator installed once on Pyodide load
+- Function preserved during namespace resets (with Karel commands)
+- Educational messages: "Function parameters are not allowed. Define 'turn_right()' with no parameters."
+- Line numbers included for easy debugging
 
 ### ✅ Interactive World Editing
 
@@ -231,6 +274,7 @@ Successfully implemented the Karel the Robot playground endpoint with full funct
 
 - Cleared on reset
 - Karel commands preserved
+- **Code validator preserved** (`validate_karel_code`, `ast`, `sys`)
 - User functions cleared between runs
 
 ---
@@ -356,10 +400,10 @@ src/
 
 ### Not Yet Implemented
 
-1. **Advanced Python Features**
-   - Variables work but not explicitly tested
-   - Feature restriction per lesson not implemented
-   - Custom error messages for educational feedback
+1. **Per-Lesson Feature Control**
+   - Current restriction level is fixed for all playground use
+   - Future: Support different restriction levels per lesson
+   - Would need lesson data structure to specify allowed features
 
 2. **Interactive World Editing**
    - ✅ **Move Karel mode** - Click grid to move Karel (COMPLETE)
@@ -391,8 +435,8 @@ src/
 2. ✅ `while` loop support (implemented)
 3. ✅ `for` loop with `range()` support (implemented)
 4. ✅ Variables work (implementation complete)
-5. Implement feature restriction system per lesson
-6. Add custom educational error messages
+5. ✅ **Implement feature restriction system** (AST-based validation complete)
+6. ✅ **Add custom educational error messages** (complete with line numbers)
 
 ### Priority 2: Interactive World Editor
 

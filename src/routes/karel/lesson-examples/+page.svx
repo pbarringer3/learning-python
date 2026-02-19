@@ -1,0 +1,253 @@
+<script lang="ts">
+  import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
+  import type { KarelConfig } from '$lib/karel/types';
+
+  // Example 1: Simple demonstration (no restrictions, no tests)
+  const simpleConfig: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 5, y: 1, count: 1 }]
+    },
+    initialCode: `# Simple example: Pick up the beeper
+# Karel starts at (1,1) facing east
+# The beeper is at (5,1)
+
+# Your code here:
+move()
+move()
+move()
+move()
+pick_beeper()
+`
+  };
+
+  // Example 2: Single test exercise with feature restrictions
+  const singleTestConfig: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Exercise: Place a beeper at (3,3)
+# You can only use: move(), turn_left(), put_beeper()
+# No loops or conditionals for this exercise
+
+# Your code here:
+
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'put_beeper', 'beepers_present']
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const beeperAt33 = world.beepers.find((b) => b.x === 3 && b.y === 3);
+        if (beeperAt33 && beeperAt33.count > 0) {
+          return { passed: true, message: 'Perfect! Beeper placed at (3,3)' };
+        }
+        return { passed: false, message: 'Beeper not found at position (3,3)' };
+      }
+    }
+  };
+
+  // Example 3: Multi-test exercise
+  const multiTestConfig: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 6, height: 3 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 10
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Exercise: Define fill_row() to place beepers across a row
+# Karel should place beepers until hitting a wall
+# Then move up and turn around
+
+def fill_row():
+  # Your code here
+  pass
+
+# Call your function for each row
+fill_row()
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'put_beeper', 'front_is_clear', 'front_is_blocked']
+    },
+    tests: {
+      worlds: {
+        'Test 1: 6x3 Grid': {
+          dimensions: { width: 6, height: 3 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 20
+          },
+          walls: [],
+          beepers: []
+        },
+        'Test 2: 4x3 Grid': {
+          dimensions: { width: 4, height: 3 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 15
+          },
+          walls: [],
+          beepers: []
+        },
+        'Test 3: 8x2 Grid': {
+          dimensions: { width: 8, height: 2 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 20
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const row1Count = world.beepers.filter((b) => b.y === 1).length;
+        if (row1Count >= world.dimensions.width) {
+          return { passed: true, message: 'All positions in first row have beepers!' };
+        }
+        return {
+          passed: false,
+          message: `Only ${row1Count} out of ${world.dimensions.width} positions filled in first row`
+        };
+      },
+      loadableTests: ['Test 1: 6x3 Grid', 'Test 2: 4x3 Grid']
+    }
+  };
+</script>
+
+<svelte:head>
+  <title>Karel Lesson Examples</title>
+</svelte:head>
+
+<div class="lesson-container">
+
+# Karel Lesson Examples
+
+These examples demonstrate different ways to use the Karel environment in lessons. Each exercise below shows a different configuration — from simple demonstrations to multi-test exercises with feature restrictions.
+
+---
+
+## Example 1: Simple Demonstration
+
+A basic example with no restrictions or tests. Karel starts at (1,1) facing east,
+and there's a beeper at (5,1). Students can freely experiment with all Karel commands.
+
+Try running the starter code, then modify it to do something different!
+
+<KarelEnvironment config={simpleConfig} />
+
+---
+
+## Example 2: Place a Beeper at (3,3)
+
+This exercise restricts which Karel commands you can use and validates your solution with a test. You need to navigate Karel to position (3,3) and place a beeper there.
+
+> **Allowed commands:** `move()`, `turn_left()`, `put_beeper()`, `beepers_present()`
+
+Click **Run Tests** when you think your solution is correct.
+
+<KarelEnvironment config={singleTestConfig} />
+
+---
+
+## Example 3: Fill a Row with Beepers
+
+Define a `fill_row()` function that places beepers across an entire row. Karel should place beepers until hitting a wall. Your solution is tested against multiple world sizes to make sure it generalizes.
+
+> **Allowed commands:** `move()`, `turn_left()`, `put_beeper()`, `front_is_clear()`, `front_is_blocked()`
+
+Use the dropdown to load different test worlds and see how your code needs to handle varying grid sizes. Click **Run Tests** to validate against all worlds.
+
+<KarelEnvironment config={multiTestConfig} />
+
+</div>
+
+<style>
+  .lesson-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .lesson-container :global(h1) {
+    font-size: 2.5rem;
+    color: #1e293b;
+    margin-bottom: 1rem;
+  }
+
+  .lesson-container :global(h2) {
+    font-size: 1.75rem;
+    color: #334155;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .lesson-container :global(p) {
+    color: #64748b;
+    margin-bottom: 1rem;
+    line-height: 1.7;
+  }
+
+  .lesson-container :global(hr) {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 2.5rem 0;
+  }
+
+  .lesson-container :global(blockquote) {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .lesson-container :global(blockquote strong) {
+    color: #92400e;
+  }
+
+  .lesson-container :global(blockquote p) {
+    color: #78716c;
+    margin-bottom: 0;
+  }
+
+  .lesson-container :global(code) {
+    background: #f1f5f9;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.875em;
+    color: #334155;
+  }
+</style>

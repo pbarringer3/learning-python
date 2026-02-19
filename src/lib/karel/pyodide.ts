@@ -156,17 +156,23 @@ export interface ValidationResult {
 
 /**
  * Install the Python code validator into Pyodide
+ * This version supports configurable allowed features
  */
 export function installCodeValidator(pyodide: PyodideInterface): void {
   pyodide.runPython(`
 import ast
 import sys
 
-def validate_karel_code(code):
+def validate_karel_code(code, allowed_commands=None, allowed_features=None):
     """
-    Validate that code only uses allowed Karel playground features.
+    Validate that code only uses allowed Karel features.
     
-    Allowed:
+    Args:
+        code: Python code to validate
+        allowed_commands: List of allowed Karel commands (None = all allowed)
+        allowed_features: List of allowed Python features (None = default playground features)
+    
+    Default allowed features (playground mode):
     - Karel function calls (move, turn_left, etc.)
     - Function definitions with NO parameters
     - Loops (while, for with range)
@@ -175,7 +181,7 @@ def validate_karel_code(code):
     - Comments
     - Loop variables (e.g., i in 'for i in range(5)')
     
-    Disallowed:
+    Disallowed by default:
     - Variable assignments (except loop variables)
     - Function parameters
     - print() and other built-ins except range()
@@ -193,8 +199,8 @@ def validate_karel_code(code):
             'line': e.lineno
         }
     
-    # Define allowed Karel functions
-    karel_functions = {
+    # Define all Karel functions
+    all_karel_functions = {
         'move', 'turn_left', 'pick_beeper', 'put_beeper',
         'front_is_clear', 'front_is_blocked',
         'beepers_present', 'no_beepers_present',
@@ -206,6 +212,19 @@ def validate_karel_code(code):
         'facing_east', 'not_facing_east',
         'facing_west', 'not_facing_west'
     }
+    
+    # Determine which Karel commands are allowed
+    if allowed_commands is None:
+        karel_functions = all_karel_functions
+    else:
+        karel_functions = set(allowed_commands)
+        # Validate that allowed commands are actually Karel commands
+        invalid = karel_functions - all_karel_functions
+        if invalid:
+            return {
+                'valid': False,
+                'error': f'Configuration error: Unknown Karel command(s): {", ".join(invalid)}'
+            }
     
     # FIRST PASS: Collect all user-defined function names
     user_functions = set()
@@ -271,11 +290,19 @@ def validate_karel_code(code):
                 func_name = node.func.id
                 # Allow Karel functions, user-defined functions, and range()
                 if func_name not in karel_functions and func_name not in user_functions and func_name != 'range':
-                    return {
-                        'valid': False,
-                        'error': f'Function "{func_name}()" is not allowed. Use only Karel functions, your own functions, or range().',
-                        'line': node.lineno
-                    }
+                    # Check if it's a Karel function that's not allowed
+                    if func_name in all_karel_functions:
+                        return {
+                            'valid': False,
+                            'error': f'Karel function "{func_name}()" is not allowed in this exercise.',
+                            'line': node.lineno
+                        }
+                    else:
+                        return {
+                            'valid': False,
+                            'error': f'Function "{func_name}()" is not allowed. Use only Karel functions, your own functions, or range().',
+                            'line': node.lineno
+                        }
         
         # 6. No list/dict/set literals or comprehensions
         if isinstance(node, (ast.List, ast.Dict, ast.Set)):
@@ -362,13 +389,20 @@ def validate_karel_code(code):
 
 /**
  * Validate Python code against Karel playground restrictions
+ * Now supports configurable allowed commands
  */
 export async function validateKarelCode(
   pyodide: PyodideInterface,
-  code: string
+  code: string,
+  allowedCommands?: string[]
 ): Promise<ValidationResult> {
   try {
-    const result = pyodide.runPython(`validate_karel_code(${JSON.stringify(code)})`);
+    // Convert allowedCommands to Python list format
+    const commandsArg = allowedCommands ? JSON.stringify(allowedCommands) : 'None';
+
+    const result = pyodide.runPython(
+      `validate_karel_code(${JSON.stringify(code)}, ${commandsArg})`
+    );
     return result.toJs({ dict_converter: Object.fromEntries }) as ValidationResult;
   } catch (err) {
     return {
@@ -380,14 +414,15 @@ export async function validateKarelCode(
 
 /**
  * Execute Python code with validation
+ * Supports configurable feature restrictions
  */
 export async function executePythonCode(
   pyodide: PyodideInterface,
   code: string,
-  allowedFeatures: string[] = []
+  allowedCommands?: string[]
 ): Promise<void> {
-  // Validate code first
-  const validation = await validateKarelCode(pyodide, code);
+  // Validate code first with allowed commands
+  const validation = await validateKarelCode(pyodide, code, allowedCommands);
 
   if (!validation.valid) {
     const error = new Error(validation.error || 'Invalid code');

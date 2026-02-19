@@ -3,23 +3,33 @@
 
   interface Props {
     status: ExecutionStatus;
-    speed: number;
-    onplay?: () => void;
-    onpause?: () => void;
-    onstep?: () => void;
-    onreset?: () => void;
-    onspeedchange?: (speed: number) => void;
+    animationSpeed?: number;
+    onPlay?: () => void;
+    onPause?: () => void;
+    onStep?: () => void;
+    onReset?: () => void;
+    onSpeedChange?: (speed: number) => void;
+    showTests?: boolean;
+    onRunTests?: () => void;
+    testWorlds?: string[];
+    onLoadTestWorld?: (testName: string) => void;
+    runningTests?: boolean;
     class?: string;
   }
 
   let {
     status,
-    speed = $bindable(300),
-    onplay,
-    onpause,
-    onstep,
-    onreset,
-    onspeedchange,
+    animationSpeed = $bindable(300),
+    onPlay,
+    onPause,
+    onStep,
+    onReset,
+    onSpeedChange,
+    showTests = false,
+    onRunTests,
+    testWorlds,
+    onLoadTestWorld,
+    runningTests = false,
     class: className = ''
   }: Props = $props();
 
@@ -41,19 +51,18 @@
     const target = event.target as HTMLInputElement;
     const index = parseInt(target.value);
     const newSpeed = speedOptions[index].value;
-    speed = newSpeed;
-    // Note: onspeedchange callback is optional - parent can use bind:speed instead
-    onspeedchange?.(newSpeed);
+    animationSpeed = newSpeed;
+    onSpeedChange?.(newSpeed);
   }
 
   function getSpeedLabel(): string {
-    const option = speedOptions.find((opt) => opt.value === speed);
+    const option = speedOptions.find((opt) => opt.value === animationSpeed);
     return option ? option.label : 'Custom';
   }
 
   // Get the index of the current speed in speedOptions
   function getCurrentSpeedIndex(): number {
-    const index = speedOptions.findIndex((opt) => opt.value === speed);
+    const index = speedOptions.findIndex((opt) => opt.value === animationSpeed);
     return index !== -1 ? index : 3; // Default to Normal if not found
   }
 </script>
@@ -61,7 +70,7 @@
 <div class="karel-controls {className}">
   <div class="controls-buttons">
     {#if isRunning}
-      <button onclick={onpause} class="control-btn pause" title="Pause execution">
+      <button onclick={onPause} class="control-btn pause" title="Pause execution">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
           <rect x="6" y="4" width="4" height="16" />
           <rect x="14" y="4" width="4" height="16" />
@@ -69,7 +78,7 @@
         <span>Pause</span>
       </button>
     {:else}
-      <button onclick={onplay} class="control-btn play" disabled={isRunning} title="Run program">
+      <button onclick={onPlay} class="control-btn play" disabled={isRunning} title="Run program">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8 5v14l11-7z" />
         </svg>
@@ -78,7 +87,7 @@
     {/if}
 
     <button
-      onclick={onstep}
+      onclick={onStep}
       class="control-btn step"
       disabled={isRunning}
       title="Execute one statement"
@@ -90,7 +99,7 @@
       <span>Step</span>
     </button>
 
-    <button onclick={onreset} class="control-btn reset" title="Reset to initial state">
+    <button onclick={onReset} class="control-btn reset" title="Reset to initial state">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
         <path
           d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
@@ -98,7 +107,37 @@
       </svg>
       <span>Reset</span>
     </button>
+
+    {#if showTests && onRunTests}
+      <button
+        onclick={onRunTests}
+        class="control-btn run-tests"
+        disabled={isRunning || runningTests}
+        title="Run all tests"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+        </svg>
+        <span>{runningTests ? 'Running Tests...' : 'Run Tests'}</span>
+      </button>
+    {/if}
   </div>
+
+  {#if testWorlds && testWorlds.length > 0 && onLoadTestWorld}
+    <div class="test-worlds">
+      <label for="test-world-select">Load Test World:</label>
+      <select
+        id="test-world-select"
+        onchange={(e) => onLoadTestWorld?.(e.currentTarget.value)}
+        class="test-world-select"
+      >
+        <option value="">Select a test...</option>
+        {#each testWorlds as testName}
+          <option value={testName}>{testName}</option>
+        {/each}
+      </select>
+    </div>
+  {/if}
 
   <div class="speed-control">
     <label for="speed-slider">
@@ -179,6 +218,30 @@
 
   .control-btn.reset {
     color: #ef4444;
+  }
+
+  .control-btn.run-tests {
+    color: #8b5cf6;
+  }
+
+  .test-worlds {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .test-worlds label {
+    font-size: 14px;
+    color: #666;
+  }
+
+  .test-world-select {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
   }
 
   .speed-control {

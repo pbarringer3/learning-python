@@ -165,7 +165,6 @@ _Note: Current implementation enforces one restriction level for all playground 
 #### Level 3: Advanced
 
 - `for` loops with `range()`
-- Function parameters: `def move_n_times(n):`
 - Variables and arithmetic
 - Nested control structures
 
@@ -177,64 +176,127 @@ _Note: Current implementation enforces one restriction level for all playground 
 
 ```
 Chapter
-  └─ Lesson
-      └─ Exercise(s)
+  └─ Lesson (MDsveX file)
+      └─ Embedded Karel Environments (Examples & Exercises)
 ```
 
 - **Chapters** group related concepts
-- **Lessons** contain one or more exercises
-- **Exercises** are individual Karel problems
-- Users can access any lesson/exercise (no forced linear progression)
+- **Lessons** are MDsveX files containing explanations and embedded Karel environments
+- **Karel Environments** can be simple examples or exercises with tests
+- Users can access any lesson (no forced linear progression)
 
-### Data Storage
+### Karel Environment Configuration
 
-**Structured Data (TypeScript):**
+Each embedded Karel environment is configured via a `KarelConfig` object:
 
 ```typescript
-interface Exercise {
-  id: string;
-  title: string;
+interface KarelConfig {
+  // Initial setup (required)
+  initialWorld: KarelWorld;
+  initialCode: string;
 
-  // World definition
-  world: {
-    dimensions: { width: number; height: number }; // Max 30x30
-    karel: {
-      position: { x: number; y: number };
-      direction: 'north' | 'east' | 'south' | 'west';
-      beepers: number; // -1 for infinite
-    };
-    walls: Wall[]; // Wall segment definitions
-    beepers: { x: number; y: number; count: number }[];
+  // Feature restrictions (optional - defaults to all features allowed)
+  allowedFeatures?: {
+    // Restrict which Karel commands can be used
+    karelCommands?: string[]; // e.g., ['move', 'turn_left', 'pick_beeper', 'put_beeper']
+
+    // Restrict which Python features can be used
+    pythonFeatures?: string[]; // e.g., ['functions', 'while', 'if', 'for', 'range']
   };
 
-  // Lesson configuration
-  allowedFeatures: string[]; // e.g., ['functions', 'while', 'if']
-  starterCode?: string;
+  // Test suite (optional - for exercises with "Run Tests" button)
+  // For a single test, just provide one test world
+  tests?: {
+    // Map of test name to test world
+    worlds: { [testName: string]: KarelWorld };
 
-  // Validation
-  validate: (world: KarelWorld) => { passed: boolean; message: string };
-}
+    // Validation function to check if solution is correct
+    validate: (world: KarelWorld) => {
+      passed: boolean;
+      message: string;
+    };
 
-interface Lesson {
-  id: string;
-  title: string;
-  exercises: Exercise[];
-  markdownPath: string; // Path to .svx file with instructions
-}
+    // List of test names that can be loaded into editor via dropdown
+    loadableTests?: string[];
+  };
 
-interface Chapter {
-  id: string;
-  title: string;
-  lessons: Lesson[];
+  // UI configuration (typically defaults are fine)
+  showWorldEditor?: boolean; // Default: false (true only for playground)
 }
 ```
 
-**Instructional Content (MDsveX):**
+### Environment Types
+
+**1. Simple Interactive Example:**
+
+- No tests
+- Students experiment freely
+
+```typescript
+{
+  initialWorld: { /* ... */ },
+  initialCode: '# Try moving Karel!\nmove()\nturn_left()'
+}
+```
+
+**2. Exercise with Single Test:**
+
+- One test world (shown in editor)
+- "Run Tests" button appears
+- Validation checks the result
+
+```typescript
+{
+  initialWorld: { /* ... */ },
+  initialCode: '# Move to position (5, 5)\n',
+  tests: {
+    worlds: {
+      'Main': { /* the displayed world */ }
+    },
+    validate: (world) => ({
+      passed: world.karel.position.x === 5 && world.karel.position.y === 5,
+      message: world.karel.position.x === 5 && world.karel.position.y === 5
+        ? 'Perfect! Karel is at (5, 5)!'
+        : 'Karel needs to reach position (5, 5)'
+    })
+  }
+}
+```
+
+**3. Exercise with Multiple Tests:**
+
+- Multiple test worlds
+- "Run Tests" button appears
+- Optional test world dropdown to preview different scenarios
+- Validation checks each result
+
+```typescript
+{
+  initialWorld: { /* ... displayed by default */ },
+  initialCode: '# Pick up all beepers\n',
+  tests: {
+    worlds: {
+      'Empty world': { /* no beepers */ },
+      'One beeper': { /* 1 beeper at (3,3) */ },
+      'Many beepers': { /* 5 beepers scattered */ }
+    },
+    loadableTests: ['Empty world', 'One beeper'], // Students can preview these
+    validate: (world) => ({
+      passed: world.beepers.length === 0 && world.karel.beepers > 0,
+      message: world.beepers.length === 0
+        ? '✓ All beepers collected!'
+        : 'Some beepers remain on the ground'
+    })
+  }
+}
+```
+
+### Instructional Content (MDsveX)
 
 - Lesson descriptions, explanations, and instructions in `.svx` files (Markdown + Svelte)
-- Can embed interactive Svelte components within markdown
+- Embed `KarelEnvironment` components directly in markdown
 - Supports code blocks with syntax highlighting
-- Can include inline Karel world demonstrations
+- Can include multiple Karel environments per lesson (examples + exercises)
 
 ---
 
@@ -529,23 +591,29 @@ pyodide.globals.set('turn_left', () => {
 
 ### Playground Page
 
-- Dedicated route (e.g., `/karel/playground`)
+The playground is a special page that uses `KarelEnvironment` with world editing capabilities enabled:
+
+- Dedicated route (`/karel/playground`)
+- Uses `KarelEnvironment` component with `showWorldEditor=true`
 - **Mode Toggle**: Slider button to switch between Play and Edit modes
-  - **Play Mode** (default): Code editor + execution controls + world display
-  - **Edit Mode**: World editor + interactive world display for setup
-  - **Auto-reset**: Switching to Setup mode automatically resets execution state
-- **Interactive Grid**: In Edit mode, click cells in Karel World to move Karel
-- **State Persistence**: World changes (position, direction, beepers) persist when switching modes
-- Combines world editor + code editor + Karel world display
+  - **Play Mode** (default): Standard Karel environment with execution controls
+  - **Edit Mode**: World editor UI for modifying the world state
+  - **Auto-reset**: Switching to Edit mode automatically resets execution state
+- **No Additional Restrictions**: All Karel commands and allowed Python features enabled (base Karel restrictions still apply)
+- **No Validation/Testing**: Pure sandbox for experimentation
+- **State Persistence**: World changes persist when switching modes
+- **World Export/Import**: Save and load world configurations as JSON
 - Target users: Both instructors (lesson authoring) and students (experimentation)
 
 ### World Editor Features
 
 1. **Grid Configuration**
+
    - Adjust dimensions (up to 30x30)
    - Visual grid display
 
 2. **Interactive Editing**
+
    - **✅ Move Karel Mode** (COMPLETE): Click cells to move Karel to new position
    - **✅ Add/Remove Walls Mode** (COMPLETE): Click wall segments between cells to toggle walls
    - Click to add/remove beepers with count selector (TODO)
@@ -556,6 +624,7 @@ pyodide.globals.set('turn_left', () => {
    - **Streamlined UI**: Clean interface without instruction text (intuitive button labels)
 
 3. **Technical Implementation**
+
    - KarelWorld component supports `interactive` prop with separate `onCellClick` and `onWallClick` callbacks
    - Wall hotspots: 8px wide clickable areas with 1px visual wall thickness
    - WorldEditor exposes `handleCellClick` and `handleWallClick` functions via bindable props
@@ -570,6 +639,7 @@ pyodide.globals.set('turn_left', () => {
    - **Reset functionality**: Uses `createDefaultWorld()` from types.ts to restore initial state
 
 4. **Export**
+
    - Generate JSON matching TypeScript data structure
    - Copy to clipboard button
    - Download as .json file button
@@ -584,13 +654,54 @@ pyodide.globals.set('turn_left', () => {
 - Validation functions written manually in TypeScript code
 - Not a full lesson authoring UI (just world creation/testing)
 
+### Relationship to Lessons
+
+- Playground is standalone - not embedded in lessons
+- Students use playground for open-ended experimentation
+- Instructors use playground to create and test worlds for lessons
+- Export worlds from playground → copy into lesson config objects
+
 ---
 
 ## 13. Component Architecture
 
-### Core Components
+### Overview
 
-**Pure Display Components:**
+The Karel environment is designed as a **reusable component system** to support multiple use cases:
+
+1. **Playground**: Open-ended experimentation with world editing
+2. **Simple Examples**: Interactive code demonstrations in lessons without tests
+3. **Exercises with Tests**: Exercises with "Run Tests" button (single or multiple test worlds)
+
+All use cases share the same core `KarelEnvironment` component, configured via props.
+
+### Reusable Karel Environment
+
+The core Karel execution environment is implemented as a reusable Svelte component (`KarelEnvironment.svelte`) that can be embedded in both the playground and lesson pages. This component accepts configuration via props and handles all execution, animation, and validation logic.
+
+#### KarelEnvironment Component
+
+**Props:** Accepts a `KarelConfig` object (see Section 4 for full interface definition)
+
+**Responsibilities:**
+
+- Manages Karel world state (current and initial)
+- Handles code execution via Pyodide integration
+- Implements animation system with record-and-replay
+- Validates code against allowed features
+- Provides execution controls (play/pause/step/reset)
+- Handles test execution when tests provided
+
+**Features:**
+
+1. **Standard Execution**: Run code with animation controls
+2. **Testing** (when tests provided): "Run Tests" button that:
+   - Executes code against one or more test worlds
+   - Shows "✓ All tests passed!" if all pass
+   - Shows individual test results if any fail (e.g., "Test 1: ✗ Failed - Karel ended at wrong position")
+   - Provides dropdown to load any test world from `loadableTests` into the Karel display
+
+### Pure Display Components
 
 ```typescript
 // KarelWorld.svelte
@@ -598,10 +709,12 @@ pyodide.globals.set('turn_left', () => {
 // - Renders SVG visualization
 // - No internal state management
 // - Pure display of position, direction, beepers, walls
+// - Supports interactive prop for world editor (playground only)
 
 // KarelControls.svelte
 // - Play/Pause/Step/Reset buttons
 // - Speed slider
+// - Optional "Run Tests" button (when tests provided)
 // - Dispatches events to parent
 // - No execution logic
 
@@ -614,42 +727,146 @@ pyodide.globals.set('turn_left', () => {
 // KarelOutput.svelte
 // - Displays error messages
 // - Displays success/validation feedback
+// - Shows test results (pass/fail details)
 // - Pure display component
-```
 
-**Container Components:**
-
-```typescript
-// KarelLesson.svelte
-// - Orchestrates all Karel components for a lesson
-// - Manages execution state and animation
-// - Handles Pyodide integration
-// - Coordinates between code editor, world, and controls
-// - Implements animation queue and timing
-
-// KarelPlayground.svelte
-// - Similar to KarelLesson but includes WorldEditor
-// - Manages world editing state
-// - Handles world export/import
-
-// WorldEditor.svelte
+// WorldEditor.svelte (playground only)
 // - UI for editing world state
 // - Grid manipulation tools
 // - Export/import functionality
 ```
 
+### Container Components
+
+```typescript
+// KarelEnvironment.svelte (NEW - core reusable component)
+// - Accepts KarelConfig as prop
+// - Orchestrates all Karel components
+// - Manages execution state and animation
+// - Handles Pyodide integration
+// - Implements validation and testing logic
+// - Coordinates between code editor, world, and controls
+// - Implements animation queue and timing
+
+// Playground Page (+page.svelte in /karel/playground)
+// - Uses KarelEnvironment with showWorldEditor=true
+// - Manages world editing state and mode switching
+// - Provides default world and code
+// - Handles world export/import
+// - Enables all features (no restrictions)
+
+// Lesson Pages (future)
+// - Embed multiple KarelEnvironment instances
+// - Each instance gets unique KarelConfig
+// - Markdown content with embedded Karel environments
+// - Some exercises have tests, others are just examples
+```
+
 ### Data Flow
+
+**Standard Execution:**
 
 ```
 User Action (Controls)
   ↓
-Container Component (Lesson/Playground)
+KarelEnvironment Component
   ↓
 Execute via Pyodide → Update State
   ↓
 Props down to Display Components
   ↓
 SVG/UI Updates
+```
+
+**Testing Flow:**
+
+```
+User clicks "Run Tests"
+  ↓
+KarelEnvironment loops through test worlds:
+  - Reset to test world
+  - Execute user code
+  - Call validate(finalWorld)
+  - Record result
+  ↓
+All tests pass → "✓ All tests passed!"
+Some fail → Show details for each failure
+  ↓
+Display results in KarelOutput
+```
+
+### Usage Example
+
+**In a lesson markdown file:**
+
+```svelte
+<script>
+  import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
+
+  const exercise1Config = {
+    initialWorld: {
+      dimensions: { width: 8, height: 8 },
+      karel: { position: { x: 1, y: 1 }, direction: { type: 'east' }, beepers: 0 },
+      walls: [],
+      beepers: [{ x: 4, y: 1, count: 1 }]
+    },
+    initialCode: '# Move Karel to the beeper\n',
+    tests: {
+      worlds: {
+        Main: {
+          /* same as initialWorld */
+        }
+      },
+      validate: (world) => {
+        if (world.karel.position.x === 4 && world.karel.position.y === 1) {
+          return { passed: true, message: 'Perfect! Karel reached the beeper!' };
+        }
+        return { passed: false, message: 'Karel needs to reach position (4, 1)' };
+      }
+    }
+  };
+
+  const exercise2Config = {
+    initialWorld: {
+      /* ... */
+    },
+    initialCode: '# Pick up all beepers\n',
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'pick_beeper'],
+      pythonFeatures: ['functions', 'while', 'if']
+    },
+    tests: {
+      worlds: {
+        'Test 1: Empty world': {
+          /* world with no beepers */
+        },
+        'Test 2: One beeper': {
+          /* world with 1 beeper */
+        },
+        'Test 3: Multiple beepers': {
+          /* world with 5 beepers */
+        }
+      },
+      loadableTests: ['Test 1: Empty world', 'Test 2: One beeper'],
+      validate: (world) => ({
+        passed: world.beepers.length === 0,
+        message:
+          world.beepers.length === 0
+            ? 'Great job! All beepers collected!'
+            : 'Some beepers remain on the ground'
+      })
+    }
+  };
+</script>
+
+# Lesson: Moving Karel Learn how to move Karel around the world! ## Exercise 1: Reach the Beeper
+Write code to move Karel to position (4, 1) where the beeper is located.
+
+<KarelEnvironment config={exercise1Config} />
+
+## Exercise 2: Collect All Beepers This exercise tests your code against multiple worlds!
+
+<KarelEnvironment config={exercise2Config} />
 ```
 
 ---
@@ -783,15 +1000,34 @@ interface ExecutionState {
 5. ✅ Step-through debugging with line highlighting
 6. ✅ Full control flow support (if/else, while, for loops)
 
-### Phase 3: Lessons & Content
+### Phase 3: Reusable Component Architecture (NEXT)
 
-1. Define lesson data structures
-2. Create lesson container components
-3. Build chapter/lesson navigation
-4. Implement progress tracking
-5. Create initial lesson content
+1. ⏳ Extract core logic into `KarelEnvironment` component
+   - Move execution state management from playground to component
+   - Accept `KarelConfig` prop for configuration
+   - Support optional testing
+2. ⏳ Refactor playground to use `KarelEnvironment`
+   - Playground wraps KarelEnvironment with world editor
+   - Maintains all existing functionality
+3. ⏳ Implement feature restriction system
+   - Configurable Karel command restrictions
+   - Configurable Python feature restrictions
+   - Update validator to accept allowed features
+4. ⏳ Add testing support
+   - "Run Tests" button when tests provided
+   - Test execution against one or more test worlds
+   - Test world dropdown for loadable tests
+   - Test result display (all pass vs. individual failures)
+   - Single test acts as simple validation
 
-### Phase 4: Polish & Enhancement
+### Phase 4: Lessons & Content
+
+1. Create example lessons using `KarelEnvironment`
+2. Build chapter/lesson navigation
+3. Implement progress tracking
+4. Create initial lesson content
+
+### Phase 5: Polish & Enhancement
 
 1. Error handling improvements
 2. Responsive design refinement

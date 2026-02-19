@@ -103,3 +103,51 @@ export function createDefaultExecutionState(): ExecutionState {
     animationSpeed: 300 // Normal speed
   };
 }
+
+/**
+ * Test result for a single test case
+ */
+export interface TestResult {
+  testName: string;
+  passed: boolean;
+  message: string;
+}
+
+/**
+ * Configuration for Karel environment tests
+ */
+export interface KarelTests {
+  /** Map of test name to test world */
+  worlds: { [testName: string]: KarelWorld };
+  /** Validation function that checks if final world state is correct */
+  validate: (world: KarelWorld) => { passed: boolean; message: string };
+  /** Names of tests that can be loaded and viewed in the UI */
+  loadableTests?: string[];
+}
+
+/**
+ * Configuration for allowed features in Karel environment
+ */
+export interface AllowedFeatures {
+  /** List of allowed Karel commands (if undefined, all are allowed) */
+  karelCommands?: string[];
+  /** List of allowed Python features (if undefined, all playground features are allowed) */
+  pythonFeatures?: string[];
+}
+
+/**
+ * Configuration for a Karel environment instance
+ * This allows embedding Karel in lessons with specific restrictions and tests
+ */
+export interface KarelConfig {
+  /** Initial world state when environment loads */
+  initialWorld: KarelWorld;
+  /** Initial code to display in the editor */
+  initialCode: string;
+  /** Feature restrictions for this environment (optional) */
+  allowedFeatures?: AllowedFeatures;
+  /** Test configuration for this environment (optional) */
+  tests?: KarelTests;
+  /** Whether to show the world editor UI (default: false) */
+  showWorldEditor?: boolean;
+}

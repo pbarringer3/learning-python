@@ -108,8 +108,8 @@ The site includes specialized interactive modules for teaching:
 ## Key Documentation
 
 - `README.md` — Project overview and user-facing information
+- `SITE_DESIGN.md` — Overall site design (layout, navigation, landing page, progress tracking)
 - `KAREL_DESIGN.md` — Design decisions for the Karel module
-- `KAREL_REFACTOR.md` — Karel component architecture refactoring plan
 - `LESSON_AUTHORING_GUIDE.md` — How to author lessons (Karel and beyond)
 - `PROGRESS.md` — Implementation progress tracking
 

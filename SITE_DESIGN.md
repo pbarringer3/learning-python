@@ -38,8 +38,8 @@ Learning Python is a web-based interactive curriculum that teaches Python from t
 
 ```
 /                       → Landing page (hero + site overview)
-/<chapter>              → Chapter landing page (topic showcase + lesson nav)
-/<chapter>/<lesson>     → Lesson pages
+/<chapterNum>           → Chapter landing page (e.g. /1 for Karel)
+/<chapterNum>/<lessonNum> → Lesson pages (e.g. /1/1 for Meet Karel)
 /karel/playground       → Karel playground (existing, fully functional)
 /karel/lesson-examples  → Karel lesson examples (existing)
 ```

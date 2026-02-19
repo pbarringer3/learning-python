@@ -1,17 +1,36 @@
-# Karel Lesson Authoring Guide
+# Lesson Authoring Guide
 
-This guide explains how to create Karel programming lessons using the KarelEnvironment component.
+This guide explains how to create lessons for the Learning Python curriculum. Lessons use MDsveX (Markdown + Svelte components) and embed interactive environments for hands-on learning.
 
 ## Table of Contents
 
-1. [Basic Usage](#basic-usage)
-2. [Simple Examples](#simple-examples)
-3. [Exercises with Feature Restrictions](#exercises-with-feature-restrictions)
-4. [Single Test Exercises](#single-test-exercises)
-5. [Multi-Test Exercises](#multi-test-exercises)
-6. [Configuration Reference](#configuration-reference)
+1. [Overview](#overview)
+2. [Karel Lessons](#karel-lessons)
+3. [Future: Non-Karel Lessons](#future-non-karel-lessons)
+4. [Karel Basic Usage](#karel-basic-usage)
+5. [Simple Examples](#simple-examples)
+6. [Exercises with Feature Restrictions](#exercises-with-feature-restrictions)
+7. [Single Test Exercises](#single-test-exercises)
+8. [Multi-Test Exercises](#multi-test-exercises)
+9. [Configuration Reference](#configuration-reference)
 
-## Basic Usage
+## Overview
+
+The Learning Python curriculum is organized into chapters. Each chapter contains lessons written as MDsveX files with embedded interactive components.
+
+- **Chapter 1 (Karel)** uses the `KarelEnvironment` component.
+- **Later chapters** will introduce other interactive modules (e.g., a Call Stack Visualizer for tracing Python execution) alongside standard lesson content.
+- **Karel exercises** may also appear in later chapters as practice for new concepts like loops or functions with parameters.
+
+All interactive modules follow the same embedding pattern: import a Svelte component, configure it, and embed it in your MDsveX lesson file.
+
+---
+
+## Karel Lessons
+
+The sections below cover authoring Karel-specific lessons. As new interactive modules are added, this guide will expand with module-specific sections following the same patterns.
+
+### Karel Basic Usage
 
 To embed a Karel environment in a lesson, import `KarelEnvironment` and provide a `KarelConfig` object:
 
@@ -299,6 +318,24 @@ interface BeeperLocation {
 }
 ```
 
+## Future: Non-Karel Lessons
+
+As the curriculum expands beyond Karel, new interactive modules will be developed:
+
+- **Call Stack Visualizer** (planned) — An interactive component for visualizing the call stack and tracing through Python code execution. Will be used in chapters covering functions, recursion, and program flow.
+- **Additional modules** — As needed for topics like data structures, algorithms, etc.
+
+Each new module will:
+
+1. Live in `src/lib/<module-name>/` for logic and types
+2. Have reusable Svelte components in `src/lib/components/`
+3. Be embeddable in MDsveX lessons following the same `import → configure → embed` pattern as Karel
+4. Have a corresponding design document (`<MODULE>_DESIGN.md`)
+
+Lesson files for non-Karel chapters will follow the same MDsveX format, mixing prose explanations with embedded interactive components.
+
+---
+
 ## Tips for Lesson Authors
 
 1. **Start Simple**: Begin with simple examples before adding restrictions or tests
@@ -315,6 +352,7 @@ See [src/routes/karel/lesson-examples/+page.svelte](src/routes/karel/lesson-exam
 
 ## Need Help?
 
-- Check [KAREL_DESIGN.md](KAREL_DESIGN.md) for system design details
-- Check [KAREL_REFACTOR.md](KAREL_REFACTOR.md) for refactoring documentation
+- Check [KAREL_DESIGN.md](KAREL_DESIGN.md) for Karel module design details
+- Check [KAREL_REFACTOR.md](KAREL_REFACTOR.md) for Karel refactoring documentation
 - Check [PROGRESS.md](PROGRESS.md) for implementation status
+- Check [AGENTS.md](AGENTS.md) for overall project guidance

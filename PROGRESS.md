@@ -1,6 +1,10 @@
-# Karel the Robot - Implementation Progress
+# Implementation Progress
+
+## Karel the Robot (Chapter 1)
 
 **Status:** Phase 3 Complete - Reusable Component Architecture with Lesson Support
+
+> Karel is the first chapter of the Learning Python curriculum. This document tracks Karel-specific implementation progress. As more chapters and modules are built, they will have their own progress sections or documents.
 
 ---
 
@@ -26,6 +30,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
 ### ✅ Phase 3: Component Architecture (NEW)
 
 1. **KarelConfig Interface** ([src/lib/karel/types.ts](src/lib/karel/types.ts))
+
    - Configurable initial world and code
    - Optional feature restrictions (Karel commands, Python features)
    - Optional test configuration with multiple test worlds
@@ -33,6 +38,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
    - Loadable test worlds for UI dropdown
 
 2. **KarelEnvironment Component** ([src/lib/components/KarelEnvironment.svelte](src/lib/components/KarelEnvironment.svelte))
+
    - Reusable Karel environment that accepts `KarelConfig` props
    - Integrates all existing components (World, CodeEditor, Controls, Output)
    - Manages execution state, animation, and Karel command implementations
@@ -41,6 +47,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
    - 740+ lines of refactored logic from playground
 
 3. **Enhanced Code Validator** ([src/lib/karel/pyodide.ts](src/lib/karel/pyodide.ts))
+
    - Now accepts `allowed_commands` parameter (list of Karel commands)
    - Validates against restricted command set when provided
    - Clear error messages when using restricted commands
@@ -48,12 +55,14 @@ The refactor maintains 100% backward compatibility while enabling new educationa
    - Configuration validation (detects invalid command names)
 
 4. **Enhanced Controls** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
+
    - New "Run Tests" button (appears when tests configured)
    - Test world dropdown (appears when loadable tests configured)
    - Running tests state indicator
    - All existing control functionality preserved
 
 5. **Enhanced Output** ([src/lib/components/KarelOutput.svelte](src/lib/components/KarelOutput.svelte))
+
    - Test results display section
    - Success indicator when all tests pass
    - Individual test results with pass/fail indicators
@@ -62,6 +71,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
    - All existing output functionality preserved
 
 6. **Refactored Playground** ([src/routes/karel/playground/+page.svelte](src/routes/karel/playground/+page.svelte))
+
    - Now uses KarelEnvironment component for Play mode
    - Maintains separate World Editor for Edit mode
    - Reduced from 941 to ~250 lines (73% reduction!)
@@ -78,6 +88,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
 ### ✅ Core Infrastructure
 
 1. **Type Definitions** ([src/lib/karel/types.ts](src/lib/karel/types.ts))
+
    - `KarelWorld`, `Position`, `Direction`, `Wall`, `BeeperLocation` interfaces
    - `ExecutionState` with support for error line tracking
    - Helper functions: `createDefaultWorld()`, `cloneWorld()`, `createDefaultExecutionState()`
@@ -95,6 +106,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
 ### ✅ Display Components
 
 3. **KarelWorld Component** ([src/lib/components/KarelWorld.svelte](src/lib/components/KarelWorld.svelte))
+
    - SVG-based rendering (scalable, interactive-ready)
    - Classic Stanford Karel visual design:
      - Solid border wall around world perimeter
@@ -113,6 +125,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
    - **Fixed:** North/south directions now correct (north=270°, south=90°)
 
 4. **KarelCodeEditor Component** ([src/lib/components/KarelCodeEditor.svelte](src/lib/components/KarelCodeEditor.svelte))
+
    - CodeMirror 6 integration
    - Python syntax highlighting
    - Line highlighting (yellow for current, red for errors)
@@ -120,6 +133,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
    - Bindable value with proper change detection
 
 5. **KarelControls Component** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
+
    - Play/Pause/Step/Reset buttons (centered within container)
    - Speed slider with 6 discrete presets (Instant, Very Fast, Fast, Normal, Slow, Very Slow)
    - Index-based slider (0-5) prevents "Custom" values between presets
@@ -127,6 +141,7 @@ The refactor maintains 100% backward compatibility while enabling new educationa
    - Disabled states when appropriate
 
 6. **KarelOutput Component** ([src/lib/components/KarelOutput.svelte](src/lib/components/KarelOutput.svelte))
+
    - Error messages (clean, no stack traces)
    - Success notifications
    - Running status with step count
@@ -453,20 +468,24 @@ src/
 ### Not Yet Implemented
 
 1. **Per-Lesson Feature Control**
+
    - Current restriction level is fixed for all playground use
    - Future: Support different restriction levels per lesson
    - Would need lesson data structure to specify allowed features
 
 2. **Interactive World Editing**
+
    - ✅ **Move Karel mode** - Click grid to move Karel (COMPLETE)
    - ✅ **Add/Remove Walls mode** - Click wall segments to toggle walls (COMPLETE)
    - Place Beepers mode not yet wired up
 
 3. **Validation Functions**
+
    - No exercise validation system
    - Success criteria not implemented
 
 4. **Lessons & Content**
+
    - No lesson data structures
    - No MDsveX integration for instructions
    - No progress tracking
@@ -519,7 +538,7 @@ src/
 ## Development Server
 
 **Start:** `npm run dev`  
-**URL:** http://localhost:5173/karel/playground
+**Karel Playground URL:** http://localhost:5173/karel/playground
 
 ---
 
@@ -624,6 +643,13 @@ async function continueExecution() {
 Full specification: [KAREL_DESIGN.md](KAREL_DESIGN.md)
 
 This implementation follows Phase 1 (Core Infrastructure) from the design document. The playground is fully functional for basic use cases with proper stepping, error handling, and world editing.
+
+---
+
+## Planned: Future Modules
+
+- **Call Stack Visualizer** — Interactive module for tracing through Python code execution and visualizing the call stack. Will be used in later chapters to teach functions, recursion, and program flow.
+- **Additional curriculum chapters** — Variables, strings, data types, functions with parameters, lists, dictionaries, classes, recursion, data structures and algorithms, etc.
 
 ---
 

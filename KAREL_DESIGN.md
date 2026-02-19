@@ -2,7 +2,11 @@
 
 ## Project Overview
 
-Karel the Robot is an interactive, browser-based module for teaching Python programming fundamentals. Students write Python code to control a robot (Karel) in a grid-based world, learning programming concepts through visual, engaging exercises.
+Karel the Robot is the first chapter of the **Learning Python** curriculum — an interactive, browser-based site that teaches Python from the ground up through data structures and algorithms.
+
+In this chapter, students write Python code to control a robot (Karel) in a grid-based world, learning programming fundamentals through visual, engaging exercises. Karel exercises also appear in later chapters as practice for new concepts (e.g., using Karel to practice loops or functions with parameters).
+
+This document covers design decisions specific to the Karel module. For the overall project, see `AGENTS.md` and `README.md`.
 
 ### Goals
 

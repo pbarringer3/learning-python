@@ -1,10 +1,26 @@
 # Agent Instructions
 
-This document provides high-level guidance for AI assistants working on this Karel learning environment project.
+This document provides high-level guidance for AI assistants working on this project.
 
 ## Project Overview
 
-This is a web-based Karel programming environment built with SvelteKit, allowing users to learn Python through Karel the Robot. The application runs Python code in the browser using Pyodide.
+**Learning Python** is a web-based interactive Python curriculum built with SvelteKit. The site teaches Python from the ground up — starting with Karel the Robot and progressing through all the fundamentals up to data structures and algorithms.
+
+All Python code runs client-side in the browser via Pyodide (Python compiled to WebAssembly). There is no backend.
+
+### Curriculum Structure
+
+- **Chapter 1: Karel the Robot** — Students learn programming basics (functions, control flow) by writing Python to control a robot in a grid world. This is fully implemented.
+- **Later chapters** — Will cover standard Python topics: variables, strings, data types, functions with parameters, lists, dictionaries, loops, classes, recursion, data structures and algorithms, etc.
+- **Karel mixed in later** — Karel exercises appear in later chapters as practice for new concepts (e.g., using Karel to practice loops or functions with parameters).
+
+### Interactive Modules
+
+The site includes specialized interactive modules for teaching:
+
+- **Karel Environment** — Grid-based robot world with code editor, execution controls, and animated step-through. Fully implemented.
+- **Call Stack Visualizer** (planned) — Will allow students to visualize the call stack and trace through regular Python code execution.
+- More modules may be added as the curriculum expands.
 
 ## Technology Stack
 
@@ -37,26 +53,45 @@ This is a web-based Karel programming environment built with SvelteKit, allowing
 
 ### Design Principles
 
-- Maintain educational focus (teaching programming concepts)
+- Maintain educational focus — this is a full Python curriculum, not just a Karel tool
 - Keep UI intuitive for beginners
 - Ensure Python execution is sandboxed and safe
-- Refer to `KAREL_DESIGN.md` for detailed design decisions
+- Design components to be reusable across different lesson types
+- Refer to `KAREL_DESIGN.md` for Karel-specific design decisions
 
 ## Common Tasks
 
-### Adding New Karel Commands
+### Karel-Specific Tasks
+
+#### Adding New Karel Commands
 
 1. Update Karel command definitions in `src/lib/karel/types.ts`
 2. Implement command logic in the Karel engine
 3. Update documentation and examples
 
-### Modifying the World Grid
+#### Modifying the World Grid
 
 1. Changes likely in `KarelWorld.svelte` for rendering
 2. Update world state management logic
 3. Consider backward compatibility with existing worlds
 
-### UI Changes
+### General Tasks
+
+#### Adding New Lesson Content
+
+1. Lessons use MDsveX (Markdown + Svelte components)
+2. Interactive environments are embedded as Svelte components within lesson content
+3. Karel lessons use `KarelEnvironment` component; future lessons will have their own interactive components
+4. See `LESSON_AUTHORING_GUIDE.md` for details
+
+#### Adding New Interactive Modules
+
+1. Create module logic in `src/lib/<module-name>/`
+2. Create reusable Svelte components in `src/lib/components/`
+3. Follow the same patterns as the Karel module (configurable, embeddable, testable)
+4. Add a design document (`<MODULE>_DESIGN.md`) for non-trivial modules
+
+#### UI Changes
 
 1. Use Tailwind utility classes
 2. Maintain responsive design
@@ -68,6 +103,15 @@ This is a web-based Karel programming environment built with SvelteKit, allowing
 - **State Management**: Svelte stores for reactive state
 - **Documentation**: Keep `README.md` updated with user-facing changes
 - **Progress Tracking**: Update `PROGRESS.md` when completing major features
+- **Scope**: Karel is Chapter 1 — the project scope is a full Python curriculum
+
+## Key Documentation
+
+- `README.md` — Project overview and user-facing information
+- `KAREL_DESIGN.md` — Design decisions for the Karel module
+- `KAREL_REFACTOR.md` — Karel component architecture refactoring plan
+- `LESSON_AUTHORING_GUIDE.md` — How to author lessons (Karel and beyond)
+- `PROGRESS.md` — Implementation progress tracking
 
 ## Getting Started
 

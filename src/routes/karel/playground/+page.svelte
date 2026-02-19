@@ -96,6 +96,7 @@ else:
   <div class="mode-toggle-container">
     <div class="mode-toggle" bind:this={toggleContainer}>
       <button
+        type="button"
         class="mode-button"
         class:active={mode === 'play'}
         bind:this={playButton}
@@ -104,6 +105,7 @@ else:
         Play
       </button>
       <button
+        type="button"
         class="mode-button"
         class:active={mode === 'edit'}
         bind:this={editButton}

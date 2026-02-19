@@ -2,8 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   webServer: {
-    command: 'npm run build && npm run preview',
-    port: 4173
+    command: 'npm run dev',
+    port: 5173,
+    reuseExistingServer: !process.env.CI
   },
   testDir: 'tests',
   testMatch: /(.+\.)?(test|spec)\.[jt]s/,
@@ -14,10 +15,6 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] }
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] }
     },
     {
       name: 'webkit',

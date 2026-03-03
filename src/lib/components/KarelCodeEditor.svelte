@@ -3,7 +3,13 @@
   import { minimalSetup } from 'codemirror';
   import { python } from '@codemirror/lang-python';
   import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
-  import { Decoration, type DecorationSet, EditorView, lineNumbers, highlightActiveLine } from '@codemirror/view';
+  import {
+    Decoration,
+    type DecorationSet,
+    EditorView,
+    lineNumbers,
+    highlightActiveLine
+  } from '@codemirror/view';
   import { indentUnit, bracketMatching, indentOnInput } from '@codemirror/language';
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';

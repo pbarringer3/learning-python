@@ -410,7 +410,8 @@ interface KarelConfig {
 - Python syntax highlighting
 - Line highlighting during step-through execution
 - Line numbers
-- Basic editing features (bracket matching, indentation)
+- Basic editing features (bracket matching, auto-close brackets, indentation)
+- **No autocompletion** — intentionally disabled to keep students focused on learning and typing code themselves rather than relying on suggestions
 
 ---
 

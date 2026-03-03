@@ -126,9 +126,10 @@ The refactor maintains 100% backward compatibility while enabling new educationa
 
 4. **KarelCodeEditor Component** ([src/lib/components/KarelCodeEditor.svelte](src/lib/components/KarelCodeEditor.svelte))
 
-   - CodeMirror 6 integration
+   - CodeMirror 6 integration (using `minimalSetup` — no autocompletion)
    - Python syntax highlighting
    - Line highlighting (yellow for current, red for errors)
+   - Line numbers, bracket matching, auto-close brackets, selection match highlighting
    - Read-only mode support
    - Bindable value with proper change detection
 

@@ -1,0 +1,484 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
+  import type { KarelConfig } from '$lib/karel/types';
+
+  // Example 1: Careful collector — while + if
+  const carefulCollectorExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 7, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [
+        { x: 2, y: 1, count: 1 },
+        { x: 5, y: 1, count: 1 },
+        { x: 7, y: 1, count: 1 }
+      ]
+    },
+    initialCode: `# Walk the whole row and pick up beepers
+# only where they exist.
+# Without the "if", Karel would crash
+# trying to pick up from empty cells!
+
+while front_is_clear():
+    move()
+    if beepers_present():
+        pick_beeper()
+`
+  };
+
+  // Example 2: If/else — choose between two actions
+  const ifElseExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: [
+        { x: 1, y: 1, count: 1 },
+        { x: 3, y: 1, count: 1 },
+        { x: 5, y: 1, count: 1 }
+      ]
+    },
+    initialCode: `# Invert the beepers!
+# If there's a beeper: pick it up.
+# If there's no beeper: put one down.
+
+def check_and_invert():
+    if beepers_present():
+        pick_beeper()
+    else:
+        put_beeper()
+
+check_and_invert()
+move()
+check_and_invert()
+move()
+check_and_invert()
+move()
+check_and_invert()
+move()
+check_and_invert()
+`
+  };
+
+  // Example 3: More sensors — left_is_clear, right_is_clear
+  const moreSensorsExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 3 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [
+        // Wall blocking upward from (2,1) — vertical wall to right of (2,1) wouldn't work
+        // Let's put a horizontal wall above (2,1) — that's a horizontal wall at (2,2)
+        // horizontal wall below (2,2) means between row 1 and row 2 at column 2
+        { type: 'horizontal', x: 2, y: 2 },
+        { type: 'horizontal', x: 4, y: 2 }
+      ],
+      beepers: []
+    },
+    initialCode: `# Walk east and put a beeper wherever
+# Karel's left side is clear (no wall).
+# Karel faces east, so "left" is north.
+
+while front_is_clear():
+    if left_is_clear():
+        put_beeper()
+    move()
+
+# Check the last position too
+if left_is_clear():
+    put_beeper()
+`
+  };
+
+  // Exercise 1: Selective collector
+  const exercise1Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 6, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [
+        { x: 1, y: 1, count: 1 },
+        { x: 3, y: 1, count: 1 },
+        { x: 4, y: 1, count: 1 },
+        { x: 6, y: 1, count: 1 }
+      ]
+    },
+    initialCode: `# Walk the entire row and pick up every beeper.
+# Not all positions have beepers — use "if" to check!
+#
+# Your solution must work for any beeper arrangement.
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'pick_beeper', 'put_beeper',
+        'front_is_clear', 'front_is_blocked',
+        'beepers_present', 'no_beepers_present'
+      ]
+    },
+    tests: {
+      worlds: {
+        'Test 1: Scattered': {
+          dimensions: { width: 6, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [
+            { x: 1, y: 1, count: 1 },
+            { x: 3, y: 1, count: 1 },
+            { x: 4, y: 1, count: 1 },
+            { x: 6, y: 1, count: 1 }
+          ]
+        },
+        'Test 2: All beepers': {
+          dimensions: { width: 4, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [
+            { x: 1, y: 1, count: 1 },
+            { x: 2, y: 1, count: 1 },
+            { x: 3, y: 1, count: 1 },
+            { x: 4, y: 1, count: 1 }
+          ]
+        },
+        'Test 3: Just one': {
+          dimensions: { width: 5, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [
+            { x: 3, y: 1, count: 1 }
+          ]
+        }
+      },
+      validate: (world) => {
+        const remaining = world.beepers.filter((b) => b.count > 0);
+        if (remaining.length === 0) {
+          return { passed: true, message: 'All beepers collected! Your if-statement works perfectly.' };
+        }
+        return {
+          passed: false,
+          message: `${remaining.length} beeper(s) still on the ground. Check both the starting position and all positions after moving.`
+        };
+      },
+      loadableTests: ['Test 1: Scattered', 'Test 2: All beepers', 'Test 3: Just one']
+    }
+  };
+
+  // Exercise 2: Beeper line inverter
+  const exercise2Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: [
+        { x: 1, y: 1, count: 1 },
+        { x: 3, y: 1, count: 1 },
+        { x: 5, y: 1, count: 1 }
+      ]
+    },
+    initialCode: `# Invert the beeper pattern!
+# For each position in the row:
+#   - If there's a beeper, pick it up
+#   - If there's no beeper, put one down
+#
+# Use a while loop with an if/else inside.
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'pick_beeper', 'put_beeper',
+        'front_is_clear', 'front_is_blocked',
+        'beepers_present', 'no_beepers_present'
+      ]
+    },
+    tests: {
+      worlds: {
+        'Test: Alternating': {
+          dimensions: { width: 5, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: [
+            { x: 1, y: 1, count: 1 },
+            { x: 3, y: 1, count: 1 },
+            { x: 5, y: 1, count: 1 }
+          ]
+        }
+      },
+      validate: (world) => {
+        // After inverting: beepers should be at 2 and 4 (not at 1, 3, 5)
+        const expected = [
+          { x: 2, y: 1, should: true },
+          { x: 4, y: 1, should: true },
+          { x: 1, y: 1, should: false },
+          { x: 3, y: 1, should: false },
+          { x: 5, y: 1, should: false }
+        ];
+
+        for (const exp of expected) {
+          const found = world.beepers.find(
+            (b) => b.x === exp.x && b.y === exp.y && b.count > 0
+          );
+          if (exp.should && !found) {
+            return {
+              passed: false,
+              message: `Expected a beeper at (${exp.x}, ${exp.y}) but didn't find one. Remember: if there's no beeper, put one down.`
+            };
+          }
+          if (!exp.should && found) {
+            return {
+              passed: false,
+              message: `Found a beeper at (${exp.x}, ${exp.y}) that should have been picked up.`
+            };
+          }
+        }
+        return { passed: true, message: 'Pattern inverted perfectly! Great use of if/else.' };
+      }
+    }
+  };
+
+  // Exercise 3: Safe navigation
+  const exercise3Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [
+        // Create a zigzag path by blocking certain directions
+        { type: 'vertical', x: 3, y: 1 },   // wall to right of (3,1)
+        { type: 'horizontal', x: 4, y: 3 },  // wall below (4,3)
+        { type: 'vertical', x: 2, y: 4 }     // wall to right of (2,4)
+      ],
+      beepers: [{ x: 5, y: 5, count: 1 }]
+    },
+    initialCode: `# Navigate to the beeper at (5, 5).
+# There are walls in the way!
+#
+# Strategy: Try to move east. If blocked, move north.
+# Keep going until you reach the beeper.
+#
+# You'll need: while, if/else, and sensor functions.
+
+def turn_right():
+    for i in range(3):
+        turn_left()
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'pick_beeper', 'put_beeper',
+        'front_is_clear', 'front_is_blocked',
+        'beepers_present', 'no_beepers_present',
+        'left_is_clear', 'left_is_blocked',
+        'right_is_clear', 'right_is_blocked',
+        'facing_north', 'not_facing_north',
+        'facing_east', 'not_facing_east',
+        'facing_south', 'not_facing_south',
+        'facing_west', 'not_facing_west'
+      ]
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [
+            { type: 'vertical', x: 3, y: 1 },
+            { type: 'horizontal', x: 4, y: 3 },
+            { type: 'vertical', x: 2, y: 4 }
+          ],
+          beepers: [{ x: 5, y: 5, count: 1 }]
+        }
+      },
+      validate: (world) => {
+        const beepersOnGround = world.beepers.filter((b) => b.count > 0);
+        if (beepersOnGround.length === 0) {
+          return { passed: true, message: 'Karel navigated the walls and found the beeper! Nicely done.' };
+        }
+        return {
+          passed: false,
+          message: 'Karel needs to reach (5, 5) and pick up the beeper. Use sensors to check for walls before moving.'
+        };
+      }
+    }
+  };
+</script>
+
+<LessonShell chapterNumber={1} lessonNumber={6}>
+
+## Making Decisions
+
+So far, Karel's programs have been straightforward — move, turn, repeat. But what if Karel needs to **make a choice**? What if there might be a beeper, or there might not? What if there might be a wall ahead, or there might not?
+
+**If/else statements** let Karel decide what to do based on its surroundings.
+
+## The If Statement
+
+The simplest form checks one condition:
+
+```python
+if beepers_present():
+    pick_beeper()
+```
+
+This says: **"If there's a beeper here, pick it up. Otherwise, do nothing."**
+
+Without the `if`, calling `pick_beeper()` on an empty cell would crash. The `if` statement protects Karel from errors.
+
+## If/Else: Two Choices
+
+Sometimes you want Karel to do one thing if a condition is true, and *something different* if it's false:
+
+```python
+if beepers_present():
+    pick_beeper()
+else:
+    put_beeper()
+```
+
+This says: **"If there's a beeper, pick it up. Otherwise, put one down."** Karel always does exactly one of the two — never both, never neither.
+
+## Example: Careful Collector
+
+This is the pattern you'll use most often: a **while loop** with an **if statement** inside. Karel walks the whole row, checking for beepers at each position:
+
+<KarelEnvironment config={carefulCollectorExample} />
+
+Notice how the `if` lets Karel only pick up beepers where they exist, avoiding crashes on empty cells.
+
+---
+
+## Example: Beeper Inverter
+
+Here's `if/else` in action. Each position either has a beeper or doesn't. Karel inverts the pattern — picking up where there's a beeper, placing where there isn't:
+
+<KarelEnvironment config={ifElseExample} />
+
+---
+
+## More Sensors
+
+Now that you can use if/else, here are more sensor functions that become useful:
+
+| Sensor | Opposite | What it checks |
+| --- | --- | --- |
+| `left_is_clear()` | `left_is_blocked()` | Is there a wall to Karel's left? |
+| `right_is_clear()` | `right_is_blocked()` | Is there a wall to Karel's right? |
+| `facing_north()` | `not_facing_north()` | Which way is Karel facing? |
+| `facing_east()` | `not_facing_east()` | |
+| `facing_south()` | `not_facing_south()` | |
+| `facing_west()` | `not_facing_west()` | |
+
+## Example: Checking Left and Right
+
+In this example, Karel walks east and places a beeper only where the left side (north) is clear — no wall above:
+
+<KarelEnvironment config={moreSensorsExample} />
+
+---
+
+## Combining Everything
+
+The real power comes from combining `if/else` with `while` loops and functions. Here's a common pattern:
+
+```python
+while front_is_clear():
+    if beepers_present():
+        pick_beeper()
+    move()
+```
+
+This walks the entire row, picking up beepers wherever they exist. The `while` handles the repetition, and the `if` handles the decision at each step.
+
+---
+
+## Exercise 1: Selective Collector
+
+Walk the entire row and pick up every beeper, but be careful — not all positions have beepers! Use `if` to check before picking up.
+
+Your solution must work for any arrangement of beepers. Use the dropdown to test different configurations.
+
+> **Hint:** Don't forget to check Karel's starting position. The loop condition `front_is_clear()` only controls moving — you need to check for beepers separately.
+
+<KarelEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: Beeper Inverter
+
+Invert the beeper pattern across the entire row:
+- If a position has a beeper → pick it up
+- If a position has no beeper → put one down
+
+The starting pattern has beepers at positions 1, 3, and 5. After your program runs, beepers should be at positions 2 and 4 instead.
+
+<KarelEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: Wall Navigator
+
+Navigate Karel from (1, 1) to the beeper at (5, 5) — but there are walls in the way!
+
+You'll need to use sensors to detect walls and choose alternate paths. One strategy: try to move east; if blocked, try north. Use a combination of while loops, if/else, and sensor functions.
+
+> **Hint:** All the sensors are available for this exercise. Use `front_is_clear()` to check before moving, and `turn_left()` to try a different direction when blocked.
+
+<KarelEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+In this lesson you learned:
+
+- **If statements** let Karel check conditions before acting
+- **If/else** lets Karel choose between two different actions
+- Combining **while loops + if/else** creates powerful, safe programs
+- More sensor functions: `left_is_clear()`, `right_is_clear()`, `facing_north()`, etc.
+- How to protect Karel from crashes by checking before acting
+
+In the final lesson, you'll **put everything together** to solve complex Karel challenges!
+
+</LessonShell>

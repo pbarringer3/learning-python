@@ -22,6 +22,11 @@ const config = {
     // Base path for GitHub Pages project site
     paths: {
       base: process.env.NODE_ENV === 'production' ? '/learning-python' : ''
+    },
+    prerender: {
+      // Dynamic fallback routes (e.g., [chapter]/[lesson]) may have no instances
+      // when all lessons have dedicated .svx files.
+      handleUnseenRoutes: 'warn'
     }
   }
 };

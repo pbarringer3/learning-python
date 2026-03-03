@@ -1,0 +1,344 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
+  import type { KarelConfig } from '$lib/karel/types';
+
+  // Example 1: Place beepers in a row
+  const rowExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 6, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Place 5 beepers in a row.
+# for i in range(5) repeats the indented code 5 times.
+
+for i in range(5):
+    put_beeper()
+    move()
+`
+  };
+
+  // Example 2: Efficient turn_right with for loop
+  const turnRightForExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# A cleaner way to write turn_right()!
+def turn_right():
+    for i in range(3):
+        turn_left()
+
+# Use it to trace a square path,
+# placing a beeper at each corner.
+for i in range(4):
+    put_beeper()
+    move()
+    move()
+    turn_right()
+`
+  };
+
+  // Exercise 1: Place beepers at every position in a row
+  const exercise1Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Place a beeper at EVERY position in the row,
+# including Karel's starting spot and the very end.
+#
+# The world is 5 cells wide.
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'put_beeper', 'pick_beeper',
+        'front_is_clear', 'front_is_blocked'
+      ]
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const width = world.dimensions.width;
+        const missing = [];
+        for (let x = 1; x <= width; x++) {
+          const b = world.beepers.find((b) => b.x === x && b.y === 1 && b.count > 0);
+          if (!b) missing.push(x);
+        }
+        if (missing.length === 0) {
+          return { passed: true, message: 'Every position has a beeper! Well done.' };
+        }
+        return {
+          passed: false,
+          message: `Missing beepers at column(s): ${missing.join(', ')}. Remember to cover both ends!`
+        };
+      }
+    }
+  };
+
+  // Exercise 2: Build a tower
+  const exercise2Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 3, y: 1 },
+        direction: { type: 'north' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Build a tower: place a beeper at every position
+# in column 3, from (3,1) to (3,5).
+#
+# Karel starts at (3, 1) facing north.
+# Use a for loop!
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'put_beeper', 'pick_beeper',
+        'front_is_clear', 'front_is_blocked'
+      ]
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 3, y: 1 },
+            direction: { type: 'north' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const missing = [];
+        for (let y = 1; y <= 5; y++) {
+          const b = world.beepers.find((b) => b.x === 3 && b.y === y && b.count > 0);
+          if (!b) missing.push(y);
+        }
+        if (missing.length === 0) {
+          return { passed: true, message: 'Tower complete! 5 beepers stacked in column 3.' };
+        }
+        return {
+          passed: false,
+          message: `Missing beepers at row(s): ${missing.join(', ')} in column 3.`
+        };
+      }
+    }
+  };
+
+  // Exercise 3: Build a diamond outline
+  const exercise3Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 3, height: 3 },
+      karel: {
+        position: { x: 2, y: 1 },
+        direction: { type: 'north' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Place beepers around the edges of this 3x3 world.
+# That means every cell on the border:
+# Bottom: (1,1), (2,1), (3,1)
+# Right:  (3,2), (3,3)
+# Top:    (2,3), (1,3)
+# Left:   (1,2)
+#
+# Karel starts at (2, 1) facing north.
+# Use for loops and functions to keep it clean!
+
+def turn_right():
+    for i in range(3):
+        turn_left()
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'put_beeper', 'pick_beeper',
+        'front_is_clear', 'front_is_blocked'
+      ]
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 3, height: 3 },
+          karel: {
+            position: { x: 2, y: 1 },
+            direction: { type: 'north' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const border = [
+          { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 },
+          { x: 3, y: 2 }, { x: 3, y: 3 },
+          { x: 2, y: 3 }, { x: 1, y: 3 },
+          { x: 1, y: 2 }
+        ];
+        const missing = border.filter(
+          (r) => !world.beepers.find((b) => b.x === r.x && b.y === r.y && b.count > 0)
+        );
+        if (missing.length === 0) {
+          return { passed: true, message: 'Border complete! Great use of for loops.' };
+        }
+        return {
+          passed: false,
+          message: `${missing.length} border position(s) missing beepers.`
+        };
+      }
+    }
+  };
+</script>
+
+<LessonShell chapterNumber={1} lessonNumber={5}>
+
+## When You Know Exactly How Many Times
+
+In the previous lesson, you used **while loops** to repeat actions until a condition changed — great for when you don't know the size of the world. But sometimes you know *exactly* how many times to repeat something.
+
+For that, Python has **for loops**.
+
+## The For Loop
+
+Here's the basic syntax:
+
+```python
+for i in range(5):
+    move()
+```
+
+This means: **"Repeat `move()` exactly 5 times."**
+
+- **`for i in range(5):`** — Sets up the loop to run 5 times
+- **`range(5)`** — Generates the numbers 0, 1, 2, 3, 4 (five numbers)
+- **`i`** — A loop variable that counts which repetition we're on (you don't have to use it)
+- **The indented code** — What gets repeated each time
+
+> **Tip:** `range(n)` makes the loop run `n` times. `range(3)` runs 3 times, `range(10)` runs 10 times.
+
+## Example: Place Beepers in a Row
+
+Watch Karel place 5 beepers, one at each position, using a for loop. Notice how compact the code is compared to writing `put_beeper()` and `move()` five separate times:
+
+<KarelEnvironment config={rowExample} />
+
+---
+
+## For Loops Inside Functions
+
+For loops are especially useful inside function definitions. Remember `turn_right()`? Instead of writing `turn_left()` three times, you can use a for loop:
+
+```python
+def turn_right():
+    for i in range(3):
+        turn_left()
+```
+
+This does the exact same thing — it just uses a loop instead of repeating the command.
+
+## Example: Tracing a Square
+
+This example combines for loops with a function. Karel traces a square path, placing a beeper at each corner. Notice the **nested structure**: a for loop in the main program calls `turn_right()`, which itself contains a for loop!
+
+<KarelEnvironment config={turnRightForExample} />
+
+---
+
+## When to Use For vs. While
+
+A common question: when should you use a `for` loop vs. a `while` loop?
+
+- **For loop** — When you know the exact number of repetitions: "do this 5 times," "do this 3 times"
+- **While loop** — When you don't know how many times, but you know when to stop: "keep going until you hit a wall," "keep picking up until no beepers remain"
+
+Both are important tools. As you practice, you'll develop an intuition for which one fits each situation.
+
+---
+
+## Exercise 1: Fill the Row
+
+Place a beeper at **every** position in the 5-cell row, including the very first and very last position.
+
+Karel starts at (1, 1) facing east with unlimited beepers. Think about how many times you need to place-and-move, and whether there's a beeper needed at the final position.
+
+<KarelEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: Build a Tower
+
+Karel starts at (3, 1) facing north in a 5×5 world. Place a beeper at every position going up column 3: (3,1), (3,2), (3,3), (3,4), and (3,5).
+
+Use a for loop to keep your code short.
+
+<KarelEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: Trace the Border
+
+Place beepers along the entire border of a 3×3 world. That's all 8 border cells:
+
+- **Bottom:** (1,1), (2,1), (3,1)
+- **Right side:** (3,2), (3,3)
+- **Top:** (2,3), (1,3)
+- **Left side:** (1,2)
+
+Karel starts at (2, 1) facing north. A `turn_right()` helper is provided. Think about the pattern: move along one side placing beepers, turn, then do the next side.
+
+<KarelEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+In this lesson you learned:
+
+- **For loops** repeat code a specific number of times using `for i in range(n):`
+- `range(n)` makes the loop run exactly `n` times
+- For loops work great inside function definitions
+- **For loops** are for known counts; **while loops** are for unknown conditions
+- Loops and functions can be nested for powerful combinations
+
+In the next lesson, you'll learn about **if/else statements** — making Karel choose different actions based on its surroundings.
+
+</LessonShell>

@@ -1,0 +1,318 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
+  import type { KarelConfig } from '$lib/karel/types';
+
+  // Example: Building a tower with decomposition
+  const towerExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Build a tower of 3 beepers at column 3
+# Notice how each function handles ONE clear task.
+
+def turn_right():
+    turn_left()
+    turn_left()
+    turn_left()
+
+def move_to_column_three():
+    move()
+    move()
+
+def build_tower():
+    turn_left()
+    put_beeper()
+    move()
+    put_beeper()
+    move()
+    put_beeper()
+
+# Main program — reads like a plan!
+move_to_column_three()
+build_tower()
+`
+  };
+
+  // Example 2: Decomposing a complex task
+  const houseExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 7, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Place beepers along the bottom from (2,1) to (6,1),
+# then build a column at (6,1) to (6,3).
+# This makes an L-shape!
+
+def turn_right():
+    turn_left()
+    turn_left()
+    turn_left()
+
+def turn_around():
+    turn_left()
+    turn_left()
+
+def build_base():
+    move()
+    put_beeper()
+    move()
+    put_beeper()
+    move()
+    put_beeper()
+    move()
+    put_beeper()
+    move()
+    put_beeper()
+
+def build_column():
+    turn_left()
+    move()
+    put_beeper()
+    move()
+    put_beeper()
+
+# Main program
+build_base()
+build_column()
+`
+  };
+
+  // Exercise 1: Decorate the corners
+  const exercise1Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Place one beeper in each corner of the 5x5 world:
+# (1,1), (5,1), (5,5), and (1,5).
+#
+# Decompose: what's the repeated pattern?
+# Hint: "place a beeper, move to the next corner" is one step.
+
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'put_beeper']
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const corners = [
+          { x: 1, y: 1 },
+          { x: 5, y: 1 },
+          { x: 5, y: 5 },
+          { x: 1, y: 5 }
+        ];
+        const missing = corners.filter(
+          (c) => !world.beepers.find((b) => b.x === c.x && b.y === c.y && b.count > 0)
+        );
+
+        if (missing.length === 0) {
+          return { passed: true, message: 'All four corners decorated! Great decomposition!' };
+        }
+        const missingStr = missing.map((c) => `(${c.x}, ${c.y})`).join(', ');
+        return {
+          passed: false,
+          message: `Missing beepers at: ${missingStr}`
+        };
+      }
+    }
+  };
+
+  // Exercise 2: Build a plus sign
+  const exercise2Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 3, y: 1 },
+        direction: { type: 'north' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Build a plus (+) sign centered at (3, 3).
+# Place beepers at:
+#   (3,1), (3,2), (3,3), (3,4), (3,5)  — vertical bar
+#   (1,3), (2,3), (4,3), (5,3)          — horizontal bar
+#
+# Karel starts at (3, 1) facing north.
+# Break this into smaller functions!
+
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'put_beeper']
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 3, y: 1 },
+            direction: { type: 'north' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const required = [
+          { x: 3, y: 1 }, { x: 3, y: 2 }, { x: 3, y: 3 }, { x: 3, y: 4 }, { x: 3, y: 5 },
+          { x: 1, y: 3 }, { x: 2, y: 3 }, { x: 4, y: 3 }, { x: 5, y: 3 }
+        ];
+        const missing = required.filter(
+          (r) => !world.beepers.find((b) => b.x === r.x && b.y === r.y && b.count > 0)
+        );
+
+        if (missing.length === 0) {
+          return { passed: true, message: 'Beautiful plus sign! Excellent decomposition work!' };
+        }
+        return {
+          passed: false,
+          message: `${missing.length} beeper(s) missing from the plus pattern. Check your positioning carefully.`
+        };
+      }
+    }
+  };
+</script>
+
+<LessonShell chapterNumber={1} lessonNumber={3}>
+
+## What Is Decomposition?
+
+Imagine someone asked you to cook a full dinner. You wouldn't try to do everything at once — you'd break it into steps: prepare the ingredients, cook the main dish, make the side, set the table. Each step is manageable on its own.
+
+**Decomposition** is the same idea applied to programming: take a big, complicated problem and break it into smaller pieces that are easier to think about.
+
+In code, each "piece" becomes a **function**. This is one of the most important skills in programming, and it's something you'll use in every program you write.
+
+## Top-Down Design
+
+Here's a strategy called **top-down design**:
+
+1. **Start with the big picture** — Write your main program using function names that describe *what* needs to happen (even before those functions exist)
+2. **Fill in the details** — Go back and define each function
+
+For example, if you need Karel to build a tower of beepers:
+
+```python
+# Step 1: Write the plan
+move_to_column_three()
+build_tower()
+```
+
+```python
+# Step 2: Define each function
+def move_to_column_three():
+    move()
+    move()
+
+def build_tower():
+    turn_left()
+    put_beeper()
+    move()
+    put_beeper()
+    move()
+    put_beeper()
+```
+
+The main program reads like a recipe. Each function handles one clear job. That's decomposition!
+
+## Example: Building a Tower
+
+Watch how this program uses two functions to build a tower of beepers at column 3. The main program at the bottom reads like a simple plan.
+
+<KarelEnvironment config={towerExample} />
+
+---
+
+## Example: Building an L-Shape
+
+Here's a more complex example. Karel needs to build an L-shape: a row of beepers along the bottom, then a column going up. The problem is decomposed into `build_base()` and `build_column()`, plus helper functions for turning.
+
+<KarelEnvironment config={houseExample} />
+
+Notice how the main program is just two lines: `build_base()` then `build_column()`. All the details of *how* to build each part are tucked away inside the functions. That's the beauty of decomposition!
+
+---
+
+## When to Create a Function
+
+Here are some guidelines for when to break code into a function:
+
+- **When you repeat the same steps** — If you're writing the same sequence of commands more than once, make it a function
+- **When a chunk of code has a clear purpose** — If you can describe what a group of commands does in a few words, that's a good function name
+- **When your code is getting long** — If your main program is more than 10–15 lines, look for sections you can pull out into functions
+
+Good decomposition makes your code **easier to read**, **easier to debug**, and **easier to reuse**.
+
+---
+
+## Exercise 1: Decorate the Corners
+
+Place one beeper in each corner of the 5×5 world: (1,1), (5,1), (5,5), and (1,5).
+
+Karel starts at (1, 1) facing east with an unlimited supply of beepers. Think about the pattern: you need to place a beeper and move to the next corner, four times. Can you write a function for that repeated step?
+
+> **Hint:** After placing a beeper, Karel needs to move 4 spaces to reach the next corner, then turn left to be ready for the next side.
+
+<KarelEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: Build a Plus Sign
+
+Build a plus (+) sign centered at (3, 3) by placing beepers at these positions:
+
+- **Vertical bar:** (3,1), (3,2), (3,3), (3,4), (3,5)
+- **Horizontal bar:** (1,3), (2,3), (4,3), (5,3)
+
+Karel starts at (3, 1) facing north. Think about how to break this into pieces — maybe a function for the vertical bar and another for the horizontal bar?
+
+<KarelEnvironment config={exercise2Config} />
+
+---
+
+## What You Learned
+
+In this lesson you learned:
+
+- **Decomposition** means breaking a big problem into smaller, manageable pieces
+- **Top-down design** starts with the big picture and fills in details with functions
+- Each function should do **one clear job** with a descriptive name
+- Good decomposition makes code easier to read, debug, and reuse
+
+In the next lesson, you'll learn about **while loops** — a way to repeat actions without knowing exactly how many times to repeat.
+
+</LessonShell>

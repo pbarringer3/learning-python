@@ -1,0 +1,334 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
+  import type { KarelConfig } from '$lib/karel/types';
+
+  // Exercise 1: Fill the entire grid with beepers
+  const fillGridConfig: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 4 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Fill every cell in the grid with a beeper!
+# Karel starts at (1, 1) facing east.
+#
+# Strategy: fill one row, move up, fill the next row
+# going the other direction, and repeat.
+#
+# Your solution should work for any grid size.
+# Use while loops to handle unknown dimensions.
+
+def turn_right():
+    for i in range(3):
+        turn_left()
+
+def turn_around():
+    turn_left()
+    turn_left()
+
+`,
+    tests: {
+      worlds: {
+        'Test 1: 5x4': {
+          dimensions: { width: 5, height: 4 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        },
+        'Test 2: 3x3': {
+          dimensions: { width: 3, height: 3 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        },
+        'Test 3: 7x2': {
+          dimensions: { width: 7, height: 2 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const { width, height } = world.dimensions;
+        const total = width * height;
+        let filled = 0;
+        for (let x = 1; x <= width; x++) {
+          for (let y = 1; y <= height; y++) {
+            const b = world.beepers.find((b) => b.x === x && b.y === y && b.count > 0);
+            if (b) filled++;
+          }
+        }
+        if (filled === total) {
+          return { passed: true, message: `All ${total} cells filled! Your grid-fill algorithm works!` };
+        }
+        return {
+          passed: false,
+          message: `${filled} out of ${total} cells have beepers. Make sure you cover every row and column.`
+        };
+      },
+      loadableTests: ['Test 1: 5x4', 'Test 2: 3x3', 'Test 3: 7x2']
+    }
+  };
+
+  // Exercise 2: Checkerboard pattern
+  const checkerboardConfig: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Create a checkerboard pattern!
+# Place beepers on every other cell, like a chess board.
+# (1,1) should have a beeper, (2,1) should not,
+# (3,1) should, etc.
+#
+# Row 1: beeper, skip, beeper, skip, beeper
+# Row 2: skip, beeper, skip, beeper, skip
+# Row 3: beeper, skip, beeper, skip, beeper
+# ...
+#
+# This is a challenging problem! Break it into steps:
+# 1. How do you fill one row with the right pattern?
+# 2. How do you move to the next row?
+# 3. How do rows alternate?
+
+def turn_right():
+    for i in range(3):
+        turn_left()
+
+def turn_around():
+    turn_left()
+    turn_left()
+
+`,
+    tests: {
+      worlds: {
+        'Test: 5x5': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: -1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const { width, height } = world.dimensions;
+        const errors = [];
+        for (let y = 1; y <= height; y++) {
+          for (let x = 1; x <= width; x++) {
+            const shouldHave = (x + y) % 2 === 0;
+            const has = world.beepers.find((b) => b.x === x && b.y === y && b.count > 0);
+            if (shouldHave && !has) {
+              errors.push(`(${x},${y}) should have a beeper`);
+            }
+            if (!shouldHave && has) {
+              errors.push(`(${x},${y}) should NOT have a beeper`);
+            }
+          }
+        }
+        if (errors.length === 0) {
+          return { passed: true, message: 'Perfect checkerboard! This is a really impressive solution.' };
+        }
+        if (errors.length <= 3) {
+          return { passed: false, message: `Almost! Issues: ${errors.join('; ')}` };
+        }
+        return {
+          passed: false,
+          message: `${errors.length} cells have the wrong state. Remember: (1,1) should have a beeper, and the pattern alternates.`
+        };
+      }
+    }
+  };
+
+  // Exercise 3: Collect all beepers in a room with walls
+  const roomCleanerConfig: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 6, height: 4 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [
+        // Create some internal walls to make it interesting
+        { type: 'vertical', x: 3, y: 1 },    // wall to right of (3,1)
+        { type: 'vertical', x: 3, y: 2 },    // wall to right of (3,2)
+        { type: 'horizontal', x: 5, y: 3 }   // wall below (5,3)
+      ],
+      beepers: [
+        { x: 2, y: 1, count: 1 },
+        { x: 1, y: 2, count: 1 },
+        { x: 5, y: 1, count: 1 },
+        { x: 6, y: 2, count: 1 },
+        { x: 3, y: 4, count: 1 },
+        { x: 6, y: 4, count: 1 }
+      ]
+    },
+    initialCode: `# Clean the room! Pick up every beeper.
+# Be careful — there are walls inside this room!
+#
+# You'll need all the skills you've learned:
+# - Functions for clean code
+# - While loops for moving
+# - If statements for checking beepers and walls
+#
+# Hint: one approach is to sweep row by row,
+# but you'll need to handle the internal walls.
+
+def turn_right():
+    for i in range(3):
+        turn_left()
+
+def turn_around():
+    turn_left()
+    turn_left()
+
+`,
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 6, height: 4 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [
+            { type: 'vertical', x: 3, y: 1 },
+            { type: 'vertical', x: 3, y: 2 },
+            { type: 'horizontal', x: 5, y: 3 }
+          ],
+          beepers: [
+            { x: 2, y: 1, count: 1 },
+            { x: 1, y: 2, count: 1 },
+            { x: 5, y: 1, count: 1 },
+            { x: 6, y: 2, count: 1 },
+            { x: 3, y: 4, count: 1 },
+            { x: 6, y: 4, count: 1 }
+          ]
+        }
+      },
+      validate: (world) => {
+        const remaining = world.beepers.filter((b) => b.count > 0);
+        if (remaining.length === 0) {
+          return { passed: true, message: 'Room is clean! All beepers collected. Excellent work!' };
+        }
+        return {
+          passed: false,
+          message: `${remaining.length} beeper(s) still on the ground. Make sure Karel visits every reachable cell.`
+        };
+      }
+    }
+  };
+</script>
+
+<LessonShell chapterNumber={1} lessonNumber={7}>
+
+## Time to Put It All Together
+
+Over the past six lessons, you've learned a complete toolkit for programming Karel:
+
+- **Basic commands**: `move()`, `turn_left()`, `pick_beeper()`, `put_beeper()`
+- **Functions**: Teaching Karel new tricks with `def`
+- **Decomposition**: Breaking big problems into smaller pieces
+- **While loops**: Repeating until a condition changes
+- **For loops**: Repeating a known number of times
+- **If/else**: Making decisions based on Karel's surroundings
+
+Now it's time to combine everything. Each exercise below requires multiple skills working together. There's no single "right" approach — think about the problem, plan your strategy, decompose it into functions, and use the right loops and conditionals for each part.
+
+> **Advice:** Before writing code, think about the problem in plain language first. What's the overall plan? What are the major steps? Write those as function names, then fill in the details.
+
+---
+
+## Exercise 1: Fill the Grid
+
+Fill **every cell** in the grid with a beeper. Karel starts at (1, 1) facing east with unlimited beepers.
+
+Your solution must work for any grid size! Think about:
+- How to fill one row (while loop moving forward, placing beepers)
+- How to move up to the next row
+- How to handle alternating directions (left-to-right, then right-to-left)
+
+This is tested against multiple grid sizes. Use the dropdown to see different configurations.
+
+<KarelEnvironment config={fillGridConfig} />
+
+---
+
+## Exercise 2: Checkerboard
+
+Create a checkerboard pattern — place beepers on alternating cells, like a chessboard:
+
+```
+Row 5: ◆ · ◆ · ◆
+Row 4: · ◆ · ◆ ·
+Row 3: ◆ · ◆ · ◆
+Row 2: · ◆ · ◆ ·
+Row 1: ◆ · ◆ · ◆
+```
+
+Position (1,1) should have a beeper. The pattern alternates both horizontally and vertically.
+
+This is one of the classic Karel challenges! Think about what pattern each row needs, and how adjacent rows differ. You might find it helpful to define a function that fills one row with the right spacing.
+
+<KarelEnvironment config={checkerboardConfig} />
+
+---
+
+## Exercise 3: Room Cleaner
+
+Karel is in a room with walls inside it, and beepers are scattered around. Pick up every single beeper!
+
+The tricky part: internal walls block Karel's path, so you can't just sweep straight across. You'll need to check for walls as you go and figure out how to reach every area of the room.
+
+Think about:
+- How to sweep a row while checking for walls
+- How to move to the next row
+- How to make sure you don't miss any beepers behind walls
+
+<KarelEnvironment config={roomCleanerConfig} />
+
+---
+
+## Congratulations!
+
+You've completed Chapter 1: Karel the Robot! Along the way, you've learned the same fundamental programming concepts that every programmer uses:
+
+- **Sequential execution** — code runs one line at a time, top to bottom
+- **Functions** — reusable blocks of code that you name and call
+- **Decomposition** — breaking complex problems into simpler pieces
+- **Loops** — repeating actions (while loops for conditions, for loops for counting)
+- **Conditionals** — making decisions based on the current state
+
+These concepts aren't just for Karel — they're the foundation of **all programming**. In the next chapter, you'll start using these same ideas to write "real" Python programs with variables, strings, math, and more.
+
+But for now, feel free to revisit any lesson, try the exercises again, or experiment in the Karel Playground where you can design your own worlds!
+
+</LessonShell>

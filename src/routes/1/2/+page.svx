@@ -1,0 +1,344 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
+  import type { KarelConfig } from '$lib/karel/types';
+
+  // Example 1: Defining turn_right()
+  const turnRightExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 5, y: 3, count: 1 }]
+    },
+    initialCode: `# Defining a new command: turn_right()
+def turn_right():
+    turn_left()
+    turn_left()
+    turn_left()
+
+# Now we can use turn_right just like any built-in command!
+move()
+move()
+turn_left()
+move()
+move()
+move()
+move()
+turn_right()
+move()
+move()
+pick_beeper()
+`
+  };
+
+  // Example 2: Defining turn_around()
+  const turnAroundExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 1, y: 1, count: 1 }]
+    },
+    initialCode: `# Defining turn_around()
+def turn_around():
+    turn_left()
+    turn_left()
+
+# Walk to the end of the row...
+move()
+move()
+move()
+move()
+
+# ...then turn around and come back!
+turn_around()
+
+move()
+move()
+move()
+move()
+
+# Now Karel is back at (1,1) — pick up the beeper!
+pick_beeper()
+`
+  };
+
+  // Exercise 1: Define turn_right() and navigate
+  const exercise1Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 3, y: 5 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 5, y: 1, count: 1 }]
+    },
+    initialCode: `# Define turn_right() and use it to reach the beeper at (5, 1).
+# Karel starts at (3, 5) facing east.
+# Hint: turning right from east means facing south.
+
+def turn_right():
+    # Your code here
+    pass
+
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'pick_beeper', 'put_beeper']
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 3, y: 5 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 5, y: 1, count: 1 }]
+        }
+      },
+      validate: (world) => {
+        const beepersOnGround = world.beepers.filter((b) => b.count > 0);
+        if (beepersOnGround.length === 0) {
+          return { passed: true, message: 'Awesome! You used turn_right() to reach the beeper!' };
+        }
+        return {
+          passed: false,
+          message: 'Karel needs to pick up the beeper at (5, 1). Did you define turn_right() correctly?'
+        };
+      }
+    }
+  };
+
+  // Exercise 2: The return trip
+  const exercise2Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 7, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 7, y: 1, count: 1 }]
+    },
+    initialCode: `# Pick up the beeper at the end of the row,
+# then return Karel to position (1, 1).
+#
+# Define turn_around() to make this easier!
+
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'pick_beeper', 'put_beeper']
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 7, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 7, y: 1, count: 1 }]
+        }
+      },
+      validate: (world) => {
+        const beepersOnGround = world.beepers.filter((b) => b.count > 0);
+        const karelHome = world.karel.position.x === 1 && world.karel.position.y === 1;
+
+        if (beepersOnGround.length === 0 && karelHome) {
+          return { passed: true, message: 'Perfect! Karel grabbed the beeper and made it home!' };
+        }
+        if (beepersOnGround.length > 0) {
+          return { passed: false, message: 'Karel still needs to pick up the beeper at (7, 1).' };
+        }
+        return {
+          passed: false,
+          message: `Karel needs to return to (1, 1). Currently at (${world.karel.position.x}, ${world.karel.position.y}).`
+        };
+      }
+    }
+  };
+
+  // Exercise 3: Define multiple helper functions
+  const exercise3Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 1
+      },
+      walls: [],
+      beepers: [{ x: 5, y: 5, count: 1 }]
+    },
+    initialCode: `# Karel has 1 beeper in its bag.
+# 1. Navigate to (5, 5) and pick up the beeper there.
+# 2. Navigate to (3, 3) and put down BOTH beepers.
+#
+# Define any helper functions you need!
+
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'pick_beeper', 'put_beeper']
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 1
+          },
+          walls: [],
+          beepers: [{ x: 5, y: 5, count: 1 }]
+        }
+      },
+      validate: (world) => {
+        const beeperAt33 = world.beepers.find((b) => b.x === 3 && b.y === 3);
+        const totalOnGround = world.beepers.reduce((sum, b) => sum + b.count, 0);
+
+        if (beeperAt33 && beeperAt33.count === 2 && totalOnGround === 2) {
+          return { passed: true, message: 'Excellent! Both beepers delivered to (3, 3)!' };
+        }
+        if (!beeperAt33 || beeperAt33.count === 0) {
+          return { passed: false, message: 'There should be 2 beepers at position (3, 3).' };
+        }
+        if (beeperAt33.count === 1) {
+          return { passed: false, message: 'Only 1 beeper at (3, 3) — you need to deliver both!' };
+        }
+        return { passed: false, message: 'Something isn\'t right. Make sure both beepers end up at (3, 3) and nowhere else.' };
+      }
+    }
+  };
+</script>
+
+<LessonShell chapterNumber={1} lessonNumber={2}>
+
+## Why Define Functions?
+
+In the previous lesson, you used Karel's four built-in commands to solve problems. But you probably noticed something annoying — Karel can turn left, but **there's no `turn_right()` command!**
+
+If you wanted Karel to turn right, you had to write `turn_left()` three times in a row. That works, but it's tedious and hard to read. Wouldn't it be nice if you could just write `turn_right()`?
+
+You can — by **defining your own function**.
+
+## How to Define a Function
+
+A function definition teaches Karel a new command. Here's the pattern:
+
+```python
+def turn_right():
+    turn_left()
+    turn_left()
+    turn_left()
+```
+
+Let's break this down:
+
+- **`def`** — This keyword tells Python you're *defining* a new function
+- **`turn_right`** — The name you're giving your new command (you choose this!)
+- **`()`** — Required parentheses (for now, always leave them empty)
+- **`:`** — A colon marks the start of the function's body
+- **The indented lines** — Everything indented under `def` is what happens when the function runs
+
+> **Important:** Defining a function doesn't *run* it. It just teaches Karel a new trick. You still need to *call* the function (e.g., `turn_right()`) to make Karel actually do it.
+
+## Example: Using turn_right()
+
+Watch how defining `turn_right()` makes this program cleaner. Karel navigates an L-shaped path to reach a beeper — using both `turn_left()` and the custom `turn_right()`.
+
+<KarelEnvironment config={turnRightExample} />
+
+---
+
+## Example: Defining turn_around()
+
+Another handy function is `turn_around()`, which makes Karel face the opposite direction. Since a full 180° turn is two left turns:
+
+```python
+def turn_around():
+    turn_left()
+    turn_left()
+```
+
+In this example, Karel walks to the end of a row, turns around, walks back, and picks up a beeper at the start.
+
+<KarelEnvironment config={turnAroundExample} />
+
+---
+
+## Naming Your Functions
+
+When you define a function, choose a name that describes **what it does**. Good function names read like plain English:
+
+- `turn_right()` — clear and descriptive ✓
+- `go_home()` — tells you the purpose ✓
+- `do_thing()` — too vague ✗
+- `x()` — meaningless ✗
+
+Python function names should use **lowercase letters** with **underscores** between words. This style is called `snake_case`.
+
+---
+
+## Exercise 1: Right Turn Navigation
+
+Karel is at (3, 5) facing east, and there's a beeper at (5, 1). Define `turn_right()` and use it to navigate Karel to the beeper.
+
+A starter `turn_right()` definition is provided — you just need to fill in the body (replace `pass` with the actual commands) and then write the navigation code.
+
+<KarelEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Return Trip
+
+Karel is at (1, 1) facing east, and there's a beeper at (7, 1) — the far end of the row. Pick up the beeper, then bring Karel back to (1, 1).
+
+Define `turn_around()` to make this much easier.
+
+<KarelEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Collector
+
+This is a bigger challenge! Karel starts at (1, 1) facing east with 1 beeper in its bag. There's also a beeper sitting at (5, 5).
+
+Your task:
+1. Navigate to (5, 5) and pick up the beeper
+2. Navigate to (3, 3) and put **both** beepers down
+
+Define whatever helper functions you need. Think about what directions Karel needs to turn and how you can reuse your functions to keep the code clean.
+
+<KarelEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+In this lesson you learned:
+
+- How to define functions with `def function_name():`
+- The difference between *defining* a function and *calling* it
+- How to build `turn_right()` and `turn_around()` from `turn_left()`
+- Good naming practices for functions
+
+In the next lesson, you'll learn about **decomposition** — the art of breaking complex problems into smaller, manageable pieces using functions.
+
+</LessonShell>

@@ -1,0 +1,206 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
+  import type { KarelConfig } from '$lib/karel/types';
+
+  // Example: Your first Karel program
+  const firstProgramConfig: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 5, y: 1, count: 1 }]
+    },
+    initialCode: `# Karel's first program!
+# Click the Play button to watch Karel run.
+
+move()
+move()
+move()
+move()
+pick_beeper()
+`
+  };
+
+  // Exercise 1: Navigate to the beeper
+  const exercise1Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 3, y: 3, count: 1 }]
+    },
+    initialCode: `# Navigate Karel to (3, 3) and pick up the beeper.
+# Remember: Karel starts at (1, 1) facing east.
+# Hint: you'll need both move() and turn_left().
+
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'pick_beeper', 'put_beeper']
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 3, y: 3, count: 1 }]
+        }
+      },
+      validate: (world) => {
+        const beepersOnGround = world.beepers.filter((b) => b.count > 0);
+        if (beepersOnGround.length === 0) {
+          return { passed: true, message: 'Great job! Karel picked up the beeper!' };
+        }
+        return {
+          passed: false,
+          message: 'Karel still needs to pick up the beeper at (3, 3). Make sure Karel is standing on the beeper before calling pick_beeper().'
+        };
+      }
+    }
+  };
+
+  // Exercise 2: Pick up and deliver
+  const exercise2Config: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Karel has 1 beeper in its bag.
+# Deliver it to position (3, 3) using put_beeper().
+# Then return to the bottom-right corner at (5, 1).
+
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'pick_beeper', 'put_beeper']
+    },
+    tests: {
+      worlds: {
+        'Main Test': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 1
+          },
+          walls: [],
+          beepers: []
+        }
+      },
+      validate: (world) => {
+        const beeperAt33 = world.beepers.find((b) => b.x === 3 && b.y === 3 && b.count > 0);
+        const karelAtEnd = world.karel.position.x === 5 && world.karel.position.y === 1;
+
+        if (beeperAt33 && karelAtEnd) {
+          return { passed: true, message: 'Perfect! Beeper delivered and Karel reached (5, 1)!' };
+        }
+        if (!beeperAt33) {
+          return { passed: false, message: 'The beeper needs to be placed at position (3, 3). Use put_beeper() when Karel is standing there.' };
+        }
+        return {
+          passed: false,
+          message: `Karel needs to end at (5, 1). Karel is currently at (${world.karel.position.x}, ${world.karel.position.y}).`
+        };
+      }
+    }
+  };
+</script>
+
+<LessonShell chapterNumber={1} lessonNumber={1}>
+
+## Welcome to Karel's World
+
+Karel is a simple robot that lives in a grid world. In this chapter, you'll learn programming by giving Karel instructions — telling it where to go, what to pick up, and what to put down. By the end, you'll know the same fundamental concepts that professional programmers use every day.
+
+Take a look at the grid below. You'll see Karel (the little robot) standing at the bottom-left corner, and a teal diamond shape — that's a **beeper**. The numbers along the edges show the column and row coordinates.
+
+## Karel's Four Commands
+
+Karel understands exactly four commands:
+
+| Command | What it does |
+| --- | --- |
+| `move()` | Move forward one space in the direction Karel is facing |
+| `turn_left()` | Turn 90° to the left (Karel stays in the same spot) |
+| `pick_beeper()` | Pick up a beeper from Karel's current position |
+| `put_beeper()` | Put down a beeper from Karel's bag at the current position |
+
+That's it! Every Karel program is built from just these four instructions. Let's see them in action.
+
+## Example: Your First Program
+
+In this example, Karel starts at position (1, 1) facing east (to the right), and there's a beeper at position (5, 1). The code tells Karel to move forward four times and then pick up the beeper.
+
+Click the **Play** button (▶) to watch Karel run the program. You can also try the **Step** button to watch one command at a time.
+
+<KarelEnvironment config={firstProgramConfig} />
+
+---
+
+## A Few Important Things
+
+Before you try writing your own code, here are a few things to keep in mind:
+
+- **Karel follows instructions in order** — from top to bottom, one at a time. This is called **sequential execution**.
+- **Karel can only face one direction at a time** — north, east, south, or west. The `turn_left()` command rotates Karel 90° counter-clockwise.
+- **Crashing is an error** — if you tell Karel to `move()` into a wall, or `pick_beeper()` when there's no beeper, the program will stop with an error message. That's OK! Read the error message, fix the code, and try again.
+
+> **Tip:** Notice that every command ends with parentheses `()`. This is Python syntax for *calling* a command. Don't forget them!
+
+---
+
+## Exercise 1: Navigate to the Beeper
+
+Time to write your own code! Karel is at (1, 1) facing east, and there's a beeper at (3, 3). Write a program to move Karel to the beeper and pick it up.
+
+You'll need to combine `move()` and `turn_left()` to get Karel there. Remember, `turn_left()` rotates Karel 90° counter-clockwise — so if Karel is facing east and you call `turn_left()`, Karel will be facing north.
+
+Click **Run Tests** when you think your solution works.
+
+<KarelEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: Deliver and Go
+
+Karel starts at (1, 1) facing east with one beeper in its bag. Your mission:
+
+1. Navigate Karel to position (3, 3) and place the beeper there using `put_beeper()`
+2. Then navigate Karel to the bottom-right corner at (5, 1)
+
+This exercise uses all four commands. Plan your route before you start coding!
+
+<KarelEnvironment config={exercise2Config} />
+
+---
+
+## What You Learned
+
+Nice work! In this lesson you learned:
+
+- Karel lives in a grid world with rows and columns
+- Karel has four basic commands: `move()`, `turn_left()`, `pick_beeper()`, and `put_beeper()`
+- Programs run from top to bottom, one command at a time
+- Karel must be on a beeper to pick it up, and must have beepers in its bag to put one down
+
+In the next lesson, you'll learn how to teach Karel **new commands** by defining your own functions.
+
+</LessonShell>

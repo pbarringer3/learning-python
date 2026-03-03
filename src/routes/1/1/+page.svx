@@ -86,7 +86,7 @@ pick_beeper()
     },
     initialCode: `# Karel has 1 beeper in its bag.
 # Deliver it to position (3, 3) using put_beeper().
-# Then return to the bottom-right corner at (5, 1).
+# Then travel to the bottom-right corner at (5, 1).
 
 `,
     allowedFeatures: {

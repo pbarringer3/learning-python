@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { EditorView, basicSetup } from 'codemirror';
+  import { minimalSetup } from 'codemirror';
   import { python } from '@codemirror/lang-python';
   import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
-  import { Decoration, type DecorationSet } from '@codemirror/view';
-  import { indentUnit } from '@codemirror/language';
+  import { Decoration, type DecorationSet, EditorView, lineNumbers, highlightActiveLine } from '@codemirror/view';
+  import { indentUnit, bracketMatching, indentOnInput } from '@codemirror/language';
   import { keymap } from '@codemirror/view';
   import { indentWithTab } from '@codemirror/commands';
+  import { closeBrackets } from '@codemirror/autocomplete';
+  import { highlightSelectionMatches } from '@codemirror/search';
 
   interface Props {
     value: string;
@@ -61,7 +63,13 @@
 
   onMount(() => {
     const extensions: Extension[] = [
-      basicSetup,
+      minimalSetup,
+      lineNumbers(),
+      highlightActiveLine(),
+      bracketMatching(),
+      closeBrackets(),
+      indentOnInput(),
+      highlightSelectionMatches(),
       python(),
       indentUnit.of('  '), // Use 2 spaces for indentation (Python standard)
       keymap.of([indentWithTab]), // Tab key inserts spaces instead of tab character

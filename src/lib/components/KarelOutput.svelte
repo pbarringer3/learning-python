@@ -211,9 +211,9 @@
     color: #2563eb;
   }
 
-  .step-message {
+  .message-content.step-message {
     border-left: 3px solid #2563eb;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .idle {

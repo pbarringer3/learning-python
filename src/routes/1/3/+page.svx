@@ -19,21 +19,21 @@
 # Notice how each function handles ONE clear task.
 
 def turn_right():
-    turn_left()
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
+  turn_left()
 
 def move_to_column_three():
-    move()
-    move()
+  move()
+  move()
 
 def build_tower():
-    turn_left()
-    put_beeper()
-    move()
-    put_beeper()
-    move()
-    put_beeper()
+  turn_left()
+  put_beeper()
+  move()
+  put_beeper()
+  move()
+  put_beeper()
 
 # Main program — reads like a plan!
 move_to_column_three()
@@ -58,32 +58,32 @@ build_tower()
 # This makes an L-shape!
 
 def turn_right():
-    turn_left()
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
+  turn_left()
 
 def turn_around():
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
 
 def build_base():
-    move()
-    put_beeper()
-    move()
-    put_beeper()
-    move()
-    put_beeper()
-    move()
-    put_beeper()
-    move()
-    put_beeper()
+  move()
+  put_beeper()
+  move()
+  put_beeper()
+  move()
+  put_beeper()
+  move()
+  put_beeper()
+  move()
+  put_beeper()
 
 def build_column():
-    turn_left()
-    move()
-    put_beeper()
-    move()
-    put_beeper()
+  turn_left()
+  move()
+  put_beeper()
+  move()
+  put_beeper()
 
 # Main program
 build_base()
@@ -237,16 +237,16 @@ build_tower()
 ```python
 # Step 2: Define each function
 def move_to_column_three():
-    move()
-    move()
+  move()
+  move()
 
 def build_tower():
-    turn_left()
-    put_beeper()
-    move()
-    put_beeper()
-    move()
-    put_beeper()
+  turn_left()
+  put_beeper()
+  move()
+  put_beeper()
+  move()
+  put_beeper()
 ```
 
 The main program reads like a recipe. Each function handles one clear job. That's decomposition!

@@ -38,6 +38,7 @@ The site includes specialized interactive modules for teaching:
 - Use Svelte's reactive declarations (`$:`) appropriately
 - Keep components focused and modular
 - Format code with `npm run format` before committing
+- All student-facing Python code (in `initialCode` and markdown code blocks) must use **2-space indentation** — enforced by `lesson-style.test.ts`
 
 ### File Organization
 

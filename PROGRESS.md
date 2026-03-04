@@ -23,7 +23,8 @@ Successfully refactored the Karel playground into a reusable component architect
 - **Progress store** — Svelte writable store backed by localStorage with hydration pattern
 - Full playground functionality preserved (Play/Edit modes, world editor)
 - 7 Karel lessons with 18 exercises, all wired with persistence
-- Comprehensive test coverage (31 unit tests + 5 Playwright e2e tests)
+- **2-space Python indentation** convention for all student-facing code, enforced by automated tests
+- Comprehensive test coverage (31 unit tests + 5 Playwright e2e tests + 45 lesson style tests)
 
 ---
 
@@ -79,7 +80,16 @@ Successfully refactored the Karel playground into a reusable component architect
 
    - 31 unit tests for progress store ([src/lib/curriculum/progress.test.ts](src/lib/curriculum/progress.test.ts))
    - 5 Playwright e2e tests for exercise completion flow ([tests/karel.test.ts](tests/karel.test.ts))
-   - Tests cover: hydration, persistence, completion tracking, auto-completion, reset, round-trip persistence
+   - 45 lesson style tests enforcing 2-space Python indentation ([src/lib/curriculum/lesson-style.test.ts](src/lib/curriculum/lesson-style.test.ts))
+   - Tests cover: hydration, persistence, completion tracking, auto-completion, reset, round-trip persistence, code style enforcement
+
+8. **2-Space Python Indentation Convention**
+
+   - All `initialCode` strings in lesson configs use 2-space indentation
+   - All markdown Python code blocks (` ```python `) in lessons use 2-space indentation
+   - Automated test scans all `.svx` files and validates indentation
+   - Documented in [LESSON_AUTHORING_GUIDE.md](LESSON_AUTHORING_GUIDE.md) (Tips for Lesson Authors, item 3)
+   - Documented in [AGENTS.md](AGENTS.md) (Code Style section)
 
 ### ✅ Phase 3: Component Architecture
 

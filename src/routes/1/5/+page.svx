@@ -19,8 +19,8 @@
 # for i in range(5) repeats the indented code 5 times.
 
 for i in range(5):
-    put_beeper()
-    move()
+  put_beeper()
+  move()
 `
   };
 
@@ -38,16 +38,16 @@ for i in range(5):
     },
     initialCode: `# A cleaner way to write turn_right()!
 def turn_right():
-    for i in range(3):
-        turn_left()
+  for i in range(3):
+    turn_left()
 
 # Use it to trace a square path,
 # placing a beeper at each corner.
 for i in range(4):
-    put_beeper()
-    move()
-    move()
-    turn_right()
+  put_beeper()
+  move()
+  move()
+  turn_right()
 `
   };
 
@@ -187,8 +187,8 @@ for i in range(4):
 # Use for loops and functions to keep it clean!
 
 def turn_right():
-    for i in range(3):
-        turn_left()
+  for i in range(3):
+    turn_left()
 
 `,
     allowedFeatures: {
@@ -246,7 +246,7 @@ Here's the basic syntax:
 
 ```python
 for i in range(5):
-    move()
+  move()
 ```
 
 This means: **"Repeat `move()` exactly 5 times."**
@@ -272,8 +272,8 @@ For loops are especially useful inside function definitions. Remember `turn_righ
 
 ```python
 def turn_right():
-    for i in range(3):
-        turn_left()
+  for i in range(3):
+    turn_left()
 ```
 
 This does the exact same thing — it just uses a loop instead of repeating the command.

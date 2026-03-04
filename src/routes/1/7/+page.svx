@@ -26,12 +26,12 @@
 # Use while loops to handle unknown dimensions.
 
 def turn_right():
-    for i in range(3):
-        turn_left()
+  for i in range(3):
+    turn_left()
 
 def turn_around():
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
 
 `,
     tests: {
@@ -118,12 +118,12 @@ def turn_around():
 # 3. How do rows alternate?
 
 def turn_right():
-    for i in range(3):
-        turn_left()
+  for i in range(3):
+    turn_left()
 
 def turn_around():
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
 
 `,
     tests: {
@@ -205,12 +205,12 @@ def turn_around():
 # but you'll need to handle the internal walls.
 
 def turn_right():
-    for i in range(3):
-        turn_left()
+  for i in range(3):
+    turn_left()
 
 def turn_around():
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
 
 `,
     tests: {

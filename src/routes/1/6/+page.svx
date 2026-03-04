@@ -25,9 +25,9 @@
 # trying to pick up from empty cells!
 
 while front_is_clear():
-    move()
-    if beepers_present():
-        pick_beeper()
+  move()
+  if beepers_present():
+    pick_beeper()
 `
   };
 
@@ -52,10 +52,10 @@ while front_is_clear():
 # If there's no beeper: put one down.
 
 def check_and_invert():
-    if beepers_present():
-        pick_beeper()
-    else:
-        put_beeper()
+  if beepers_present():
+    pick_beeper()
+  else:
+    put_beeper()
 
 check_and_invert()
 move()
@@ -92,13 +92,13 @@ check_and_invert()
 # Karel faces east, so "left" is north.
 
 while front_is_clear():
-    if left_is_clear():
-        put_beeper()
-    move()
+  if left_is_clear():
+    put_beeper()
+  move()
 
 # Check the last position too
 if left_is_clear():
-    put_beeper()
+  put_beeper()
 `
   };
 
@@ -300,8 +300,8 @@ if left_is_clear():
 # You'll need: while, if/else, and sensor functions.
 
 def turn_right():
-    for i in range(3):
-        turn_left()
+  for i in range(3):
+    turn_left()
 
 `,
     allowedFeatures: {
@@ -362,7 +362,7 @@ The simplest form checks one condition:
 
 ```python
 if beepers_present():
-    pick_beeper()
+  pick_beeper()
 ```
 
 This says: **"If there's a beeper here, pick it up. Otherwise, do nothing."**
@@ -375,9 +375,9 @@ Sometimes you want Karel to do one thing if a condition is true, and *something 
 
 ```python
 if beepers_present():
-    pick_beeper()
+  pick_beeper()
 else:
-    put_beeper()
+  put_beeper()
 ```
 
 This says: **"If there's a beeper, pick it up. Otherwise, put one down."** Karel always does exactly one of the two — never both, never neither.
@@ -427,9 +427,9 @@ The real power comes from combining `if/else` with `while` loops and functions. 
 
 ```python
 while front_is_clear():
-    if beepers_present():
-        pick_beeper()
-    move()
+  if beepers_present():
+    pick_beeper()
+  move()
 ```
 
 This walks the entire row, picking up beepers wherever they exist. The `while` handles the repetition, and the `if` handles the decision at each step.

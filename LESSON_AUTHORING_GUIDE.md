@@ -187,8 +187,8 @@ const multiTestExercise: KarelConfig = {
     beepers: []
   },
   initialCode: `def fill_row():
-    # Fill current row with beepers
-    pass
+  # Fill current row with beepers
+  pass
 
 fill_row()
 `,
@@ -394,13 +394,14 @@ Lesson files for non-Karel chapters will follow the same MDsveX format, mixing p
 
 1. **Start Simple**: Begin with simple examples before adding restrictions or tests
 2. **Clear Instructions**: Write clear comments in `initialCode` explaining the task
-3. **Test Validation**: Test your validation function with correct and incorrect solutions
-4. **Multiple Tests**: Use multiple test worlds to ensure solutions work generally, not just for one case
-5. **Appropriate Restrictions**: Only restrict features that haven't been taught yet
-6. **Helpful Messages**: Write clear, helpful messages in validation returns
-7. **Loadable Tests**: Make tests loadable so students can see the different scenarios
-8. **Persistence Keys**: Always add a `persistenceKey` to exercises (not demos). Use the convention `'<chapter>/<lesson>/exercise-<n>'` (e.g., `'1/3/exercise-2'`). Keys must be unique across the entire site.
-9. **Exercise Count**: When adding or removing exercises from a lesson, update the `exerciseCount` in `src/lib/curriculum/index.ts` to match. Auto-completion depends on this value.
+3. **2-Space Indentation**: All Python code in `initialCode` (and in prose code blocks within lessons) must use **2 spaces** for indentation — not 4. This keeps code compact in the editor and is the project-wide convention for student-facing Python.
+4. **Test Validation**: Test your validation function with correct and incorrect solutions
+5. **Multiple Tests**: Use multiple test worlds to ensure solutions work generally, not just for one case
+6. **Appropriate Restrictions**: Only restrict features that haven't been taught yet
+7. **Helpful Messages**: Write clear, helpful messages in validation returns
+8. **Loadable Tests**: Make tests loadable so students can see the different scenarios
+9. **Persistence Keys**: Always add a `persistenceKey` to exercises (not demos). Use the convention `'<chapter>/<lesson>/exercise-<n>'` (e.g., `'1/3/exercise-2'`). Keys must be unique across the entire site.
+10. **Exercise Count**: When adding or removing exercises from a lesson, update the `exerciseCount` in `src/lib/curriculum/index.ts` to match. Auto-completion depends on this value.
 
 ## Example Lessons
 

@@ -17,9 +17,9 @@
     },
     initialCode: `# Defining a new command: turn_right()
 def turn_right():
-    turn_left()
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
+  turn_left()
 
 # Now we can use turn_right just like any built-in command!
 move()
@@ -50,8 +50,8 @@ pick_beeper()
     },
     initialCode: `# Defining turn_around()
 def turn_around():
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
 
 # Walk to the end of the row...
 move()
@@ -66,6 +66,39 @@ move()
 move()
 move()
 move()
+
+# Now Karel is back at (1,1) — pick up the beeper!
+pick_beeper()
+`
+  };
+
+  // Example 3: Reducing repetitive code
+  const diminshedDuplicationExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 5, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 1, y: 1, count: 1 }]
+    },
+    initialCode: `# Defining turn_around()
+def turn_around():
+  turn_left()
+  turn_left()
+
+# Walk to the end of the row...
+def walk_to_end():
+  move()
+  move()
+  move()
+  move()
+
+walk_to_end()
+turn_around()
+walk_to_end()
 
 # Now Karel is back at (1,1) — pick up the beeper!
 pick_beeper()
@@ -90,8 +123,8 @@ pick_beeper()
 # Hint: turning right from east means facing south.
 
 def turn_right():
-    # Your code here
-    pass
+  # Your code here
+  pass
 
 `,
     allowedFeatures: {
@@ -247,9 +280,9 @@ A function definition teaches Karel a new command. Here's the pattern:
 
 ```python
 def turn_right():
-    turn_left()
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
+  turn_left()
 ```
 
 Let's break this down:
@@ -276,8 +309,8 @@ Another handy function is `turn_around()`, which makes Karel face the opposite d
 
 ```python
 def turn_around():
-    turn_left()
-    turn_left()
+  turn_left()
+  turn_left()
 ```
 
 In this example, Karel walks to the end of a row, turns around, walks back, and picks up a beeper at the start.

@@ -19,7 +19,7 @@
 # This works no matter how wide the world is!
 
 while front_is_clear():
-    move()
+  move()
 `
   };
 
@@ -39,7 +39,7 @@ while front_is_clear():
 # Pick them all up!
 
 while beepers_present():
-    pick_beeper()
+  pick_beeper()
 `
   };
 
@@ -59,11 +59,11 @@ while beepers_present():
 # Use a while loop to turn until facing north.
 
 while not_facing_north():
-    turn_left()
+  turn_left()
 
 # Now Karel is facing north — move to the beeper.
 while front_is_clear():
-    move()
+  move()
 
 pick_beeper()
 `
@@ -263,7 +263,7 @@ A `while` loop repeats a block of code as long as a condition is true:
 
 ```python
 while front_is_clear():
-    move()
+  move()
 ```
 
 Here's how it works:

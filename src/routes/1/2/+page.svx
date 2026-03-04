@@ -76,7 +76,7 @@ pick_beeper()
   };
 
   // Example 3: Reducing repetitive code
-  const diminshedDuplicationExample: KarelConfig = {
+  const diminishedDuplicationExample: KarelConfig = {
     initialWorld: {
       dimensions: { width: 5, height: 1 },
       karel: {
@@ -364,7 +364,7 @@ walk_to_end()
 
 Each line reads like a clear instruction: *walk to the end, turn around, walk to the end*. Try it out below — this program does exactly the same thing as the previous example, but with less duplication.
 
-<KarelEnvironment config={diminshedDuplicationExample} />
+<KarelEnvironment config={diminishedDuplicationExample} />
 
 Functions aren't just for teaching Karel new tricks — they're also a powerful way to **avoid repeating yourself**. If you find yourself writing the same group of commands over and over, wrap them in a function and call it by name instead.
 

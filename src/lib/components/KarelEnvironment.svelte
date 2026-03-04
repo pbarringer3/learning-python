@@ -134,9 +134,13 @@
   const MAX_STEPS = 2500;
 
   // Execution recording types
+  type StepType = 'action' | 'define' | 'call' | 'return';
+
   type RecordedStep = {
     line: number;
     world: KarelWorldType; // snapshot of world AFTER this step executed
+    type: StepType;
+    message: string;
   };
 
   // Step-through execution state
@@ -485,19 +489,39 @@
     const recordingCallbacks: KarelCallbacks = {
       move: () => {
         move();
-        steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
+        steps.push({
+          line: lastTracedLine,
+          world: cloneWorld(currentWorld),
+          type: 'action',
+          message: 'move() — Karel moves forward'
+        });
       },
       turn_left: () => {
         turn_left();
-        steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
+        steps.push({
+          line: lastTracedLine,
+          world: cloneWorld(currentWorld),
+          type: 'action',
+          message: 'turn_left() — Karel turns left'
+        });
       },
       pick_beeper: () => {
         pick_beeper();
-        steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
+        steps.push({
+          line: lastTracedLine,
+          world: cloneWorld(currentWorld),
+          type: 'action',
+          message: 'pick_beeper() — Karel picks up a beeper'
+        });
       },
       put_beeper: () => {
         put_beeper();
-        steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
+        steps.push({
+          line: lastTracedLine,
+          world: cloneWorld(currentWorld),
+          type: 'action',
+          message: 'put_beeper() — Karel puts down a beeper'
+        });
       },
       front_is_clear,
       front_is_blocked,
@@ -521,20 +545,92 @@
 
     injectKarelCommands(pyodide, recordingCallbacks);
 
-    // Line trace callback — updates lastTracedLine so Karel callbacks know where we are
-    const traceCallback = (lineNo: number) => {
+    // Track which lines are def statements via AST pre-analysis
+    // We'll populate this from Python before running the code
+    let defLines: Map<number, string> = new Map();
+
+    // Line trace callback — updates lastTracedLine and records def steps
+    const lineCallback = (lineNo: number) => {
       lastTracedLine = lineNo;
+
+      // If this line is a def statement, record a 'define' step
+      if (defLines.has(lineNo)) {
+        const funcName = defLines.get(lineNo)!;
+        steps.push({
+          line: lineNo,
+          world: cloneWorld(currentWorld),
+          type: 'define',
+          message: `Define the ${funcName}() function (stored for later use)`
+        });
+      }
     };
-    pyodide.globals.set('__js_trace_cb__', traceCallback);
+
+    // Call callback — fires when entering a user-defined function
+    const callCallback = (funcName: string, callingLine: number) => {
+      steps.push({
+        line: callingLine,
+        world: cloneWorld(currentWorld),
+        type: 'call',
+        message: `Call ${funcName}()`
+      });
+    };
+
+    // Return callback — fires when leaving a user-defined function
+    const returnCallback = (funcName: string, callingLine: number) => {
+      steps.push({
+        line: callingLine,
+        world: cloneWorld(currentWorld),
+        type: 'return',
+        message: `Return from ${funcName}()`
+      });
+    };
+
+    pyodide.globals.set('__js_line_cb__', lineCallback);
+    pyodide.globals.set('__js_call_cb__', callCallback);
+    pyodide.globals.set('__js_return_cb__', returnCallback);
 
     const escapedCode = code.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
 
     try {
+      // First: run AST pre-analysis to find def statement lines
+      const astCode = `
+import ast as _ast
+_tree = _ast.parse('${escapedCode}')
+_def_lines = {}
+for _node in _ast.walk(_tree):
+    if isinstance(_node, _ast.FunctionDef):
+        _def_lines[_node.lineno] = _node.name
+`;
+      await pyodide.runPythonAsync(astCode);
+
+      // Read def_lines from Python into JS
+      const pyDefLines = pyodide.globals.get('_def_lines');
+      if (pyDefLines) {
+        const jsMap = pyDefLines.toJs();
+        if (jsMap instanceof Map) {
+          defLines = jsMap;
+        }
+        pyDefLines.destroy();
+      }
+
+      // Clean up AST temporaries
+      pyodide.runPython(`
+try:
+    del _ast, _tree, _def_lines, _node
+except:
+    pass
+`);
+
       await pyodide.runPythonAsync(`
 import sys as _ts
 def _tt(frame, event, arg):
-    if event == 'line' and frame.f_code.co_filename == '<user>':
-        __js_trace_cb__(frame.f_lineno)
+    if frame.f_code.co_filename == '<user>':
+        if event == 'line':
+            __js_line_cb__(frame.f_lineno)
+        elif event == 'call' and frame.f_back and frame.f_back.f_code.co_filename == '<user>':
+            __js_call_cb__(frame.f_code.co_name, frame.f_back.f_lineno)
+        elif event == 'return' and frame.f_back and frame.f_back.f_code.co_filename == '<user>':
+            __js_return_cb__(frame.f_code.co_name, frame.f_back.f_lineno)
     return _tt
 _code = compile('${escapedCode}', '<user>', 'exec')
 _ts.settrace(_tt)
@@ -555,7 +651,7 @@ finally:
       // Clean up
       pyodide.runPython(`
 try:
-    del __js_trace_cb__
+    del __js_line_cb__, __js_call_cb__, __js_return_cb__
 except:
     pass
 `);
@@ -580,6 +676,7 @@ except:
     // Phase 3: Replay each recorded step
     for (const step of recording.steps) {
       executionState.currentLine = step.line;
+      executionState.stepMessage = step.message;
       yield step.line;
 
       // Apply the world snapshot
@@ -597,9 +694,8 @@ except:
     }
 
     executionState.currentLine = null;
+    executionState.stepMessage = null;
   }
-
-  // Control handlers
   async function handlePlay() {
     if (!pyodide) {
       executionState.error = 'Pyodide not loaded yet';
@@ -673,6 +769,7 @@ except:
           executionState.status = 'success';
           executionState.currentLine = null;
           executionState.errorLine = null;
+          executionState.stepMessage = null;
           executionGenerator = null;
           break;
         } else {
@@ -689,6 +786,7 @@ except:
       executionState.status = 'error';
       executionState.error = extractErrorMessage(err);
       executionState.currentLine = executionState.errorLine;
+      executionState.stepMessage = null;
       executionGenerator = null;
     }
   }
@@ -726,6 +824,7 @@ except:
           executionState.status = 'success';
           executionState.currentLine = null;
           executionState.errorLine = null;
+          executionState.stepMessage = null;
           executionGenerator = null;
         } else {
           executionState.status = 'paused';
@@ -736,6 +835,7 @@ except:
         executionState.error = extractErrorMessage(err);
         // Keep the error line highlighted (it was set in the catch block)
         executionState.currentLine = executionState.errorLine;
+        executionState.stepMessage = null;
         executionGenerator = null;
       }
     }
@@ -910,6 +1010,7 @@ for var in user_vars:
         status={executionState.status}
         error={executionState.error}
         stepCount={executionState.stepCount}
+        stepMessage={executionState.stepMessage}
         {pyodideLoading}
         {pyodideError}
         {testResults}

@@ -688,3 +688,168 @@ test.describe('Exercise completion and persistence', () => {
     expect(editorContent).toContain('Navigate Karel');
   });
 });
+
+// ============================================================
+// Top-down stepping — def / call / return steps and messages
+// ============================================================
+
+test.describe('Top-down stepping', () => {
+  /**
+   * Helper: get the step message text from the output panel
+   */
+  function getStepMessage(env: import('@playwright/test').Locator) {
+    return env.locator('.step-message');
+  }
+
+  // --- Tests using Lesson 1/2 which has def statements in its examples ---
+
+  test.describe('with lesson 1/2 examples', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/1/2');
+      await waitForPyodide(page);
+    });
+
+    test('first step on a def statement shows define message', async ({ page }) => {
+      // The first KarelEnvironment on lesson 1/2 has code starting with `def turn_right():`
+      const env = getEnvironments(page).first();
+      await clickStep(env);
+
+      const msg = getStepMessage(env);
+      await expect(msg).toBeVisible({ timeout: 10_000 });
+      await expect(msg).toContainText('turn_right()');
+      await expect(msg).toContainText('function');
+    });
+
+    test('stepping shows call message when entering user-defined function', async ({ page }) => {
+      // First env has: def turn_right() ... then move(), move(), turn_left(), move(), move(), turn_right()
+      // Steps: def(turn_right), move, move, turn_left, move, move, call(turn_right)
+      const env = getEnvironments(page).first();
+
+      // Step 1: def turn_right
+      await clickStep(env);
+      await expect(getStepMessage(env)).toContainText('turn_right()');
+      await expect(getStepMessage(env)).toContainText('function');
+
+      // Steps 2-6: move, move, turn_left, move, move (5 action steps)
+      for (let i = 0; i < 5; i++) {
+        await clickStep(env);
+      }
+
+      // Step 7: call turn_right()
+      await clickStep(env);
+      await expect(getStepMessage(env)).toContainText('Call');
+      await expect(getStepMessage(env)).toContainText('turn_right()');
+    });
+
+    test('stepping shows return message after function body completes', async ({ page }) => {
+      const env = getEnvironments(page).first();
+
+      // Step 1: def turn_right
+      await clickStep(env);
+
+      // Steps 2-6: move, move, turn_left, move, move
+      for (let i = 0; i < 5; i++) {
+        await clickStep(env);
+      }
+
+      // Step 7: call turn_right()
+      await clickStep(env);
+      await expect(getStepMessage(env)).toContainText('Call');
+
+      // Steps 8-10: three turn_left() inside turn_right
+      for (let i = 0; i < 3; i++) {
+        await clickStep(env);
+        await expect(getStepMessage(env)).toContainText('turn_left()');
+      }
+
+      // Step 11: return from turn_right()
+      await clickStep(env);
+      await expect(getStepMessage(env)).toContainText('Return from');
+      await expect(getStepMessage(env)).toContainText('turn_right()');
+    });
+
+    test('multiple def statements produce separate define steps', async ({ page }) => {
+      // The third KarelEnvironment (diminshedDuplicationExample) has two defs:
+      // def turn_around() and def walk_to_end()
+      const env = getEnvironments(page).nth(2);
+
+      // Step 1: def turn_around
+      await clickStep(env);
+      await expect(getStepMessage(env)).toContainText('turn_around()');
+      await expect(getStepMessage(env)).toContainText('function');
+
+      // Step 2: def walk_to_end
+      await clickStep(env);
+      await expect(getStepMessage(env)).toContainText('walk_to_end()');
+      await expect(getStepMessage(env)).toContainText('function');
+    });
+
+    test('step message shows Karel action descriptions', async ({ page }) => {
+      const env = getEnvironments(page).nth(2);
+
+      // Step 1: def turn_around, Step 2: def walk_to_end
+      await clickStep(env);
+      await clickStep(env);
+
+      // Step 3: call walk_to_end()
+      await clickStep(env);
+      await expect(getStepMessage(env)).toContainText('Call');
+      await expect(getStepMessage(env)).toContainText('walk_to_end()');
+
+      // Step 4: move() inside walk_to_end
+      await clickStep(env);
+      await expect(getStepMessage(env)).toContainText('move()');
+      await expect(getStepMessage(env)).toContainText('Karel moves forward');
+    });
+  });
+
+  // --- Tests using the playground page (no def statements needed) ---
+
+  test.describe('with playground', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/karel/playground');
+      await waitForPyodide(page);
+    });
+
+    test('action step shows descriptive message', async ({ page }) => {
+      // The default playground code starts with move() calls
+      const env = page.locator('.karel-environment');
+      await clickStep(env);
+
+      const msg = getStepMessage(env);
+      await expect(msg).toBeVisible({ timeout: 10_000 });
+      // Default playground code likely starts with a move()
+      await expect(msg).toContainText('Karel');
+    });
+
+    test('step message clears on success at end of program', async ({ page }) => {
+      // Type a single-command program
+      const cmContent = page.locator('.cm-content');
+      await cmContent.click();
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.type('move()');
+
+      const env = page.locator('.karel-environment');
+
+      // Step through the single action
+      await clickStep(env);
+      await expect(getStepMessage(env)).toBeVisible({ timeout: 10_000 });
+
+      // Step again to finish — should show success, no step message
+      await clickStep(env);
+      await expect(env.locator('.message-title:has-text("Success")')).toBeVisible({
+        timeout: 5_000
+      });
+      await expect(getStepMessage(env)).not.toBeVisible();
+    });
+
+    test('step message clears on reset', async ({ page }) => {
+      const env = page.locator('.karel-environment');
+      await clickStep(env);
+      await expect(getStepMessage(env)).toBeVisible({ timeout: 10_000 });
+
+      await clickReset(env);
+      await expect(getStepMessage(env)).not.toBeVisible();
+    });
+  });
+});

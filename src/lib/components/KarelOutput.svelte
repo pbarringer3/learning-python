@@ -6,6 +6,7 @@
     error?: string | null;
     message?: string | null;
     stepCount?: number;
+    stepMessage?: string | null;
     pyodideLoading?: boolean;
     pyodideError?: string | null;
     testResults?: TestResult[] | null;
@@ -17,6 +18,7 @@
     error = null,
     message = null,
     stepCount = 0,
+    stepMessage = null,
     pyodideLoading = false,
     pyodideError = null,
     testResults = null,
@@ -126,8 +128,11 @@
             d="M12 4V2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10h-2c0 4.41-3.59 8-8 8s-8-3.59-8-8 3.59-8 8-8z"
           />
         </svg>
-        <span class="message-title">Running... ({stepCount} steps)</span>
+        <span class="message-title">Running... (step {stepCount})</span>
       </div>
+      {#if stepMessage}
+        <p class="message-content step-message">{stepMessage}</p>
+      {/if}
     </div>
   {:else if isPaused}
     <div class="output-message info">
@@ -136,8 +141,11 @@
           <rect x="6" y="4" width="4" height="16" />
           <rect x="14" y="4" width="4" height="16" />
         </svg>
-        <span class="message-title">Paused at step {stepCount}</span>
+        <span class="message-title">Step {stepCount}</span>
       </div>
+      {#if stepMessage}
+        <p class="message-content step-message">{stepMessage}</p>
+      {/if}
     </div>
   {:else}
     <div class="output-message idle">
@@ -169,7 +177,7 @@
   }
 
   .message-title {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .message-content {
@@ -178,7 +186,7 @@
     background: white;
     border-radius: 4px;
     font-family: monospace;
-    font-size: 13px;
+    font-size: 12px;
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -201,6 +209,11 @@
 
   .info {
     color: #2563eb;
+  }
+
+  .step-message {
+    border-left: 3px solid #2563eb;
+    font-size: 11px;
   }
 
   .idle {
@@ -252,7 +265,7 @@
   }
 
   .test-name {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .test-message {
@@ -260,7 +273,7 @@
     padding: 0.5rem;
     background: #fef2f2;
     border-radius: 4px;
-    font-size: 13px;
+    font-size: 12px;
     color: #991b1b;
   }
 

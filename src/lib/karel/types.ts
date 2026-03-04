@@ -53,6 +53,7 @@ export interface ExecutionState {
   stepCount: number;
   error: string | null;
   animationSpeed: number; // milliseconds per command
+  stepMessage: string | null; // Descriptive message for current step
 }
 
 /**
@@ -100,7 +101,8 @@ export function createDefaultExecutionState(): ExecutionState {
     errorLine: null,
     stepCount: 0,
     error: null,
-    animationSpeed: 300 // Normal speed
+    animationSpeed: 300, // Normal speed
+    stepMessage: null
   };
 }
 

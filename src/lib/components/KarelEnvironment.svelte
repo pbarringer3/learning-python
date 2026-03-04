@@ -8,6 +8,8 @@
   import KarelCodeEditor from '$lib/components/KarelCodeEditor.svelte';
   import KarelControls from '$lib/components/KarelControls.svelte';
   import KarelOutput from '$lib/components/KarelOutput.svelte';
+  import { progressStore } from '$lib/curriculum/progress';
+  import { getLessonByNumber } from '$lib/curriculum/index';
   import {
     createDefaultExecutionState,
     cloneWorld,
@@ -40,14 +42,89 @@
   let executionState = $state(createDefaultExecutionState());
   let code = $state('');
 
-  // Initialize code when component mounts or config changes
+  // --- Code persistence helpers ---
+  const CODE_PREFIX = 'learning-python-code:';
+
+  function loadSavedCode(key: string): string | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(CODE_PREFIX + key);
+    } catch {
+      return null;
+    }
+  }
+
+  function saveCode(key: string, value: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(CODE_PREFIX + key, value);
+    } catch {
+      // localStorage may be full or unavailable — silently degrade
+    }
+  }
+
+  function deleteSavedCode(key: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(CODE_PREFIX + key);
+    } catch {
+      // silently degrade
+    }
+  }
+
+  /** Save current code to localStorage (called on Play / Run Tests) */
+  function persistCode() {
+    if (config.persistenceKey) {
+      saveCode(config.persistenceKey, code);
+    }
+  }
+
+  // Initialize code: load saved code if persistence is enabled, else use initialCode
   $effect(() => {
-    code = config.initialCode;
+    if (config.persistenceKey) {
+      const saved = loadSavedCode(config.persistenceKey);
+      code = saved ?? config.initialCode;
+    } else {
+      code = config.initialCode;
+    }
   });
+
+  /** Reset editor to the original starter code (discards saved code and completion) */
+  function handleResetCode() {
+    if (config.persistenceKey) {
+      deleteSavedCode(config.persistenceKey);
+      const parts = getExerciseParts();
+      if (parts) {
+        progressStore.clearExerciseCompleted(parts.lessonKey, parts.exerciseId);
+      }
+    }
+    code = config.initialCode;
+  }
 
   let pyodide: PyodideInterface | null = $state(null);
   let pyodideLoading = $state(true);
   let pyodideError: string | null = $state(null);
+
+  // Track exercise completion
+  let exerciseCompleted = $state(false);
+
+  function getExerciseParts(): { lessonKey: string; exerciseId: string } | null {
+    if (!config.persistenceKey) return null;
+    const lastSlash = config.persistenceKey.lastIndexOf('/');
+    return {
+      lessonKey: config.persistenceKey.substring(0, lastSlash),
+      exerciseId: config.persistenceKey.substring(lastSlash + 1)
+    };
+  }
+
+  // Subscribe for live updates during the session (e.g. after running tests)
+  progressStore.subscribe((p) => {
+    const parts = getExerciseParts();
+    if (parts) {
+      exerciseCompleted =
+        p.lessons[parts.lessonKey]?.exerciseResults?.[parts.exerciseId]?.completed ?? false;
+    }
+  });
 
   // Test results
   let testResults: TestResult[] | null = $state(null);
@@ -66,8 +143,26 @@
   let currentLineIndex = $state(0);
   let executionGenerator: AsyncGenerator<number, void, unknown> | null = null;
 
-  // Load Pyodide on mount
+  // Load Pyodide on mount — also check localStorage directly for exercise completion
   onMount(async () => {
+    // Check exercise completion directly from localStorage (store may not be hydrated yet)
+    if (config.persistenceKey) {
+      try {
+        const raw = localStorage.getItem('learning-python-progress');
+        if (raw) {
+          const data = JSON.parse(raw);
+          const parts = getExerciseParts();
+          if (parts) {
+            exerciseCompleted =
+              data?.lessons?.[parts.lessonKey]?.exerciseResults?.[parts.exerciseId]?.completed ??
+              false;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     try {
       pyodide = await loadPyodide();
       // Install the code validator
@@ -512,6 +607,9 @@ except:
       return;
     }
 
+    // Persist code on play
+    persistCode();
+
     // If already paused mid-execution, resume from where we left off
     if (executionState.status === 'paused' && executionGenerator) {
       executionState.status = 'running';
@@ -687,6 +785,9 @@ for var in user_vars:
   async function handleRunTests() {
     if (!config.tests || !pyodide) return;
 
+    // Persist code on test run
+    persistCode();
+
     runningTests = true;
     testResults = [];
 
@@ -731,6 +832,19 @@ for var in user_vars:
       }
     }
 
+    // If all tests passed and we have a persistenceKey, mark exercise completed
+    const allPassed = testResults.length > 0 && testResults.every((r) => r.passed);
+    if (allPassed && config.persistenceKey) {
+      const lastSlash = config.persistenceKey.lastIndexOf('/');
+      const lessonKey = config.persistenceKey.substring(0, lastSlash);
+      const exerciseId = config.persistenceKey.substring(lastSlash + 1);
+      // Look up the lesson's exercise count from the curriculum
+      const [chapterStr, lessonStr] = lessonKey.split('/');
+      const result = getLessonByNumber(Number(chapterStr), Number(lessonStr));
+      const exerciseCount = result?.lesson.exerciseCount;
+      progressStore.markExerciseCompleted(lessonKey, exerciseId, exerciseCount);
+    }
+
     // Reset to initial world after tests
     currentWorld = cloneWorld(initialWorldSnapshot);
     executionState = createDefaultExecutionState();
@@ -747,6 +861,23 @@ for var in user_vars:
 </script>
 
 <div class="karel-environment">
+  {#if exerciseCompleted}
+    <div class="completed-banner">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+      <span>Exercise completed</span>
+    </div>
+  {/if}
   <div class="flex flex-col gap-4 lg:flex-row">
     <!-- Left side: Code editor and controls -->
     <div class="flex flex-1 flex-col gap-4">
@@ -772,6 +903,7 @@ for var in user_vars:
         testWorlds={config.tests?.loadableTests}
         onLoadTestWorld={config.tests?.loadableTests ? handleLoadTestWorld : undefined}
         {runningTests}
+        onResetCode={config.persistenceKey ? handleResetCode : undefined}
       />
 
       <KarelOutput
@@ -797,5 +929,19 @@ for var in user_vars:
     max-width: 1400px;
     margin: 0 auto;
     padding: 1rem;
+  }
+
+  .completed-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.75rem;
+    background-color: #ecfdf5;
+    border: 1px solid #6ee7b7;
+    border-radius: 0.5rem;
+    color: #065f46;
+    font-weight: 500;
+    font-size: 0.9rem;
   }
 </style>

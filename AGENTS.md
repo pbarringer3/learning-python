@@ -50,6 +50,7 @@ The site includes specialized interactive modules for teaching:
 
 - Write Playwright tests in `tests/`
 - Run tests with `npm test`
+- Any time you are asked to add or change functionality you should use a red/green TDD approach.
 
 ### Design Principles
 
@@ -131,3 +132,4 @@ If project requirements are unclear:
 2. Examine similar existing implementations in the codebase
 3. Ask the user for clarification when necessary
 4. All questions should be asked one at a time.
+5. Never use the 'ask-user' tool. Always ask questions in plain text. The tool is terrible from a user-experience perspective.

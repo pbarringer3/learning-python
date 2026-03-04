@@ -20,6 +20,8 @@ export interface Lesson {
   number: number;
   /** Whether the lesson has graded exercises (affects completion criteria) */
   hasExercises: boolean;
+  /** Number of exercises in this lesson (0 if hasExercises is false) */
+  exerciseCount: number;
 }
 
 /** Key topic/concept taught in a chapter, shown as topic cards */

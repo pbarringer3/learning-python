@@ -5,6 +5,7 @@
 
   // Exercise 1: Fill the entire grid with beepers
   const fillGridConfig: KarelConfig = {
+    persistenceKey: '1/7/exercise-1',
     initialWorld: {
       dimensions: { width: 5, height: 4 },
       karel: {
@@ -90,6 +91,7 @@ def turn_around():
 
   // Exercise 2: Checkerboard pattern
   const checkerboardConfig: KarelConfig = {
+    persistenceKey: '1/7/exercise-2',
     initialWorld: {
       dimensions: { width: 5, height: 5 },
       karel: {
@@ -168,6 +170,7 @@ def turn_around():
 
   // Exercise 3: Collect all beepers in a room with walls
   const roomCleanerConfig: KarelConfig = {
+    persistenceKey: '1/7/exercise-3',
     initialWorld: {
       dimensions: { width: 6, height: 4 },
       karel: {

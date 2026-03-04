@@ -2,7 +2,7 @@
 
 ## Karel the Robot (Chapter 1)
 
-**Status:** Phase 3 Complete - Reusable Component Architecture with Lesson Support
+**Status:** Phase 4 Complete - Progress Tracking, Code Persistence & Exercise Completion
 
 > Karel is the first chapter of the Learning Python curriculum. This document tracks Karel-specific implementation progress. As more chapters and modules are built, they will have their own progress sections or documents.
 
@@ -10,24 +10,78 @@
 
 ## Summary
 
-Successfully refactored the Karel playground into a reusable component architecture that supports:
+Successfully refactored the Karel playground into a reusable component architecture and built a complete progress tracking system:
 
 - **Reusable KarelEnvironment component** for embedding in lessons
 - **Configurable feature restrictions** per environment instance
 - **Automated testing system** with multiple test worlds
 - **Validated solution checking** with custom validation functions
+- **Code persistence** — student code saved to localStorage on Play/Run Tests, restored on page load
+- **Exercise completion tracking** — exercises marked complete when all tests pass, with visual banner
+- **Lesson auto-completion** — lessons automatically completed when all exercises pass
+- **Reset Code** button to restore original code and clear completion state
+- **Progress store** — Svelte writable store backed by localStorage with hydration pattern
 - Full playground functionality preserved (Play/Edit modes, world editor)
-- Example lessons demonstrating all use cases
-
-The refactor maintains 100% backward compatibility while enabling new educational workflows like exercises with restricted features and automated grading.
+- 7 Karel lessons with 18 exercises, all wired with persistence
+- Comprehensive test coverage (31 unit tests + 5 Playwright e2e tests)
 
 ---
 
 ## Completed Features
 
-### ✅ Phase 3: Component Architecture (NEW)
+### ✅ Phase 4: Progress Tracking & Code Persistence (NEW)
 
-### ✅ Phase 3: Component Architecture (NEW)
+1. **Progress Store** ([src/lib/curriculum/progress.ts](src/lib/curriculum/progress.ts))
+
+   - Svelte writable store backed by localStorage (`learning-python-progress` key)
+   - `hydrate()` pattern — loads from localStorage once in root layout's `onMount`
+   - Hydration guard on `markVisited()` prevents overwriting data before localStorage is loaded
+   - Spread operator preserves `exerciseResults` when updating lesson entries
+   - `markExerciseCompleted()` with optional `exerciseCount` for auto-completing lessons
+   - `clearExerciseCompleted()` for resetting individual exercise completion
+   - `getStatus()`, `reset()` utilities
+   - Factory function `createProgressStore()` exported for isolated unit testing
+
+2. **Code Persistence** ([src/lib/components/KarelEnvironment.svelte](src/lib/components/KarelEnvironment.svelte))
+
+   - `persistenceKey` on `KarelConfig` enables per-exercise code saving
+   - Code saved to localStorage on Play and Run Tests (`learning-python-code:<key>` prefix)
+   - Saved code loaded on component mount, replacing `initialCode`
+   - Reset Code button restores `initialCode` and deletes saved code
+
+3. **Exercise Completion Tracking**
+
+   - When all tests pass and `persistenceKey` is set, exercise marked complete in progress store
+   - Green "Exercise completed" banner displayed above the environment
+   - Banner persists across page reloads (read directly from localStorage in `onMount`)
+   - Banner removed when Reset Code is clicked
+
+4. **Lesson Auto-Completion**
+
+   - `exerciseCount` added to `Lesson` type ([src/lib/curriculum/types.ts](src/lib/curriculum/types.ts))
+   - All 7 Karel lessons have `exerciseCount` set in curriculum index
+   - When completed exercise count reaches `exerciseCount`, lesson auto-marked as completed
+
+5. **Lesson Content** ([src/routes/1/1 through 1/7](src/routes/1/))
+
+   - 7 Karel lessons fully authored with prose, examples, and exercises
+   - 18 exercises total, all with `persistenceKey` for persistence
+   - Exercise counts: L1=2, L2=3, L3=2, L4=2, L5=3, L6=3, L7=3
+
+6. **Reset Code Button** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
+
+   - Appears when `persistenceKey` is set (exercises only, not demos)
+   - Deletes saved code from localStorage
+   - Restores editor to `initialCode`
+   - Clears exercise completion state
+
+7. **Tests**
+
+   - 31 unit tests for progress store ([src/lib/curriculum/progress.test.ts](src/lib/curriculum/progress.test.ts))
+   - 5 Playwright e2e tests for exercise completion flow ([tests/karel.test.ts](tests/karel.test.ts))
+   - Tests cover: hydration, persistence, completion tracking, auto-completion, reset, round-trip persistence
+
+### ✅ Phase 3: Component Architecture
 
 1. **KarelConfig Interface** ([src/lib/karel/types.ts](src/lib/karel/types.ts))
 
@@ -402,19 +456,36 @@ The refactor maintains 100% backward compatibility while enabling new educationa
 src/
 ├── lib/
 │   ├── karel/
-│   │   ├── types.ts              # TypeScript type definitions
-│   │   └── pyodide.ts            # Pyodide integration utilities
+│   │   ├── types.ts              # TypeScript types (KarelConfig, KarelWorld, etc.)
+│   │   ├── types.test.ts         # Type/validation unit tests
+│   │   ├── pyodide.ts            # Pyodide integration utilities
+│   │   └── pyodide.test.ts       # Pyodide unit tests
+│   ├── curriculum/
+│   │   ├── index.ts              # Curriculum content definitions (chapters, lessons)
+│   │   ├── types.ts              # Curriculum types (Lesson, SiteProgress, etc.)
+│   │   ├── progress.ts           # Progress store (Svelte writable + localStorage)
+│   │   └── progress.test.ts      # Progress store unit tests (31 tests)
 │   └── components/
 │       ├── KarelWorld.svelte     # SVG world display
 │       ├── KarelCodeEditor.svelte # CodeMirror editor
-│       ├── KarelControls.svelte   # Execution controls
+│       ├── KarelControls.svelte   # Execution controls + Reset Code button
 │       ├── KarelOutput.svelte     # Output/error display
+│       ├── KarelEnvironment.svelte # Reusable Karel env (persistence, completion)
+│       ├── LessonShell.svelte    # Lesson page wrapper (nav, progress tracking)
+│       ├── NavDrawer.svelte      # Navigation drawer
+│       ├── TopBar.svelte         # Top navigation bar
 │       └── WorldEditor.svelte     # World editing interface
-└── routes/
-    ├── +page.svelte              # Home page (with link to playground)
-    └── karel/
-        └── playground/
-            └── +page.svelte      # Main playground container
+├── routes/
+│   ├── +layout.svelte            # Root layout (hydrates progress store)
+│   ├── +page.svelte              # Home page
+│   ├── 1/
+│   │   ├── 1/ through 7/         # Karel lessons (7 lessons, 18 exercises)
+│   │   └── +page.svx             # MDsveX lesson files
+│   └── karel/
+│       └── playground/
+│           └── +page.svelte      # Main playground container
+└── tests/
+    └── karel.test.ts             # Playwright e2e tests (incl. exercise flow)
 ```
 
 ---
@@ -468,34 +539,25 @@ src/
 
 ### Not Yet Implemented
 
-1. **Per-Lesson Feature Control**
-
-   - Current restriction level is fixed for all playground use
-   - Future: Support different restriction levels per lesson
-   - Would need lesson data structure to specify allowed features
-
-2. **Interactive World Editing**
+1. **Interactive World Editing**
 
    - ✅ **Move Karel mode** - Click grid to move Karel (COMPLETE)
    - ✅ **Add/Remove Walls mode** - Click wall segments to toggle walls (COMPLETE)
    - Place Beepers mode not yet wired up
 
-3. **Validation Functions**
-
-   - No exercise validation system
-   - Success criteria not implemented
-
-4. **Lessons & Content**
-
-   - No lesson data structures
-   - No MDsveX integration for instructions
-   - No progress tracking
-   - No localStorage persistence
-
-5. **Polish**
+2. **Polish**
    - No animations between Karel movements
    - No sound effects
    - No achievement system
+
+### ~~Previously Not Implemented (Now Complete)~~
+
+- ~~Per-Lesson Feature Control~~ → ✅ `allowedFeatures` on `KarelConfig` supports per-exercise restrictions
+- ~~Validation Functions~~ → ✅ Full validation system with `tests.validate` callback
+- ~~Lesson data structures~~ → ✅ `Lesson` type with `exerciseCount`, curriculum index
+- ~~MDsveX integration~~ → ✅ 7 lessons authored as `.svx` files
+- ~~Progress tracking~~ → ✅ Progress store with hydration, exercise completion, auto-complete
+- ~~localStorage persistence~~ → ✅ Code persistence + progress persistence
 
 ---
 
@@ -519,20 +581,21 @@ src/
 5. Wire up Place Beepers mode with click detection and beeper count
 6. Click cells to add/remove beepers with configurable count
 
-### Priority 3: Lessons System
+### ~~Priority 3: Lessons System~~ ✅ COMPLETE
 
-1. Define lesson/exercise data structures
-2. Create sample lessons
-3. Integrate MDsveX for instructions
-4. Build lesson navigation
-5. Add validation functions
+1. ✅ Define lesson/exercise data structures (`Lesson` type, `KarelConfig`, `SiteProgress`)
+2. ✅ Create sample lessons (7 Karel lessons, 18 exercises)
+3. ✅ Integrate MDsveX for instructions (all lessons use `.svx` files)
+4. ✅ Build lesson navigation (LessonShell, NavDrawer, chapter/lesson routing)
+5. ✅ Add validation functions (each exercise has `tests.validate`)
+6. ✅ Progress tracking (progress store, exercise completion, lesson auto-complete)
+7. ✅ Code persistence (saved on Play/Run Tests, restored on load)
 
 ### Priority 4: Polish
 
 1. Smooth animations for Karel movements
 2. Visual effects (beeper pickup/place)
-3. Better error messages (educational)
-4. Accessibility improvements
+3. Accessibility improvements
 
 ---
 

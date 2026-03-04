@@ -14,6 +14,7 @@
     testWorlds?: string[];
     onLoadTestWorld?: (testName: string) => void;
     runningTests?: boolean;
+    onResetCode?: () => void;
     class?: string;
   }
 
@@ -30,6 +31,7 @@
     testWorlds,
     onLoadTestWorld,
     runningTests = false,
+    onResetCode,
     class: className = ''
   }: Props = $props();
 
@@ -107,6 +109,23 @@
       </svg>
       <span>Reset</span>
     </button>
+
+    {#if onResetCode}
+      <button
+        onclick={onResetCode}
+        class="control-btn reset-code"
+        disabled={isRunning}
+        title="Reset code to starter code"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"
+          />
+          <path d="M9.5 13.5L12 11l2.5 2.5M12 11v6" opacity="0.7" />
+        </svg>
+        <span>Reset Code</span>
+      </button>
+    {/if}
 
     {#if showTests && onRunTests}
       <button
@@ -222,6 +241,10 @@
 
   .control-btn.run-tests {
     color: #8b5cf6;
+  }
+
+  .control-btn.reset-code {
+    color: #6b7280;
   }
 
   .test-worlds {

@@ -199,6 +199,10 @@ interface KarelConfig {
   initialWorld: KarelWorld;
   initialCode: string;
 
+  // Code persistence key (optional - enables saving/loading code + exercise completion)
+  // Must be unique across the entire site. Convention: '<chapter>/<lesson>/exercise-<n>'
+  persistenceKey?: string;
+
   // Feature restrictions (optional - defaults to all features allowed)
   allowedFeatures?: {
     // Restrict which Karel commands can be used
@@ -518,41 +522,53 @@ Available speeds (via slider):
 - Current world state (Karel position, direction, beepers, walls)
 - Execution state (running, paused, stopped, current line, step count)
 - Animation queue
-- Code editor content (transient)
+- Code editor content (persisted to localStorage when `persistenceKey` set)
+- Exercise completion state (derived from progress store)
 
 **Global State (Svelte stores):**
 
 - User preferences (animation speed, etc.)
-- Lesson/exercise completion status
-- Saved code per exercise (persisted to localStorage)
-- Progress metadata (completion dates)
+- Lesson/exercise completion status (progress store)
+- Progress metadata (completion dates, per-exercise results)
 
-### State Persistence (localStorage/IndexedDB)
+### State Persistence (localStorage)
+
+**Progress Store** (`learning-python-progress` key):
 
 ```typescript
-{
-  progress: {
-    exercises: {
-      [exerciseId]: {
-        completed: boolean;
-        completedDate: string; // ISO timestamp
-        code: string; // Most recent code
-        codeUpdatedDate: string;
-      }
+interface SiteProgress {
+  version: number; // Schema version for migrations
+  lessons: { [lessonId: string]: LessonProgress };
+  lastVisited?: string;
+}
+
+interface LessonProgress {
+  lessonId: string; // e.g., '1/1'
+  status: 'not-started' | 'in-progress' | 'completed';
+  completedAt?: string; // ISO timestamp
+  exerciseResults?: {
+    [exerciseId: string]: {
+      completed: boolean;
+      completedAt?: string;
     };
-    lessons: {
-      [lessonId]: {
-        completed: boolean; // All exercises completed
-        completedDate: string;
-      }
-    };
-  };
-  preferences: {
-    animationSpeed: number;
-    // other user preferences
   };
 }
 ```
+
+**Code Persistence** (`learning-python-code:<persistenceKey>` keys):
+
+- Each exercise with a `persistenceKey` stores its code separately
+- Saved on Play and Run Tests; loaded on component mount
+- Deleted when Reset Code is clicked
+
+**Hydration Pattern:**
+
+- Progress store initialized with empty defaults (safe for SSR/prerender)
+- `hydrate()` called once in root layout's `onMount` to load from localStorage
+- `markVisited()` guarded by hydration flag to prevent overwriting loaded data
+- Spread operator used in `markVisited()` and `markCompleted()` to preserve `exerciseResults`
+
+````
 
 ---
 
@@ -581,7 +597,7 @@ pyodide.globals.set('turn_left', () => {
 });
 
 // etc. for all Karel commands
-```
+````
 
 ### Restricted Execution Environment
 
@@ -705,6 +721,14 @@ The core Karel execution environment is implemented as a reusable Svelte compone
    - Shows "✓ All tests passed!" if all pass
    - Shows individual test results if any fail (e.g., "Test 1: ✗ Failed - Karel ended at wrong position")
    - Provides dropdown to load any test world from `loadableTests` into the Karel display
+3. **Code Persistence** (when `persistenceKey` set):
+   - Saves code to localStorage on Play/Run Tests
+   - Restores saved code on mount
+   - Reset Code button restores `initialCode`
+4. **Exercise Completion** (when `persistenceKey` + tests):
+   - Marks exercise complete when all tests pass
+   - Shows green "Exercise completed" banner
+   - Auto-completes lesson when all exercises pass
 
 ### Pure Display Components
 
@@ -1005,32 +1029,23 @@ interface ExecutionState {
 5. ✅ Step-through debugging with line highlighting
 6. ✅ Full control flow support (if/else, while, for loops)
 
-### Phase 3: Reusable Component Architecture (NEXT)
+### Phase 3: Reusable Component Architecture ✅ COMPLETE
 
-1. ⏳ Extract core logic into `KarelEnvironment` component
-   - Move execution state management from playground to component
-   - Accept `KarelConfig` prop for configuration
-   - Support optional testing
-2. ⏳ Refactor playground to use `KarelEnvironment`
-   - Playground wraps KarelEnvironment with world editor
-   - Maintains all existing functionality
-3. ⏳ Implement feature restriction system
-   - Configurable Karel command restrictions
-   - Configurable Python feature restrictions
-   - Update validator to accept allowed features
-4. ⏳ Add testing support
-   - "Run Tests" button when tests provided
-   - Test execution against one or more test worlds
-   - Test world dropdown for loadable tests
-   - Test result display (all pass vs. individual failures)
-   - Single test acts as simple validation
+1. ✅ Extract core logic into `KarelEnvironment` component
+2. ✅ Refactor playground to use `KarelEnvironment`
+3. ✅ Implement feature restriction system
+4. ✅ Add testing support
 
-### Phase 4: Lessons & Content
+### Phase 4: Lessons, Progress & Persistence ✅ COMPLETE
 
-1. Create example lessons using `KarelEnvironment`
-2. Build chapter/lesson navigation
-3. Implement progress tracking
-4. Create initial lesson content
+1. ✅ Create 7 Karel lessons with 18 exercises using `KarelEnvironment`
+2. ✅ Build chapter/lesson navigation (LessonShell, NavDrawer)
+3. ✅ Implement progress tracking (progress store + localStorage)
+4. ✅ Code persistence (save on Play/Run Tests, load on mount)
+5. ✅ Exercise completion tracking with visual banner
+6. ✅ Lesson auto-completion when all exercises pass
+7. ✅ Reset Code functionality
+8. ✅ Comprehensive tests (31 unit + 5 e2e)
 
 ### Phase 5: Polish & Enhancement
 

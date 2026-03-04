@@ -25,7 +25,8 @@ const karel: Chapter = {
       description:
         'Get introduced to Karel and learn basic commands: move, turn_left, pick_beeper, and put_beeper.',
       number: 1,
-      hasExercises: true
+      hasExercises: true,
+      exerciseCount: 2
     },
     {
       id: 'functions',
@@ -33,14 +34,16 @@ const karel: Chapter = {
       description:
         'Learn to define your own functions to teach Karel new tricks like turning right.',
       number: 2,
-      hasExercises: true
+      hasExercises: true,
+      exerciseCount: 3
     },
     {
       id: 'decomposition',
       title: 'Decomposition',
       description: 'Break complex problems into smaller, reusable pieces using top-down design.',
       number: 3,
-      hasExercises: true
+      hasExercises: true,
+      exerciseCount: 2
     },
     {
       id: 'while-loops',
@@ -48,28 +51,32 @@ const karel: Chapter = {
       description:
         'Use while loops and sensor functions to write programs that adapt to different worlds.',
       number: 4,
-      hasExercises: true
+      hasExercises: true,
+      exerciseCount: 2
     },
     {
       id: 'for-loops',
       title: 'For Loops',
       description: 'Use for loops with range() to repeat actions a specific number of times.',
       number: 5,
-      hasExercises: true
+      hasExercises: true,
+      exerciseCount: 3
     },
     {
       id: 'conditionals',
       title: 'If/Else Statements',
       description: 'Make Karel decide what to do based on its surroundings using conditionals.',
       number: 6,
-      hasExercises: true
+      hasExercises: true,
+      exerciseCount: 3
     },
     {
       id: 'putting-it-together',
       title: 'Putting It All Together',
       description: "Combine everything you've learned to solve complex Karel challenges.",
       number: 7,
-      hasExercises: true
+      hasExercises: true,
+      exerciseCount: 3
     }
   ],
   topics: [

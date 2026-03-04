@@ -12,7 +12,8 @@ This guide explains how to create lessons for the Learning Python curriculum. Le
 6. [Exercises with Feature Restrictions](#exercises-with-feature-restrictions)
 7. [Single Test Exercises](#single-test-exercises)
 8. [Multi-Test Exercises](#multi-test-exercises)
-9. [Configuration Reference](#configuration-reference)
+9. [Code Persistence & Exercise Completion](#code-persistence--exercise-completion)
+10. [Configuration Reference](#configuration-reference)
 
 ## Overview
 
@@ -242,6 +243,54 @@ fill_row()
 };
 ```
 
+## Code Persistence & Exercise Completion
+
+Exercises can persist student code and track completion state across page loads.
+
+### Enabling Persistence
+
+Add a `persistenceKey` to any exercise config. This enables:
+
+- **Code saving**: Student code saved to localStorage when they press Play or Run Tests
+- **Code loading**: Saved code restored when the student revisits the page
+- **Reset Code button**: Appears in controls, letting students restore the original `initialCode`
+- **Exercise completion**: When all tests pass, the exercise is marked complete in the progress store
+- **Completion banner**: A green "Exercise completed" banner appears above the environment
+
+```svelte
+const exerciseConfig: KarelConfig = {
+  persistenceKey: '1/3/exercise-1',  // Must be unique across the entire site
+  initialWorld: { /* ... */ },
+  initialCode: `# Your task here\n`,
+  tests: { /* ... */ }
+};
+```
+
+### Persistence Key Convention
+
+Use the format `'<chapter>/<lesson>/exercise-<n>'`:
+
+- `'1/1/exercise-1'` — Chapter 1, Lesson 1, Exercise 1
+- `'1/3/exercise-2'` — Chapter 1, Lesson 3, Exercise 2
+
+Keys must be **globally unique**. The code is stored in localStorage under `learning-python-code:<key>`.
+
+### Lesson Auto-Completion
+
+When all exercises in a lesson are completed, the lesson is automatically marked as completed in the progress store. This requires:
+
+1. Each exercise has a `persistenceKey`
+2. Each exercise has `tests` with a `validate` function
+3. The lesson's `exerciseCount` is correctly set in `src/lib/curriculum/index.ts`
+
+### When NOT to Use Persistence
+
+- **Demo/example environments** that show pre-written code should NOT have a `persistenceKey`
+- **Playground** does not use persistence (it's for open experimentation)
+- Only exercises where students write and submit code should be persistent
+
+---
+
 ## Configuration Reference
 
 ### KarelConfig Interface
@@ -253,6 +302,11 @@ interface KarelConfig {
 
   // Initial code to display in the editor
   initialCode: string;
+
+  // Optional: Enables code persistence and exercise completion tracking.
+  // Must be unique across the entire site.
+  // Convention: '<chapter>/<lesson>/exercise-<n>' (e.g., '1/3/exercise-2')
+  persistenceKey?: string;
 
   // Optional: Feature restrictions for this environment
   allowedFeatures?: {
@@ -345,6 +399,8 @@ Lesson files for non-Karel chapters will follow the same MDsveX format, mixing p
 5. **Appropriate Restrictions**: Only restrict features that haven't been taught yet
 6. **Helpful Messages**: Write clear, helpful messages in validation returns
 7. **Loadable Tests**: Make tests loadable so students can see the different scenarios
+8. **Persistence Keys**: Always add a `persistenceKey` to exercises (not demos). Use the convention `'<chapter>/<lesson>/exercise-<n>'` (e.g., `'1/3/exercise-2'`). Keys must be unique across the entire site.
+9. **Exercise Count**: When adding or removing exercises from a lesson, update the `exerciseCount` in `src/lib/curriculum/index.ts` to match. Auto-completion depends on this value.
 
 ## Example Lessons
 

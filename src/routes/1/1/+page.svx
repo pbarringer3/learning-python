@@ -28,6 +28,7 @@ pick_beeper()
 
   // Exercise 1: Navigate to the beeper
   const exercise1Config: KarelConfig = {
+    persistenceKey: '1/1/exercise-1',
     initialWorld: {
       dimensions: { width: 5, height: 5 },
       karel: {
@@ -74,6 +75,7 @@ pick_beeper()
 
   // Exercise 2: Pick up and deliver
   const exercise2Config: KarelConfig = {
+    persistenceKey: '1/1/exercise-2',
     initialWorld: {
       dimensions: { width: 5, height: 5 },
       karel: {

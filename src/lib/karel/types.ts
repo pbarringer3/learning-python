@@ -150,4 +150,11 @@ export interface KarelConfig {
   tests?: KarelTests;
   /** Whether to show the world editor UI (default: false) */
   showWorldEditor?: boolean;
+  /**
+   * Unique key for persisting user code in localStorage.
+   * If provided, the editor will save code on change (debounced) and
+   * restore it when the component mounts.
+   * Convention: "<chapter>/<lesson>/<exercise>" e.g. "1/1/exercise-1"
+   */
+  persistenceKey?: string;
 }

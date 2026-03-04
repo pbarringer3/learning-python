@@ -72,10 +72,12 @@ function createProgressStore() {
      * Mark a lesson as visited (in-progress) if not already started.
      */
     markVisited(lessonKey: string) {
+      if (!hydrated) return; // Don't write before localStorage data is loaded
       update((progress) => {
         const existing = progress.lessons[lessonKey];
         if (!existing || existing.status === 'not-started') {
           progress.lessons[lessonKey] = {
+            ...existing, // preserve exerciseResults and other data
             lessonId: lessonKey,
             status: 'in-progress'
           };
@@ -94,7 +96,9 @@ function createProgressStore() {
      */
     markCompleted(lessonKey: string) {
       update((progress) => {
+        const existing = progress.lessons[lessonKey];
         progress.lessons[lessonKey] = {
+          ...existing, // preserve exerciseResults
           lessonId: lessonKey,
           status: 'completed',
           completedAt: new Date().toISOString()
@@ -106,8 +110,9 @@ function createProgressStore() {
 
     /**
      * Mark a specific exercise within a lesson as completed.
+     * If all exercises for the lesson are now done, auto-marks the lesson completed.
      */
-    markExerciseCompleted(lessonKey: string, exerciseId: string) {
+    markExerciseCompleted(lessonKey: string, exerciseId: string, exerciseCount?: number) {
       update((progress) => {
         if (!progress.lessons[lessonKey]) {
           progress.lessons[lessonKey] = {
@@ -123,7 +128,38 @@ function createProgressStore() {
           completed: true,
           completedAt: new Date().toISOString()
         };
+
+        // Auto-complete lesson if all exercises are done
+        if (exerciseCount && exerciseCount > 0) {
+          const completedCount = Object.values(lesson.exerciseResults).filter(
+            (r) => r.completed
+          ).length;
+          if (completedCount >= exerciseCount) {
+            lesson.status = 'completed';
+            lesson.completedAt = new Date().toISOString();
+          }
+        }
+
         saveProgress(progress);
+        return progress;
+      });
+    },
+
+    /**
+     * Clear the completed state for a specific exercise.
+     */
+    clearExerciseCompleted(lessonKey: string, exerciseId: string) {
+      update((progress) => {
+        const lesson = progress.lessons[lessonKey];
+        if (lesson?.exerciseResults?.[exerciseId]) {
+          delete lesson.exerciseResults[exerciseId];
+          // Revert lesson to in-progress if it was completed
+          if (lesson.status === 'completed') {
+            lesson.status = 'in-progress';
+            delete lesson.completedAt;
+          }
+          saveProgress(progress);
+        }
         return progress;
       });
     },
@@ -145,5 +181,8 @@ function createProgressStore() {
     }
   };
 }
+
+/** Exported for testing — use progressStore for app code */
+export { createProgressStore };
 
 export const progressStore = createProgressStore();

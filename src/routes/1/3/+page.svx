@@ -93,6 +93,7 @@ build_column()
 
   // Exercise 1: Decorate the corners
   const exercise1Config: KarelConfig = {
+    persistenceKey: '1/3/exercise-1',
     initialWorld: {
       dimensions: { width: 5, height: 5 },
       karel: {
@@ -151,6 +152,7 @@ build_column()
 
   // Exercise 2: Build a plus sign
   const exercise2Config: KarelConfig = {
+    persistenceKey: '1/3/exercise-2',
     initialWorld: {
       dimensions: { width: 5, height: 5 },
       karel: {

@@ -542,3 +542,149 @@ test.describe('Navigation', () => {
     await expect(page.locator('h1:has-text("Karel Lesson Examples")')).toBeVisible();
   });
 });
+
+// ============================================================
+// Exercise Completion & Persistence
+// ============================================================
+
+test.describe('Exercise completion and persistence', () => {
+  /**
+   * Helper: type code into a specific Karel environment's editor.
+   * Selects all existing code and replaces it.
+   */
+  async function typeCode(
+    page: import('@playwright/test').Page,
+    env: import('@playwright/test').Locator,
+    code: string
+  ) {
+    const cmContent = env.locator('.cm-content');
+    await cmContent.click();
+    await page.keyboard.press('Meta+a');
+    await page.keyboard.type(code, { delay: 5 });
+  }
+
+  // The correct solution for lesson 1/1 exercise 1:
+  // Karel at (1,1) facing east → go to (3,3) and pick up the beeper
+  const exercise1Solution = [
+    'move()',
+    'move()',
+    'turn_left()',
+    'move()',
+    'move()',
+    'pick_beeper()'
+  ].join('\n');
+
+  test.beforeEach(async ({ page }) => {
+    // Clear localStorage so each test starts fresh
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+  });
+
+  test('shows completion banner when all tests pass', async ({ page }) => {
+    await page.goto('/1/1');
+    await waitForPyodide(page);
+
+    // Exercise 1 is the 2nd environment on the page (1st is the demo)
+    const env = getEnvironments(page).nth(1);
+    await typeCode(page, env, exercise1Solution);
+
+    // Set instant speed
+    await env.locator('#speed-slider').fill('0');
+    await clickRunTests(env);
+
+    // Wait for "All tests passed" message
+    await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
+      timeout: 30_000
+    });
+
+    // Completion banner should appear
+    await expect(env.locator('.completed-banner')).toBeVisible();
+    await expect(env.locator('.completed-banner')).toContainText('Exercise completed');
+  });
+
+  test('completion banner persists across page reload', async ({ page }) => {
+    await page.goto('/1/1');
+    await waitForPyodide(page);
+
+    // Complete exercise 1
+    const env = getEnvironments(page).nth(1);
+    await typeCode(page, env, exercise1Solution);
+    await env.locator('#speed-slider').fill('0');
+    await clickRunTests(env);
+    await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
+      timeout: 30_000
+    });
+    await expect(env.locator('.completed-banner')).toBeVisible();
+
+    // Reload the page
+    await page.reload();
+    await waitForPyodide(page);
+
+    // Banner should still be visible
+    const envAfter = getEnvironments(page).nth(1);
+    await expect(envAfter.locator('.completed-banner')).toBeVisible();
+  });
+
+  test('Reset Code removes completion banner', async ({ page }) => {
+    await page.goto('/1/1');
+    await waitForPyodide(page);
+
+    // Complete exercise 1
+    const env = getEnvironments(page).nth(1);
+    await typeCode(page, env, exercise1Solution);
+    await env.locator('#speed-slider').fill('0');
+    await clickRunTests(env);
+    await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
+      timeout: 30_000
+    });
+    await expect(env.locator('.completed-banner')).toBeVisible();
+
+    // Click Reset Code
+    await env.locator('button:has-text("Reset Code")').click();
+
+    // Banner should disappear
+    await expect(env.locator('.completed-banner')).not.toBeVisible();
+  });
+
+  test('code persists across page reload', async ({ page }) => {
+    await page.goto('/1/1');
+    await waitForPyodide(page);
+
+    // Type code and run it (persistence triggers on Play/Run Tests)
+    const env = getEnvironments(page).nth(1);
+    await typeCode(page, env, exercise1Solution);
+    await env.locator('#speed-slider').fill('0');
+    await clickRunTests(env);
+    await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
+      timeout: 30_000
+    });
+
+    // Reload and verify code is still there
+    await page.reload();
+    await waitForPyodide(page);
+    const envAfter = getEnvironments(page).nth(1);
+    const editorContent = await envAfter.locator('.cm-content').textContent();
+    expect(editorContent).toContain('pick_beeper()');
+  });
+
+  test('Reset Code restores original code', async ({ page }) => {
+    await page.goto('/1/1');
+    await waitForPyodide(page);
+
+    // Type custom code
+    const env = getEnvironments(page).nth(1);
+    await typeCode(page, env, exercise1Solution);
+    await env.locator('#speed-slider').fill('0');
+    await clickRunTests(env);
+    await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
+      timeout: 30_000
+    });
+
+    // Click Reset Code
+    await env.locator('button:has-text("Reset Code")').click();
+
+    // Editor should have the original placeholder code (contains "Navigate Karel")
+    const editorContent = await env.locator('.cm-content').textContent();
+    expect(editorContent).toContain('Navigate Karel');
+  });
+});

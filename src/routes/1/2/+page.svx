@@ -12,7 +12,12 @@
         direction: { type: 'east' },
         beepers: 0
       },
-      walls: [],
+      walls: [
+        {type: 'vertical', x: 3, y: 1}, 
+        {type: 'vertical', x: 3, y: 2},
+        {type: 'horizontal', x: 4, y: 3},
+        {type: 'horizontal', x: 5, y: 3}
+      ],
       beepers: [{ x: 5, y: 3, count: 1 }]
     },
     initialCode: `# Defining a new command: turn_right()
@@ -25,8 +30,6 @@ def turn_right():
 move()
 move()
 turn_left()
-move()
-move()
 move()
 move()
 turn_right()
@@ -297,7 +300,7 @@ Let's break this down:
 
 ## Example: Using turn_right()
 
-Watch how defining `turn_right()` makes this program cleaner. Karel navigates an L-shaped path to reach a beeper — using both `turn_left()` and the custom `turn_right()`.
+Watch how defining `turn_right()` makes this program cleaner. Karel navigates a zigzag path to reach a beeper — using both `turn_left()` and the custom `turn_right()`.
 
 <KarelEnvironment config={turnRightExample} />
 
@@ -316,6 +319,54 @@ def turn_around():
 In this example, Karel walks to the end of a row, turns around, walks back, and picks up a beeper at the start.
 
 <KarelEnvironment config={turnAroundExample} />
+
+---
+
+## Reducing Duplication
+
+Look back at the `turn_around()` example above. Notice how the same four `move()` calls appear **twice** — once to walk to the end of the row, and again to walk back:
+
+```python
+# Walk to the end of the row...
+move()
+move()
+move()
+move()
+
+turn_around()
+
+# Walk back...
+move()
+move()
+move()
+move()
+```
+
+That's a lot of repeated code! Whenever you see the same sequence of commands written multiple times, that's a signal you can **define a function** to do it once.
+
+Here, both groups of `move()` calls do the same thing: walk Karel to the end of the row. So let's define a `walk_to_end()` function:
+
+```python
+def walk_to_end():
+  move()
+  move()
+  move()
+  move()
+```
+
+Now the program becomes much shorter and easier to read:
+
+```python
+walk_to_end()
+turn_around()
+walk_to_end()
+```
+
+Each line reads like a clear instruction: *walk to the end, turn around, walk to the end*. Try it out below — this program does exactly the same thing as the previous example, but with less duplication.
+
+<KarelEnvironment config={diminshedDuplicationExample} />
+
+Functions aren't just for teaching Karel new tricks — they're also a powerful way to **avoid repeating yourself**. If you find yourself writing the same group of commands over and over, wrap them in a function and call it by name instead.
 
 ---
 

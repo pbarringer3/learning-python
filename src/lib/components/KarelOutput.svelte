@@ -114,7 +114,7 @@
             d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
           />
         </svg>
-        <span class="message-title">Success!</span>
+        <span class="message-title">Program completed</span>
       </div>
       {#if message}
         <p class="message-content">{message}</p>
@@ -161,6 +161,10 @@
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     min-height: 80px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .output-message {
@@ -189,6 +193,10 @@
     font-size: 12px;
     white-space: pre-wrap;
     word-break: break-word;
+  }
+
+  .karel-output p {
+    margin: 0;
   }
 
   .error {

@@ -69,6 +69,80 @@ pick_beeper()
 `
   };
 
+  // Example 4: Fencepost Karel
+  const fencepostExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 13, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Place a "fencepost" (beeper) at every 4th column,
+# starting at column 1.
+# Result: beepers at columns 1, 5, 9, 13.
+#
+# Pattern: place post, move 4, place post, move 4, ...
+
+put_beeper()
+while front_is_clear():
+  move()
+  move()
+  move()
+  move()
+  put_beeper()
+`
+  };
+
+  // Example 5: Stair Climbing Karel
+  const stairClimbExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 6, height: 6 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Each step: move east, turn north, move up,
+# turn east again. Repeat until the wall!
+
+while front_is_clear():
+  move()
+  while not_facing_north():
+    turn_left()
+  move()
+  while not_facing_east():
+    turn_left()
+`
+  };
+
+  // Example 6: Infinite loop (buggy on purpose)
+  const infiniteLoopExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 15, height: 3 },
+      karel: {
+        position: { x: 2, y: 2 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# BUG: This is supposed to move Karel to the
+# end of the hall, but it has a mistake.
+# Run it and see what happens!
+
+while front_is_clear():
+  turn_left()
+`
+  };
+
   // Exercise 1: There and back again
   const exercise1Config: KarelConfig = {
     persistenceKey: '1/4/exercise-1',
@@ -86,7 +160,6 @@ pick_beeper()
 # and return to (1, 1).
 #
 # Your solution must work for ANY width!
-# Use while loops instead of counting moves.
 
 `,
     allowedFeatures: {
@@ -126,6 +199,16 @@ pick_beeper()
           },
           walls: [],
           beepers: [{ x: 10, y: 1, count: 1 }]
+        },
+        'Test 4: Width 1': {
+          dimensions: { width: 1, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 1, count: 1 }]
         }
       },
       validate: (world) => {
@@ -143,7 +226,7 @@ pick_beeper()
           message: `Karel needs to return to (1, 1). Currently at (${world.karel.position.x}, ${world.karel.position.y}).`
         };
       },
-      loadableTests: ['Test 1: Width 6', 'Test 2: Width 3', 'Test 3: Width 10']
+      loadableTests: ['Test 1: Width 6', 'Test 2: Width 3', 'Test 3: Width 10', 'Test 4: Width 1']
     }
   };
 
@@ -170,7 +253,6 @@ pick_beeper()
 # Pick up ALL of them!
 #
 # Your solution must work for any row length.
-# Hint: you need to pick up AND move forward in your loop!
 
 `,
     allowedFeatures: {
@@ -230,6 +312,18 @@ pick_beeper()
             { x: 7, y: 1, count: 1 },
             { x: 8, y: 1, count: 1 }
           ]
+        },
+        'Test 4: Width 1': {
+          dimensions: { width: 1, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [
+            { x: 1, y: 1, count: 1 }
+          ]
         }
       },
       validate: (world) => {
@@ -242,7 +336,142 @@ pick_beeper()
           message: `${beepersOnGround.length} beeper(s) still on the ground. Make sure your loop picks up every position.`
         };
       },
-      loadableTests: ['Test 1: Width 5', 'Test 2: Width 3', 'Test 3: Width 8']
+      loadableTests: ['Test 1: Width 5', 'Test 2: Width 3', 'Test 3: Width 8', 'Test 4: Width 1']
+    }
+  };
+
+  // Exercise 3: Street Sweeper Karel
+  const exercise3Config: KarelConfig = {
+    persistenceKey: '1/4/exercise-3',
+    initialWorld: {
+      dimensions: { width: 5, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [
+        { x: 1, y: 1, count: 3 },
+        { x: 2, y: 1, count: 1 },
+        { x: 3, y: 1, count: 0 },
+        { x: 4, y: 1, count: 5 },
+        { x: 5, y: 1, count: 2 }
+      ]
+    },
+    initialCode: `# Karel is a street sweeper!
+# Walk down the row and pick up ALL beepers
+# at every position.
+#
+# Each cell can have a different number of beepers
+# (or none at all). The row can be any length.
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'pick_beeper', 'put_beeper',
+        'front_is_clear', 'front_is_blocked',
+        'beepers_present', 'no_beepers_present'
+      ]
+    },
+    tests: {
+      worlds: {
+        'Test 1: Mixed piles': {
+          dimensions: { width: 5, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [
+            { x: 1, y: 1, count: 3 },
+            { x: 2, y: 1, count: 1 },
+            { x: 3, y: 1, count: 0 },
+            { x: 4, y: 1, count: 5 },
+            { x: 5, y: 1, count: 2 }
+          ]
+        },
+        'Test 2: All empty': {
+          dimensions: { width: 4, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: []
+        },
+        'Test 3: One big pile': {
+          dimensions: { width: 3, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [
+            { x: 2, y: 1, count: 10 }
+          ]
+        },
+        'Test 4: Width 1 with beepers': {
+          dimensions: { width: 1, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [
+            { x: 1, y: 1, count: 4 }
+          ]
+        },
+        'Test 5: Width 1 no beepers': {
+          dimensions: { width: 1, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: []
+        },
+        'Test 6: Long row': {
+          dimensions: { width: 8, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [
+            { x: 1, y: 1, count: 1 },
+            { x: 3, y: 1, count: 2 },
+            { x: 5, y: 1, count: 3 },
+            { x: 7, y: 1, count: 1 },
+            { x: 8, y: 1, count: 6 }
+          ]
+        }
+      },
+      validate: (world) => {
+        const beepersOnGround = world.beepers.filter((b) => b.count > 0);
+        if (beepersOnGround.length === 0) {
+          return { passed: true, message: 'Street swept clean! Every beeper picked up.' };
+        }
+        const totalLeft = beepersOnGround.reduce((sum, b) => sum + b.count, 0);
+        return {
+          passed: false,
+          message: `Still ${totalLeft} beeper(s) on the ground at ${beepersOnGround.length} position(s). Keep sweeping!`
+        };
+      },
+      loadableTests: [
+        'Test 1: Mixed piles',
+        'Test 2: All empty',
+        'Test 3: One big pile',
+        'Test 4: Width 1 with beepers',
+        'Test 5: Width 1 no beepers',
+        'Test 6: Long row'
+      ]
     }
   };
 </script>
@@ -278,14 +507,16 @@ This loop will move Karel forward *until* there's a wall in front. Whether the w
 
 To use while loops effectively, Karel needs to be able to "sense" its surroundings. These are called **sensor functions** — they return true or false:
 
-| Sensor | What it checks |
-| --- | --- |
-| `front_is_clear()` | Is there open space ahead? |
-| `front_is_blocked()` | Is there a wall ahead? |
-| `beepers_present()` | Are there beepers at Karel's position? |
-| `no_beepers_present()` | Are there no beepers at Karel's position? |
+| Sensor | Opposite | What they check |
+| --- | --- | --- |
+| `front_is_clear()` | `front_is_blocked()` | Is there open space or a wall ahead? |
+| `beepers_present()` | `no_beepers_present()` | Are there beepers at Karel's position or not? |
+| `facing_north()` | `not_facing_north()` | Is Karel facing north or not? |
+| `facing_south()` | `not_facing_south()` | Is Karel facing south or not? |
+| `facing_east()` | `not_facing_east()` | Is Karel facing east or not? |
+| `facing_west()` | `not_facing_west()` | Is Karel facing west or not? |
 
-> **Note:** Each sensor has an opposite. `front_is_clear()` and `front_is_blocked()` always give opposite answers. Use whichever makes your code more readable.
+> **Note:** Each sensor has an opposite that always gives the reverse answer. Use whichever makes your code more readable.
 
 ## Example: Move to the Wall
 
@@ -313,6 +544,71 @@ This shows two while loops working together — first to orient Karel, then to m
 
 ---
 
+## The Fencepost Problem
+
+One of the trickiest patterns in programming is the **fencepost problem** (also called an "off-by-one" error). Imagine building a fence that is 4 sections long:
+
+```
+|---|---|---|---|
+```
+
+The fence has 4 sections but **5 posts**. If you think "I need 4 of something" and loop 4 times, you'll be one post short. The issue arises whenever you need to do something *between* items — there's always one fewer gap than there are items.
+
+In Karel, this comes up all the time. If Karel needs to place a beeper and then move, the last beeper has no move after it (Karel would hit the wall). The fix is to handle the first or last item outside the loop.
+
+For example, here we could either place a beeper, then in a loop move 4 times and place a new beeper. Alternatively, inside a loop we could place a beeper and then move four times. When the loop ends, we can add the final beeper. 
+
+## Example: Fencepost Karel
+
+Karel places a "fencepost" (beeper) at every 4th column. Notice the pattern: place the first post, then repeat (move 4 spaces, place a post) until reaching the wall. When you understand this example, try editing it to use the second approach described above.
+
+<KarelEnvironment config={fencepostExample} />
+
+The key insight is that `put_beeper()` happens once before the loop and once at the end of each iteration — the classic fencepost pattern.
+
+---
+
+## Nested While Loops
+
+Sometimes a single while loop isn't enough. You might need a **while loop inside another while loop** — this is called a **nested loop**.
+
+Consider this pattern: Karel needs to climb a staircase, but you don't know how many steps there are. Each step requires moving east and then moving north. The tricky part is that Karel also needs to *turn* between directions, and since Karel only has `turn_left()`, turning right requires turning left three times.
+
+Instead of writing `turn_left()` three times, you can use a while loop to turn until facing the direction you want:
+
+```python
+while not_facing_north():
+  turn_left()
+```
+
+This inner loop handles the turning, no matter which direction Karel starts from. The outer loop handles the stepping.
+
+## Example: Stair Climbing Karel
+
+Karel climbs a staircase by alternating between moving east and moving north. The inner while loops handle turning to the right direction each time:
+
+<KarelEnvironment config={stairClimbExample} />
+
+Notice the structure: the outer `while front_is_clear()` controls how many steps Karel takes, while the inner `while not_facing_north()` and `while not_facing_east()` loops handle the turning. This is a pattern you'll use often — an outer loop for the main task, with inner loops for sub-tasks at each step.
+
+---
+
+## Watch Out: Infinite Loops
+
+A while loop keeps running as long as its condition is true. But what if the condition *never becomes false*? The loop runs forever — this is called an **infinite loop**, and it's one of the most common bugs in programming.
+
+Run this example. It's supposed to move Karel to the end of the hall, but it has a bug:
+
+<KarelEnvironment config={infiniteLoopExample} />
+
+The condition `front_is_clear()` checks whether Karel can move forward. But the loop body calls `turn_left()` instead of `move()`. Karel spins in place, the front stays clear, and the loop never ends.
+
+On this site, Karel's programs are limited to a maximum number of steps, so an infinite loop will eventually stop with an error. But when you write Python outside of this site, an infinite loop will freeze your program — it will hang and you'll have to force-quit it.
+
+Whenever you write a while loop, ask yourself: **"Does the loop body make progress toward the condition becoming false?"** If the answer is no, you probably have an infinite loop.
+
+---
+
 ## The Key Insight
 
 The power of while loops is that they make your programs **general**. Instead of writing code that works for one specific world, you write code that adapts to any world. This is a fundamental principle in programming:
@@ -337,9 +633,17 @@ Every position in the row has a beeper. Pick them all up!
 
 Your solution must work for any row length. Think carefully about the loop pattern — you need to both pick up a beeper and move forward on each step. But what about the last position?
 
-> **Hint:** The tricky part is the "fencepost problem." If there are 5 positions, you pick up 5 beepers but only move 4 times. Think about what happens at the last position.
-
 <KarelEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: Street Sweeper Karel
+
+Karel is a street sweeper! Walk down a row of any length and pick up **all** beepers at every position. The catch: each cell can have a different number of beepers stacked on it — or none at all.
+
+This exercise requires **nested while loops**: an outer loop to walk down the row, and an inner loop to pick up all the beepers at each position.
+
+<KarelEnvironment config={exercise3Config} />
 
 ---
 

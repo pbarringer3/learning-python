@@ -818,11 +818,27 @@ KarelEnvironment loops through test worlds:
   - Call validate(finalWorld)
   - Record result
   ↓
+If validateCode defined:
+  - Run validateCode.validate(sourceCode)
+  - Record result using validateCode.name
+  ↓
+If functionTests defined:
+  - Execute full student code once (defines functions)
+  - For each functionTest:
+    - Reset to functionTest.world
+    - Call functionName()
+    - Call functionTest.validate(finalWorld)
+    - Record result
+  ↓
 All tests pass → "✓ All tests passed!"
 Some fail → Show details for each failure
   ↓
 Display results in KarelOutput
 ```
+
+`validateCode` is an optional source-code-level check (e.g., requiring specific function definitions or calls). It is an object with a `name` (displayed in test results) and a `validate` function. It runs after world tests so students can see whether their code produced the right output even if the code structure doesn't meet requirements.
+
+`functionTests` run individual student-defined functions in isolation against specific world states. Each test provides its own pre-configured world, so dependent functions can be tested by manually setting Karel's position, direction, and beeper state to the expected starting conditions. Document pre/post conditions in the exercise instructions so students know the contract each function must satisfy.
 
 ### Usage Example
 

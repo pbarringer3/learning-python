@@ -12,8 +12,10 @@ This guide explains how to create lessons for the Learning Python curriculum. Le
 6. [Exercises with Feature Restrictions](#exercises-with-feature-restrictions)
 7. [Single Test Exercises](#single-test-exercises)
 8. [Multi-Test Exercises](#multi-test-exercises)
-9. [Code Persistence & Exercise Completion](#code-persistence--exercise-completion)
-10. [Configuration Reference](#configuration-reference)
+9. [Source Code Validation](#source-code-validation)
+10. [Function Tests](#function-tests)
+11. [Code Persistence & Exercise Completion](#code-persistence--exercise-completion)
+12. [Configuration Reference](#configuration-reference)
 
 ## Overview
 
@@ -243,6 +245,187 @@ fill_row()
 };
 ```
 
+## Source Code Validation
+
+Sometimes you want to enforce that students use a particular approach — for example, requiring them to define and call specific functions. The optional `validateCode` object in the test configuration inspects the raw source code and reports results as a named test.
+
+`validateCode` runs after the world tests as its own named test result. It has a `name` (displayed in the test results) and a `validate` function. If it returns `{ passed: false, ... }`, the test is shown as failed, but world tests still run independently so students can see what their code accomplished.
+
+```svelte
+const exerciseConfig: KarelConfig = {
+  initialWorld: { /* ... */ },
+  initialCode: `# You must define move_to_paper() and return_to_start()\n`,
+  tests: {
+    worlds: {
+      'Collect newspaper and return home': { /* ... */ }
+    },
+    validate: (world) => {
+      // ... check final world state as usual ...
+    },
+    validateCode: {
+      name: 'Defined and called both required functions',
+      validate: (code) => {
+        const definesMoveToPaper = /def\s+move_to_paper\s*\(/.test(code);
+        const definesReturnToStart = /def\s+return_to_start\s*\(/.test(code);
+        const callsMoveToPaper = code.split('\n').some(
+          (line) => /^\s*move_to_paper\s*\(/.test(line) && !/^\s*def\s/.test(line)
+        );
+        const callsReturnToStart = code.split('\n').some(
+          (line) => /^\s*return_to_start\s*\(/.test(line) && !/^\s*def\s/.test(line)
+        );
+
+        const missing: string[] = [];
+        if (!definesMoveToPaper) missing.push('define move_to_paper()');
+        if (!definesReturnToStart) missing.push('define return_to_start()');
+        if (definesMoveToPaper && !callsMoveToPaper) missing.push('call move_to_paper()');
+        if (definesReturnToStart && !callsReturnToStart) missing.push('call return_to_start()');
+
+        if (missing.length > 0) {
+          return {
+            passed: false,
+            message: `You must ${missing.join(' and ')}. See the requirements above.`
+          };
+        }
+        return { passed: true, message: '' };
+      }
+    }
+  }
+};
+```
+
+### When to Use `validateCode`
+
+- **Requiring specific function names** — e.g., the student must define and call `move_to_paper()` and `return_to_start()`
+- **Enforcing decomposition** — e.g., the student must define at least N helper functions
+- **Banning certain patterns** — e.g., the student must not hard-code a specific sequence
+
+### Tips
+
+- Use regex on the source string; you don't need to parse an AST.
+- Distinguish _defining_ a function (`def foo(`) from _calling_ it (`foo(`) by checking whether the line starts with `def`.
+- Return a clear, actionable message so students know exactly what's missing.
+- `validateCode` is complementary to `validate` — use both together. `validateCode` checks _how_ the code is written; `validate` checks _what it produces_.
+
+---
+
+## Function Tests
+
+Function tests go one step further than source code validation: they actually **execute individual student-defined functions in isolation** against specific world states and verify the results. This lets you test that each function does its job correctly, not just that the overall program produces the right output.
+
+Function tests run after the normal world tests. The student's full code is executed once (to register all function definitions), then each function test resets the world to its own starting state and calls just the named function.
+
+### Basic Example
+
+```svelte
+const exerciseConfig: KarelConfig = {
+  initialWorld: { /* ... */ },
+  initialCode: `# Define move_to_paper() and return_to_start()\n`,
+  tests: {
+    worlds: {
+      'Main Test': { /* ... */ }
+    },
+    validate: (world) => { /* ... check final state ... */ },
+    functionTests: [
+      {
+        name: 'move_to_paper() moves Karel to (2, 1)',
+        functionName: 'move_to_paper',
+        world: {
+          // Starting world state for this function test
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 4, y: 5 },
+            direction: { type: 'south' },
+            beepers: 0
+          },
+          walls: [ /* ... */ ],
+          beepers: [{ x: 2, y: 1, count: 1 }]
+        },
+        validate: (world) => {
+          const { x, y } = world.karel.position;
+          if (x !== 2 || y !== 1) {
+            return {
+              passed: false,
+              message: `move_to_paper() should move Karel to (2, 1) but Karel ended up at (${x}, ${y}).`
+            };
+          }
+          return { passed: true, message: 'move_to_paper() correctly moves Karel to the newspaper!' };
+        }
+      }
+    ]
+  }
+};
+```
+
+### Testing Dependent Functions with Pre-Configured Worlds
+
+Some functions depend on prior state — for example, `return_to_start()` assumes Karel is already at the newspaper's location. Instead of calling prior functions to establish state (which assumes they work correctly), **manually configure the world** to the expected starting state and document the pre/post conditions:
+
+```svelte
+{
+  name: 'return_to_start() brings Karel back to (4, 5)',
+  functionName: 'return_to_start',
+  world: {
+    // Karel is already at the paper's location, facing west, beeper picked up
+    dimensions: { width: 5, height: 5 },
+    karel: {
+      position: { x: 2, y: 1 },
+      direction: { type: 'west' },
+      beepers: 0
+    },
+    walls: [ /* ... */ ],
+    beepers: []  // newspaper already collected
+  },
+  validate: (world) => {
+    const { x, y } = world.karel.position;
+    if (x !== 4 || y !== 5) {
+      return {
+        passed: false,
+        message: `return_to_start() should bring Karel back to (4, 5) but Karel ended up at (${x}, ${y}).`
+      };
+    }
+    return { passed: true, message: 'return_to_start() correctly brings Karel home!' };
+  }
+}
+```
+
+Then document the contracts in the exercise instructions so students know the expected pre/post conditions:
+
+```python
+# move_to_paper()
+#   Pre:  Karel is at (4, 5) facing south
+#   Post: Karel is at (2, 1) facing west
+#
+# return_to_start()
+#   Pre:  Karel is at (2, 1) facing west
+#   Post: Karel is at (4, 5) facing south
+```
+
+### How Function Tests Execute
+
+1. The student's full code is executed once against a throwaway copy of the first test world (this defines all functions in the Python namespace)
+2. For each function test:
+   - The world is reset to the function test's `world` state
+   - Karel commands are re-injected to operate on the fresh world
+   - The named function is called: `functionName()`
+   - The `validate` callback checks the resulting world state
+3. Results appear alongside the normal test results in the output panel
+
+### When to Use Function Tests
+
+- **Verifying decomposition quality** — Test that `move_to_paper()` actually moves Karel to the paper, not just that the overall program works
+- **Catching shortcut solutions** — A student might hard-code everything in one function and leave the other empty; function tests catch this
+- **Giving targeted feedback** — Instead of a generic "test failed", students learn exactly which function is wrong
+
+### Tips
+
+- Combine with `validateCode` — use `validateCode` to check that functions are defined and called, and `functionTests` to verify they work correctly
+- Make `validate` messages specific: mention the function name and expected vs. actual state
+- For dependent functions, manually configure the `world` to the expected starting state rather than running prior functions
+- Document pre/post conditions in the `initialCode` comments so students know the contract each function must satisfy
+- Each function test has its own `world`, so you can test functions from different starting positions
+
+---
+
 ## Code Persistence & Exercise Completion
 
 Exercises can persist student code and track completion state across page loads.
@@ -325,6 +508,23 @@ interface KarelConfig {
     // Validation function that checks if final world state is correct
     validate: (world: KarelWorld) => { passed: boolean; message: string };
 
+    // Optional: Validation that checks the source code itself
+    // (e.g. requiring specific function definitions/calls).
+    // Runs after world tests as its own named test result.
+    validateCode?: {
+      name: string; // Display name for results
+      validate: (code: string) => { passed: boolean; message: string };
+    };
+
+    // Optional: Tests that run individual named functions in isolation
+    // against specific world states. Runs after normal world tests.
+    functionTests?: {
+      name: string; // Display name for results
+      functionName: string; // Function to call
+      world: KarelWorld; // Starting world for this test
+      validate: (world: KarelWorld) => { passed: boolean; message: string };
+    }[];
+
     // Names of tests that can be loaded and viewed in the UI
     loadableTests?: string[];
   };
@@ -396,12 +596,13 @@ Lesson files for non-Karel chapters will follow the same MDsveX format, mixing p
 2. **Clear Instructions**: Write clear comments in `initialCode` explaining the task
 3. **2-Space Indentation**: All Python code in `initialCode` (and in prose code blocks within lessons) must use **2 spaces** for indentation — not 4. This keeps code compact in the editor and is the project-wide convention for student-facing Python.
 4. **Test Validation**: Test your validation function with correct and incorrect solutions
-5. **Multiple Tests**: Use multiple test worlds to ensure solutions work generally, not just for one case
-6. **Appropriate Restrictions**: Only restrict features that haven't been taught yet
-7. **Helpful Messages**: Write clear, helpful messages in validation returns
-8. **Loadable Tests**: Make tests loadable so students can see the different scenarios
-9. **Persistence Keys**: Always add a `persistenceKey` to exercises (not demos). Use the convention `'<chapter>/<lesson>/exercise-<n>'` (e.g., `'1/3/exercise-2'`). Keys must be unique across the entire site.
-10. **Exercise Count**: When adding or removing exercises from a lesson, update the `exerciseCount` in `src/lib/curriculum/index.ts` to match. Auto-completion depends on this value.
+5. **Code Validation**: Use `validateCode` when you need to enforce coding style, required function names, or decomposition patterns
+6. **Multiple Tests**: Use multiple test worlds to ensure solutions work generally, not just for one case
+7. **Appropriate Restrictions**: Only restrict features that haven't been taught yet
+8. **Helpful Messages**: Write clear, helpful messages in validation returns
+9. **Loadable Tests**: Make tests loadable so students can see the different scenarios
+10. **Persistence Keys**: Always add a `persistenceKey` to exercises (not demos). Use the convention `'<chapter>/<lesson>/exercise-<n>'` (e.g., `'1/3/exercise-2'`). Keys must be unique across the entire site.
+11. **Exercise Count**: When adding or removing exercises from a lesson, update the `exerciseCount` in `src/lib/curriculum/index.ts` to match. Auto-completion depends on this value.
 
 ## Example Lessons
 

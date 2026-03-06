@@ -94,7 +94,6 @@ build_column()
 # (1,1), (5,1), (5,5), and (1,5).
 #
 # Decompose: what's the repeated pattern?
-# Hint: "place a beeper, move to the next corner" is one step.
 
 `,
     allowedFeatures: {
@@ -152,7 +151,7 @@ build_column()
     initialCode: `# Build a plus (+) sign centered at (3, 3).
 # Place beepers at:
 #   (3,1), (3,2), (3,3), (3,4), (3,5)  — vertical bar
-#   (1,3), (2,3), (4,3), (5,3)          — horizontal bar
+#   (1,3), (2,3), (3,3), (4,3), (5,3)  — horizontal bar
 #
 # Karel starts at (3, 1) facing north.
 # Break this into smaller functions!
@@ -191,6 +190,164 @@ build_column()
           message: `${missing.length} beeper(s) missing from the plus pattern. Check your positioning carefully.`
         };
       }
+    }
+  };
+
+  // Exercise 3: Collect Newspaper
+  const exercise3Config: KarelConfig = {
+    persistenceKey: '1/3/exercise-3',
+    initialWorld: {
+      dimensions: { width: 5, height: 5 },
+      karel: {
+        position: { x: 4, y: 5 },
+        direction: { type: 'south' },
+        beepers: 0
+      },
+      walls: [
+        { type: 'vertical', x: 3, y: 4 },
+        { type: 'vertical', x: 3, y: 5 },
+        { type: 'horizontal', x: 5, y: 4 }
+      ],
+      beepers: [{ x: 2, y: 1, count: 1 }]
+    },
+    initialCode: `# You must define and call these two functions:
+#
+# move_to_paper()
+#   Pre:  Karel is at (4, 5) facing south
+#   Post: Karel is at (2, 1) facing west
+#
+# return_to_start()
+#   Pre:  Karel is at (2, 1) facing west
+#   Post: Karel is at (4, 5) facing south
+#
+# You may also create additional helper functions.
+`,
+    allowedFeatures: {
+      karelCommands: ['move', 'turn_left', 'pick_beeper']
+    },
+    tests: {
+      worlds: {
+        'Collect newspaper and return home': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 4, y: 5 },
+            direction: { type: 'south' },
+            beepers: 0
+          },
+          walls: [
+            { type: 'vertical', x: 3, y: 4 },
+            { type: 'vertical', x: 3, y: 5 },
+            { type: 'horizontal', x: 5, y: 4 }
+          ],
+          beepers: [{ x: 2, y: 1, count: 1 }]
+        }
+      },
+      validate: (world) => {
+        const newspaperStillThere = world.beepers.find(
+          (b) => b.x === 2 && b.y === 1 && b.count > 0
+        );
+        if (newspaperStillThere) {
+          return { passed: false, message: 'Karel needs to pick up the newspaper at (2, 1)!' };
+        }
+
+        const { x, y } = world.karel.position;
+        if (x !== 4 || y !== 5) {
+          return {
+            passed: false,
+            message: `Karel should return to (4, 5) but ended up at (${x}, ${y}).`
+          };
+        }
+
+        return {
+          passed: true,
+          message: 'Karel collected the newspaper and returned home! Great decomposition!'
+        };
+      },
+      validateCode: {
+        name: 'Defined and called both required functions',
+        validate: (code) => {
+        const definesMoveToPaper = /def\s+move_to_paper\s*\(/.test(code);
+        const definesReturnToStart = /def\s+return_to_start\s*\(/.test(code);
+        const callsMoveToPaper = code.split('\n').some(
+          (line) => /^\s*move_to_paper\s*\(/.test(line) && !/^\s*def\s/.test(line)
+        );
+        const callsReturnToStart = code.split('\n').some(
+          (line) => /^\s*return_to_start\s*\(/.test(line) && !/^\s*def\s/.test(line)
+        );
+
+        const missing: string[] = [];
+        if (!definesMoveToPaper) missing.push('define move_to_paper()');
+        if (!definesReturnToStart) missing.push('define return_to_start()');
+        if (definesMoveToPaper && !callsMoveToPaper) missing.push('call move_to_paper()');
+        if (definesReturnToStart && !callsReturnToStart) missing.push('call return_to_start()');
+
+        if (missing.length > 0) {
+          return {
+            passed: false,
+            message: `You must ${missing.join(' and ')}. See the requirements above.`
+          };
+        }
+        return { passed: true, message: '' };
+        }
+      },
+      functionTests: [
+        {
+          name: 'move_to_paper() moves Karel to (2, 1)',
+          functionName: 'move_to_paper',
+          world: {
+            dimensions: { width: 5, height: 5 },
+            karel: {
+              position: { x: 4, y: 5 },
+              direction: { type: 'south' },
+              beepers: 0
+            },
+            walls: [
+              { type: 'vertical', x: 3, y: 4 },
+              { type: 'vertical', x: 3, y: 5 },
+              { type: 'horizontal', x: 5, y: 4 }
+            ],
+            beepers: [{ x: 2, y: 1, count: 1 }]
+          },
+          validate: (world) => {
+            const { x, y } = world.karel.position;
+            if (x !== 2 || y !== 1) {
+              return {
+                passed: false,
+                message: `move_to_paper() should move Karel to (2, 1) but Karel ended up at (${x}, ${y}).`
+              };
+            }
+            return { passed: true, message: 'move_to_paper() correctly moves Karel to the newspaper!' };
+          }
+        },
+        {
+          name: 'return_to_start() brings Karel back to (4, 5)',
+          functionName: 'return_to_start',
+          world: {
+            dimensions: { width: 5, height: 5 },
+            karel: {
+              position: { x: 2, y: 1 },
+              direction: { type: 'west' },
+              beepers: 0
+            },
+            walls: [
+              { type: 'vertical', x: 3, y: 4 },
+              { type: 'vertical', x: 3, y: 5 },
+              { type: 'horizontal', x: 5, y: 4 }
+            ],
+            beepers: []
+          },
+          validate: (world) => {
+            const { x, y } = world.karel.position;
+            if (x !== 4 || y !== 5) {
+              return {
+                passed: false,
+                message: `return_to_start() should bring Karel back to (4, 5) from (2, 1) but Karel ended up at (${x}, ${y}).`
+              };
+            }
+            return { passed: true, message: 'return_to_start() correctly brings Karel home!' };
+          }
+        }
+      ]
     }
   };
 </script>
@@ -284,11 +441,35 @@ Karel starts at (1, 1) facing east with an unlimited supply of beepers. Think ab
 Build a plus (+) sign centered at (3, 3) by placing beepers at these positions:
 
 - **Vertical bar:** (3,1), (3,2), (3,3), (3,4), (3,5)
-- **Horizontal bar:** (1,3), (2,3), (4,3), (5,3)
+- **Horizontal bar:** (1,3), (2,3), (3,3), (4,3), (5,3)
+- **Note:** This will result in **2 beepers** on (3,3).
 
-Karel starts at (3, 1) facing north. Think about how to break this into pieces — maybe a function for the vertical bar and another for the horizontal bar?
+Karel starts at (3, 1) facing north with an unlimited supply of beepers. Think about how to break this into pieces.
 
 <KarelEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: Collect Newspaper
+
+Karel lives in a house in the top-right corner of the world. There's a newspaper (beeper) waiting at (2, 1). Karel must walk to the newspaper, pick it up, and return to the starting position.
+
+Karel starts at (4, 5) facing south with no beepers in the bag. The house has a door at (4, 4) on its south wall.
+
+> **Requirements:** 
+> 
+> You must define and call two functions with these conditions:
+>
+> - **`move_to_paper()`** 
+>   — Before this function runs: Karel should be at (4, 5) facing south. 
+>   - After it runs: Karel should be at (2, 1) facing west. There should still be a beeper on (2, 1).
+> - **`return_to_start()`** 
+>   — Before this function runs: Karel should be at (2, 1) facing west. There will be **no beeper** on (2, 1).
+>   - After it runs: Karel should be at (4, 5) facing any direction.
+>
+> Often in programming you can make and name your own functions. Other times you'll be working in systems that give you requirements. We'll be doing both here. You may also create additional helper functions.
+
+<KarelEnvironment config={exercise3Config} />
 
 ---
 

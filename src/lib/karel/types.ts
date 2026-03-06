@@ -116,6 +116,22 @@ export interface TestResult {
 }
 
 /**
+ * A test that runs a single named function in isolation against a specific world state.
+ * The student's code is loaded (to register function definitions) but only the
+ * named function is called. The resulting world state is then validated.
+ */
+export interface FunctionTest {
+  /** Display name for the test result (e.g., "move_to_paper() test") */
+  name: string;
+  /** The function to call after loading student definitions */
+  functionName: string;
+  /** The world state to start from before calling the function */
+  world: KarelWorld;
+  /** Validation function that checks the world after the function runs */
+  validate: (world: KarelWorld) => { passed: boolean; message: string };
+}
+
+/**
  * Configuration for Karel environment tests
  */
 export interface KarelTests {
@@ -123,6 +139,15 @@ export interface KarelTests {
   worlds: { [testName: string]: KarelWorld };
   /** Validation function that checks if final world state is correct */
   validate: (world: KarelWorld) => { passed: boolean; message: string };
+  /** Optional validation function that checks the source code itself (e.g. required function names) */
+  validateCode?: {
+    /** Display name for the test result */
+    name: string;
+    /** Validation function that checks the source code */
+    validate: (code: string) => { passed: boolean; message: string };
+  };
+  /** Optional tests that run individual named functions in isolation against specific world states */
+  functionTests?: FunctionTest[];
   /** Names of tests that can be loaded and viewed in the UI */
   loadableTests?: string[];
 }

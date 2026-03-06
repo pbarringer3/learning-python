@@ -932,6 +932,71 @@ for var in user_vars:
       }
     }
 
+    // Run code-level validation as its own test result (e.g. required function names)
+    if (config.tests.validateCode) {
+      const codeResult = config.tests.validateCode.validate(code);
+      testResults.push({
+        testName: config.tests.validateCode.name,
+        passed: codeResult.passed,
+        message: codeResult.passed
+          ? codeResult.message || 'Code meets all structural requirements.'
+          : codeResult.message
+      });
+    }
+
+    // Run individual function tests if configured
+    if (config.tests.functionTests && config.tests.functionTests.length > 0) {
+      // First, load student code to register function definitions.
+      // We run it against a throwaway copy of the first world test so the
+      // main-level calls execute harmlessly.
+      const firstWorldKey = Object.keys(config.tests.worlds)[0];
+      const firstWorld = config.tests.worlds[firstWorldKey];
+      currentWorld = cloneWorld(firstWorld);
+      executionState = createDefaultExecutionState();
+      executionState.animationSpeed = 0;
+
+      let functionsLoaded = false;
+      try {
+        injectKarelCommands(pyodide, getKarelCallbacks());
+        await pyodide.runPythonAsync(code);
+        functionsLoaded = true;
+      } catch {
+        // If the main code errors, function definitions may still be loaded.
+        // We'll attempt each function test anyway and let it fail naturally.
+        functionsLoaded = true;
+      }
+
+      if (functionsLoaded) {
+        for (const ft of config.tests.functionTests) {
+          // Reset to the function test's starting world
+          currentWorld = cloneWorld(ft.world);
+          executionState = createDefaultExecutionState();
+          executionState.animationSpeed = 0;
+
+          try {
+            // Re-inject Karel commands so they operate on the fresh world
+            injectKarelCommands(pyodide, getKarelCallbacks());
+
+            // Call just the named function
+            await pyodide.runPythonAsync(`${ft.functionName}()`);
+
+            // Validate the resulting world state
+            const result = ft.validate(currentWorld);
+            testResults.push({
+              testName: ft.name,
+              ...result
+            });
+          } catch (err) {
+            testResults.push({
+              testName: ft.name,
+              passed: false,
+              message: extractErrorMessage(err)
+            });
+          }
+        }
+      }
+    }
+
     // If all tests passed and we have a persistenceKey, mark exercise completed
     const allPassed = testResults.length > 0 && testResults.every((r) => r.passed);
     if (allPassed && config.persistenceKey) {

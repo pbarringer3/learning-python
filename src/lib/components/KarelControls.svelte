@@ -35,14 +35,14 @@
     class: className = ''
   }: Props = $props();
 
-  // Speed presets in milliseconds
+  // Speed presets in milliseconds (slow on left, fast on right)
   const speedOptions = [
-    { label: 'Instant', value: 0 },
-    { label: 'Very Fast', value: 50 },
-    { label: 'Fast', value: 150 },
-    { label: 'Normal', value: 300 },
+    { label: 'Very Slow', value: 1000 },
     { label: 'Slow', value: 600 },
-    { label: 'Very Slow', value: 1000 }
+    { label: 'Normal', value: 300 },
+    { label: 'Fast', value: 150 },
+    { label: 'Very Fast', value: 50 },
+    { label: 'Instant', value: 0 }
   ];
 
   const isRunning = $derived(status === 'running');
@@ -173,8 +173,8 @@
       class="speed-slider"
     />
     <div class="speed-labels">
-      <span>Instant</span>
       <span>Very Slow</span>
+      <span>Instant</span>
     </div>
   </div>
 </div>

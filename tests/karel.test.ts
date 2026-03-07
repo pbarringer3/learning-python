@@ -122,29 +122,29 @@ test.describe('Playground execution', () => {
     // The default code should run without error
     // Set speed to instant for faster test
     const slider = page.locator('#speed-slider');
-    await slider.fill('0');
+    await slider.fill('5');
 
     await page.locator('.karel-environment button:has-text("Play")').click();
 
     // Should eventually show success
-    await expect(page.locator('.message-title:has-text("Success")')).toBeVisible({
+    await expect(page.locator('.message-title:has-text("Program completed")')).toBeVisible({
       timeout: 15_000
     });
   });
 
   test('reset button restores initial state', async ({ page }) => {
     const slider = page.locator('#speed-slider');
-    await slider.fill('0');
+    await slider.fill('5');
 
     const env = page.locator('.karel-environment');
     await clickPlay(env);
-    await expect(page.locator('.message-title:has-text("Success")')).toBeVisible({
+    await expect(page.locator('.message-title:has-text("Program completed")')).toBeVisible({
       timeout: 15_000
     });
 
     await clickReset(env);
     // After reset, success/error messages should be gone
-    await expect(page.locator('.message-title:has-text("Success")')).not.toBeVisible();
+    await expect(page.locator('.message-title:has-text("Program completed")')).not.toBeVisible();
   });
 
   test('step button starts step-through execution', async ({ page }) => {
@@ -166,7 +166,7 @@ test.describe('Playground execution', () => {
     await page.keyboard.type('turn_left()\nturn_left()\nturn_left()\nmove()');
 
     const slider = page.locator('#speed-slider');
-    await slider.fill('0');
+    await slider.fill('5');
 
     await page.locator('.karel-environment button:has-text("Play")').click();
 
@@ -297,26 +297,26 @@ test.describe('Lesson examples execution', () => {
     const env = getEnvironments(page).nth(0);
 
     // Set speed to instant
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
 
     await clickPlay(env);
 
-    await expect(env.locator('.message-title:has-text("Success")')).toBeVisible({
+    await expect(env.locator('.message-title:has-text("Program completed")')).toBeVisible({
       timeout: 15_000
     });
   });
 
   test('example 1: reset after execution clears state', async ({ page }) => {
     const env = getEnvironments(page).nth(0);
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
 
     await clickPlay(env);
-    await expect(env.locator('.message-title:has-text("Success")')).toBeVisible({
+    await expect(env.locator('.message-title:has-text("Program completed")')).toBeVisible({
       timeout: 15_000
     });
 
     await clickReset(env);
-    await expect(env.locator('.message-title:has-text("Success")')).not.toBeVisible();
+    await expect(env.locator('.message-title:has-text("Program completed")')).not.toBeVisible();
   });
 
   test('example 2: run tests shows test results', async ({ page }) => {
@@ -353,7 +353,7 @@ test.describe('Lesson examples execution', () => {
     await dropdown.selectOption('Test 2: 4x3 Grid');
 
     // Set instant speed and play
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickPlay(env);
 
     // Should complete (success or error) - the important thing is it doesn't
@@ -395,7 +395,7 @@ test.describe('Feature restrictions', () => {
     await page.keyboard.press('Meta+a');
     await page.keyboard.type('pick_beeper()');
 
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickPlay(env);
 
     // Should show error about disallowed function
@@ -413,11 +413,11 @@ test.describe('Feature restrictions', () => {
     await page.keyboard.press('Meta+a');
     await page.keyboard.type('move()');
 
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickPlay(env);
 
     // Should succeed (no restriction error)
-    await expect(env.locator('.message-title:has-text("Success")')).toBeVisible({
+    await expect(env.locator('.message-title:has-text("Program completed")')).toBeVisible({
       timeout: 15_000
     });
   });
@@ -430,7 +430,7 @@ test.describe('Feature restrictions', () => {
     await page.keyboard.press('Meta+a');
     await page.keyboard.type('print("hello")');
 
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickPlay(env);
 
     await expect(env.locator('.message-title:has-text("Error")')).toBeVisible({
@@ -446,7 +446,7 @@ test.describe('Feature restrictions', () => {
     await page.keyboard.press('Meta+a');
     await page.keyboard.type('x = 5');
 
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickPlay(env);
 
     await expect(env.locator('.message-title:has-text("Error")')).toBeVisible({
@@ -462,7 +462,7 @@ test.describe('Feature restrictions', () => {
     await page.keyboard.press('Meta+a');
     await page.keyboard.type('import os');
 
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickPlay(env);
 
     await expect(env.locator('.message-title:has-text("Error")')).toBeVisible({
@@ -484,14 +484,14 @@ test.describe('Multiple environments are independent', () => {
     const env2 = getEnvironments(page).nth(1);
 
     // Run example 1
-    await env1.locator('#speed-slider').fill('0');
+    await env1.locator('#speed-slider').fill('5');
     await clickPlay(env1);
-    await expect(env1.locator('.message-title:has-text("Success")')).toBeVisible({
+    await expect(env1.locator('.message-title:has-text("Program completed")')).toBeVisible({
       timeout: 15_000
     });
 
     // Example 2 should still be idle (no success/error message)
-    await expect(env2.locator('.message-title:has-text("Success")')).not.toBeVisible();
+    await expect(env2.locator('.message-title:has-text("Program completed")')).not.toBeVisible();
     await expect(env2.locator('.message-title:has-text("Error")')).not.toBeVisible();
   });
 });
@@ -506,13 +506,13 @@ test.describe('Speed control', () => {
 
     const slider = page.locator('#speed-slider');
 
-    // Move to "Instant" (value 0)
+    // Move to "Very Slow" (value 0)
     await slider.fill('0');
-    await expect(page.locator('text=Instant')).toBeVisible();
-
-    // Move to "Very Slow" (value 5)
-    await slider.fill('5');
     await expect(page.locator('text=Very Slow')).toBeVisible();
+
+    // Move to "Instant" (value 5)
+    await slider.fill('5');
+    await expect(page.locator('text=Instant')).toBeVisible();
   });
 });
 
@@ -589,7 +589,7 @@ test.describe('Exercise completion and persistence', () => {
     await typeCode(page, env, exercise1Solution);
 
     // Set instant speed
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickRunTests(env);
 
     // Wait for "All tests passed" message
@@ -609,7 +609,7 @@ test.describe('Exercise completion and persistence', () => {
     // Complete exercise 1
     const env = getEnvironments(page).nth(1);
     await typeCode(page, env, exercise1Solution);
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickRunTests(env);
     await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
       timeout: 30_000
@@ -632,7 +632,7 @@ test.describe('Exercise completion and persistence', () => {
     // Complete exercise 1
     const env = getEnvironments(page).nth(1);
     await typeCode(page, env, exercise1Solution);
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickRunTests(env);
     await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
       timeout: 30_000
@@ -653,7 +653,7 @@ test.describe('Exercise completion and persistence', () => {
     // Type code and run it (persistence triggers on Play/Run Tests)
     const env = getEnvironments(page).nth(1);
     await typeCode(page, env, exercise1Solution);
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickRunTests(env);
     await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
       timeout: 30_000
@@ -674,7 +674,7 @@ test.describe('Exercise completion and persistence', () => {
     // Type custom code
     const env = getEnvironments(page).nth(1);
     await typeCode(page, env, exercise1Solution);
-    await env.locator('#speed-slider').fill('0');
+    await env.locator('#speed-slider').fill('5');
     await clickRunTests(env);
     await expect(env.locator('.message-title:has-text("All tests passed")')).toBeVisible({
       timeout: 30_000
@@ -837,7 +837,7 @@ test.describe('Top-down stepping', () => {
 
       // Step again to finish — should show success, no step message
       await clickStep(env);
-      await expect(env.locator('.message-title:has-text("Success")')).toBeVisible({
+      await expect(env.locator('.message-title:has-text("Program completed")')).toBeVisible({
         timeout: 5_000
       });
       await expect(getStepMessage(env)).not.toBeVisible();

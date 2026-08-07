@@ -115,6 +115,14 @@ The site includes specialized interactive modules for teaching:
 - `LESSON_AUTHORING_GUIDE.md` — How to author lessons (Karel and beyond)
 - `PROGRESS.md` — Implementation progress tracking
 
+## Version Control
+
+- **Never run `git commit`, `git add`, (or any command that creates a commit).** The user handles all commits themselves. Showing diffs is fine if helpful, but leave the actual commits and staging to the user.
+
+## Starting a Session
+
+If the user opens a session asking something like **"what's next"**, **"what should we work on"**, or similar, read `PROGRESS.md` (especially the "Project Status Overview" and "What's Next" sections) and summarize the current project status and recommended next steps based on it. Don't just repeat the doc verbatim — briefly confirm it's still accurate against the codebase if quick to check, then present the next steps clearly.
+
 ## Getting Started
 
 ```bash

@@ -1,0 +1,718 @@
+# Chapter 1: Karel the Robot — ✅ Complete
+
+**Status:** Phase 4 Complete - Progress Tracking, Code Persistence & Exercise Completion
+
+> The sections below are a detailed implementation record of Chapter 1, preserved for reference if
+> this chapter needs to be revisited, extended (e.g., Karel exercises reused in later chapters per
+> the curriculum design), or used as a pattern reference for building `PythonEnvironment`.
+
+## Summary
+
+Successfully refactored the Karel playground into a reusable component architecture and built a complete progress tracking system:
+
+- **Reusable KarelEnvironment component** for embedding in lessons
+- **Configurable feature restrictions** per environment instance
+- **Automated testing system** with multiple test worlds
+- **Validated solution checking** with custom validation functions
+- **Code persistence** — student code saved to localStorage on Play/Run Tests, restored on page load
+- **Exercise completion tracking** — exercises marked complete when all tests pass, with visual banner
+- **Lesson auto-completion** — lessons automatically completed when all exercises pass
+- **Reset Code** button to restore original code and clear completion state
+- **Progress store** — Svelte writable store backed by localStorage with hydration pattern
+- Full playground functionality preserved (Play/Edit modes, world editor)
+- 7 Karel lessons with 18 exercises, all wired with persistence
+- **2-space Python indentation** convention for all student-facing code, enforced by automated tests
+- Comprehensive test coverage (31 unit tests + 5 Playwright e2e tests + 45 lesson style tests)
+
+---
+
+## Completed Features
+
+### ✅ Phase 4: Progress Tracking & Code Persistence (NEW)
+
+1. **Progress Store** ([src/lib/curriculum/progress.ts](src/lib/curriculum/progress.ts))
+
+   - Svelte writable store backed by localStorage (`learning-python-progress` key)
+   - `hydrate()` pattern — loads from localStorage once in root layout's `onMount`
+   - Hydration guard on `markVisited()` prevents overwriting data before localStorage is loaded
+   - Spread operator preserves `exerciseResults` when updating lesson entries
+   - `markExerciseCompleted()` with optional `exerciseCount` for auto-completing lessons
+   - `clearExerciseCompleted()` for resetting individual exercise completion
+   - `getStatus()`, `reset()` utilities
+   - Factory function `createProgressStore()` exported for isolated unit testing
+
+2. **Code Persistence** ([src/lib/components/KarelEnvironment.svelte](src/lib/components/KarelEnvironment.svelte))
+
+   - `persistenceKey` on `KarelConfig` enables per-exercise code saving
+   - Code saved to localStorage on Play and Run Tests (`learning-python-code:<key>` prefix)
+   - Saved code loaded on component mount, replacing `initialCode`
+   - Reset Code button restores `initialCode` and deletes saved code
+
+3. **Exercise Completion Tracking**
+
+   - When all tests pass and `persistenceKey` is set, exercise marked complete in progress store
+   - Green "Exercise completed" banner displayed above the environment
+   - Banner persists across page reloads (read directly from localStorage in `onMount`)
+   - Banner removed when Reset Code is clicked
+
+4. **Lesson Auto-Completion**
+
+   - `exerciseCount` added to `Lesson` type ([src/lib/curriculum/types.ts](src/lib/curriculum/types.ts))
+   - All 7 Karel lessons have `exerciseCount` set in curriculum index
+   - When completed exercise count reaches `exerciseCount`, lesson auto-marked as completed
+
+5. **Lesson Content** ([src/routes/1/1 through 1/7](src/routes/1/))
+
+   - 7 Karel lessons fully authored with prose, examples, and exercises
+   - 18 exercises total, all with `persistenceKey` for persistence
+   - Exercise counts: L1=2, L2=3, L3=2, L4=2, L5=3, L6=3, L7=3
+
+6. **Reset Code Button** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
+
+   - Appears when `persistenceKey` is set (exercises only, not demos)
+   - Deletes saved code from localStorage
+   - Restores editor to `initialCode`
+   - Clears exercise completion state
+
+7. **Tests**
+
+   - 31 unit tests for progress store ([src/lib/curriculum/progress.test.ts](src/lib/curriculum/progress.test.ts))
+   - 5 Playwright e2e tests for exercise completion flow ([tests/karel.test.ts](tests/karel.test.ts))
+   - 45 lesson style tests enforcing 2-space Python indentation ([src/lib/curriculum/lesson-style.test.ts](src/lib/curriculum/lesson-style.test.ts))
+   - Tests cover: hydration, persistence, completion tracking, auto-completion, reset, round-trip persistence, code style enforcement
+
+8. **2-Space Python Indentation Convention**
+
+   - All `initialCode` strings in lesson configs use 2-space indentation
+   - All markdown Python code blocks (` ```python `) in lessons use 2-space indentation
+   - Automated test scans all `.svx` files and validates indentation
+   - Documented in [LESSON_AUTHORING_GUIDE.md](LESSON_AUTHORING_GUIDE.md) (Tips for Lesson Authors, item 3)
+   - Documented in [AGENTS.md](AGENTS.md) (Code Style section)
+
+### ✅ Phase 3: Component Architecture
+
+1. **KarelConfig Interface** ([src/lib/karel/types.ts](src/lib/karel/types.ts))
+
+   - Configurable initial world and code
+   - Optional feature restrictions (Karel commands, Python features)
+   - Optional test configuration with multiple test worlds
+   - Optional validation function for solution checking
+   - Loadable test worlds for UI dropdown
+
+2. **KarelEnvironment Component** ([src/lib/components/KarelEnvironment.svelte](src/lib/components/KarelEnvironment.svelte))
+
+   - Reusable Karel environment that accepts `KarelConfig` props
+   - Integrates all existing components (World, CodeEditor, Controls, Output)
+   - Manages execution state, animation, and Karel command implementations
+   - Passes feature restrictions to validator automatically
+   - Handles test execution across multiple test worlds
+   - 740+ lines of refactored logic from playground
+
+3. **Enhanced Code Validator** ([src/lib/karel/pyodide.ts](src/lib/karel/pyodide.ts))
+
+   - Now accepts `allowed_commands` parameter (list of Karel commands)
+   - Validates against restricted command set when provided
+   - Clear error messages when using restricted commands
+   - Backward compatible (None = all commands allowed)
+   - Configuration validation (detects invalid command names)
+
+4. **Enhanced Controls** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
+
+   - New "Run Tests" button (appears when tests configured)
+   - Test world dropdown (appears when loadable tests configured)
+   - Running tests state indicator
+   - All existing control functionality preserved
+
+5. **Enhanced Output** ([src/lib/components/KarelOutput.svelte](src/lib/components/KarelOutput.svelte))
+
+   - Test results display section
+   - Success indicator when all tests pass
+   - Individual test results with pass/fail indicators
+   - Error messages for failed tests
+   - Pyodide loading state
+   - All existing output functionality preserved
+
+6. **Refactored Playground** ([src/routes/karel/playground/+page.svelte](src/routes/karel/playground/+page.svelte))
+
+   - Now uses KarelEnvironment component for Play mode
+   - Maintains separate World Editor for Edit mode
+   - Reduced from 941 to ~250 lines (73% reduction!)
+   - Mode switching preserved with slider UI
+   - All functionality maintained (world editing, import/export)
+
+7. **Example Lessons** ([src/routes/karel/lesson-examples/+page.svelte](src/routes/karel/lesson-examples/+page.svelte))
+   - Example 1: Simple demonstration (no restrictions)
+   - Example 2: Single test with feature restrictions
+   - Example 3: Multiple tests with loadable worlds
+   - Demonstrates all configuration options
+   - Ready-to-use templates for lesson authors
+
+### ✅ Core Infrastructure
+
+1. **Type Definitions** ([src/lib/karel/types.ts](src/lib/karel/types.ts))
+
+   - `KarelWorld`, `Position`, `Direction`, `Wall`, `BeeperLocation` interfaces
+   - `ExecutionState` with support for error line tracking
+   - Helper functions: `createDefaultWorld()`, `cloneWorld()`, `createDefaultExecutionState()`
+
+2. **Pyodide Integration** ([src/lib/karel/pyodide.ts](src/lib/karel/pyodide.ts))
+   - Dynamic script loading (no CDN script tag needed)
+   - Singleton pattern for Pyodide instance
+   - Karel command injection into Python global namespace
+   - **Python AST-based code validator** for language feature restrictions
+   - Educational error messages for disallowed syntax
+   - Two-pass validation (collect functions first, then validate)
+   - Validator persists through namespace resets
+   - Version: Pyodide 0.24.1
+
+### ✅ Display Components
+
+3. **KarelWorld Component** ([src/lib/components/KarelWorld.svelte](src/lib/components/KarelWorld.svelte))
+
+   - SVG-based rendering (scalable, interactive-ready)
+   - Classic Stanford Karel visual design:
+     - Solid border wall around world perimeter
+     - Blue plus signs (+) at center of each grid cell
+     - Row numbers along left side, column numbers along bottom
+     - Karel rendered as classic Stanford robot with transparent window (SVG from karelhelper.com)
+     - Beepers displayed as teal diamond shapes
+   - Walls (horizontal and vertical) rendered as solid lines (1px thickness)
+   - Beepers with count display when multiple present
+   - Karel robot with directional orientation (rotates correctly)
+   - **Interactive mode** - Optional clickable cells and walls with separate callbacks
+   - **Wall interaction** - Clickable wall segments (8px hotspot width) with hover feedback
+   - **Accessibility** - Full keyboard support (Enter/Space) for cell and wall interactions
+   - **Visual feedback** - Blue hover highlights for interactive elements, crosshair cursor for walls
+   - **Auto-blur on click** - Elements blur after interaction to immediately show results without hover state
+   - **Fixed:** North/south directions now correct (north=270°, south=90°)
+
+4. **KarelCodeEditor Component** ([src/lib/components/KarelCodeEditor.svelte](src/lib/components/KarelCodeEditor.svelte))
+
+   - CodeMirror 6 integration (using `minimalSetup` — no autocompletion)
+   - Python syntax highlighting
+   - Line highlighting (yellow for current, red for errors)
+   - Line numbers, bracket matching, auto-close brackets, selection match highlighting
+   - Read-only mode support
+   - Bindable value with proper change detection
+
+5. **KarelControls Component** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
+
+   - Play/Pause/Step/Reset buttons (centered within container)
+   - Speed slider with 6 discrete presets (Instant, Very Fast, Fast, Normal, Slow, Very Slow)
+   - Index-based slider (0-5) prevents "Custom" values between presets
+   - Visual feedback for execution state
+   - Disabled states when appropriate
+
+6. **KarelOutput Component** ([src/lib/components/KarelOutput.svelte](src/lib/components/KarelOutput.svelte))
+
+   - Error messages (clean, no stack traces)
+   - Success notifications
+   - Running status with step count
+   - Paused state information
+
+7. **WorldEditor Component** ([src/lib/components/WorldEditor.svelte](src/lib/components/WorldEditor.svelte))
+   - Grid dimension controls (1-30x30)
+   - Karel configuration (direction, beeper bag count)
+   - **Unified Actions section** - All editing and utility buttons in one organized section
+   - **Edit modes**: Move Karel, Add/Remove Walls, Add Beepers, Remove Beepers
+   - **Separate beeper controls** - Independent add and remove buttons for clarity
+   - **Incremental beeper editing** - Always adds/removes exactly 1 beeper per click
+   - **Smart beeper removal** - Clicking to remove when no beepers present does nothing
+   - **Exposes click handlers** - Bindable props for cell and wall interactions
+   - **Wall editing** - Toggle walls by clicking between cells
+   - **Reset button** - Resets entire world to default state (10x10, Karel at (1,1) facing East)
+   - **Code reuse** - Uses `createDefaultWorld()` from types.ts for consistency
+   - Export to clipboard/download JSON
+   - Import from JSON file
+   - **Clean UI** - No position display, no instruction text (intuitive button-based interface)
+
+### ✅ Main Playground Page
+
+8. **Playground Container** ([src/routes/karel/playground/+page.svelte](src/routes/karel/playground/+page.svelte))
+   - **Play/Edit Mode Toggle** - Centered slider button to switch between modes
+   - **Auto-reset on Setup** - Switching to Setup mode automatically resets execution state
+   - **Play Mode** - Code editor, output panel, world display, and execution controls
+   - **Edit Mode** - World editor with interactive Karel World for setup
+   - **Interactive grid** - Click cells to move Karel or place beepers, click wall segments to toggle walls
+   - **Mode-based interactions** - Different overlays shown based on edit mode (karel/walls/beepers)
+   - **State synchronization** - World changes persist when switching between modes
+   - Orchestrates all components
+   - Python code execution via Pyodide
+   - Full implementation of all 22 Karel commands
+   - **Animated Play mode** with speed control
+   - **Instant execution mode** (speed=0) runs entire program without animation
+
+### ✅ Karel Commands Implementation
+
+**Movement & Actions:**
+
+- `move()` - with wall/boundary collision detection
+- `turn_left()` - rotates 90° counter-clockwise
+- `pick_beeper()` - with error if no beeper present
+- `put_beeper()` - with error if bag empty
+
+**Sensor Functions (all 18):**
+
+- `front_is_clear()` / `front_is_blocked()`
+- `beepers_present()` / `no_beepers_present()`
+- `left_is_clear()` / `left_is_blocked()`
+- `right_is_clear()` / `right_is_blocked()`
+- `beepers_in_bag()` / `no_beepers_in_bag()`
+- `facing_north()` / `not_facing_north()`
+- `facing_south()` / `not_facing_south()`
+- `facing_east()` / `not_facing_east()`
+- `facing_west()` / `not_facing_west()`
+
+### ✅ Step-Through Execution
+
+**Record-and-Replay Architecture:**
+
+- **Phase 1 - Record:** Entire program executes once with `sys.settrace` monitoring
+- Karel command callbacks record `{ line, worldSnapshot }` for each action
+- **Phase 2 - Replay:** Generator yields each recorded step with highlighting
+- World snapshots applied during replay for accurate visualization
+- Only lines Python actually executes are highlighted (no dead code)
+
+**Control Flow Support:**
+
+- **if/elif/else statements:** Only executed branches highlighted
+- **while loops:** Each iteration's lines highlighted correctly
+- **for loops:** Loop body lines highlighted per iteration
+- **User-defined functions:** Lines inside functions highlighted when called
+- **Nested structures:** All combinations work correctly (if inside while, etc.)
+
+**Play Mode with Animation:**
+
+- Animated execution using recorded steps
+- Respects animation speed slider (50ms to 1000ms per step)
+- **Instant mode (0ms):** Executes entire program without animation, shows final state only
+- Pause/Resume functionality works mid-execution
+- **Step button:** Instant execution (no delay) for responsive debugging
+
+**Technical Details:**
+
+- Uses Python's `sys.settrace` for accurate line tracking
+- Compiles code with `compile(code, '<user>', 'exec')` for precise line numbers
+- World state cloned after each Karel action command
+- No parsing required - Python tells us exactly what executed
+- Animation delay only applied during Play mode (continueExecution)
+- Step mode executes instantly for responsive debugging
+
+### ✅ Error Handling
+
+**Visual Feedback:**
+
+- **Red highlighting** on error line (stays visible after error)
+- Clean error messages (no Python stack traces)
+- Error line preserved until reset
+
+**Error Types:**
+
+- Syntax errors (caught before execution)
+- Runtime errors (Karel commands, NameError, etc.)
+- Step limit protection (10,000 steps max to prevent infinite loops)
+
+**Errors Caught:**
+
+- Moving into wall or boundary
+- Picking beeper when none present
+- Putting beeper with empty bag
+- Calling undefined function
+- Infinite loops (step limit)
+- **Disallowed Python syntax** (validated before execution)
+
+### ✅ Python Language Restrictions
+
+**AST-Based Validation:**
+
+- Code validated using Python's `ast` module before execution
+- Two-pass algorithm: collect user functions, then validate syntax
+- Validation happens before both animated and instant execution
+- Clear, educational error messages with line numbers
+
+**Allowed Features:**
+
+- All 22 Karel commands (move, turn_left, sensors, etc.)
+- User-defined functions with **no parameters**: `def turn_right():`
+- Control flow: `if`/`elif`/`else`, `while`, `for` with `range()`
+- Boolean operators: `and`, `or`, `not`
+- Loop variables: `for i in range(5):`
+- Comments: `#`
+
+**Disallowed Features:**
+
+- Variable assignments (except loop variables)
+- Function parameters: `def move_n(n):` ❌
+- `print()` and other built-ins (except `range()`)
+- `import` statements
+- Classes, lists, dicts, sets
+- Comprehensions, lambdas
+- Exception handling (`try`/`except`)
+- Context managers (`with`)
+- Async/await, generators
+- `global`/`nonlocal`/`del`
+
+**Implementation Details:**
+
+- Validator installed once on Pyodide load
+- Function preserved during namespace resets (with Karel commands)
+- Educational messages: "Function parameters are not allowed. Define 'turn_right()' with no parameters."
+- Line numbers included for easy debugging
+
+### ✅ Interactive World Editing
+
+**Move Karel Mode:**
+
+- Click any cell in Karel World to move Karel there
+- Works in Edit mode using right-side Karel World display
+- Full keyboard accessibility (Enter/Space keys)
+- Visual hover feedback for clickable cells
+- Position updates persist when switching to Play mode
+
+**Architecture:**
+
+- WorldEditor exposes `handleCellClick` function via bindable prop
+- Playground binds the handler and passes to KarelWorld component
+- KarelWorld renders transparent interactive overlay when `interactive={true}`
+- Proper state synchronization through `handleWorldUpdate` callback
+- Direction changes already worked; position changes now also synchronized
+
+**UX Improvements:**
+
+- Contextual instructions show under Edit Mode buttons
+- Only relevant instruction displayed based on selected mode
+- Removed separate Instructions section for cleaner UI
+- Auto-reset when switching to Setup mode prevents confusion
+
+### ✅ State Management
+
+**World State:**
+
+- Initial world (editable via WorldEditor)
+- Current world (updates during execution)
+- Clone on reset/execution start
+
+**Execution State:**
+
+- Status: idle, running, paused, error, success
+- Current line highlighting (yellow)
+- Error line highlighting (red)
+- Step count tracking
+- Animation speed (preserved on reset)
+
+**Python Namespace:**
+
+- Cleared on reset
+- Karel commands preserved
+- **Code validator preserved** (`validate_karel_code`, `ast`, `sys`)
+- User functions cleared between runs
+
+---
+
+## Key Implementation Decisions
+
+### 1. **North/South Direction Fix**
+
+- North = 270° (points up)
+- South = 90° (points down)
+- East = 0° (points right)
+- West = 180° (points left)
+
+### 2. **Record-and-Replay Execution**
+
+- Entire program runs once to record execution trace
+- `sys.settrace` monitors which lines Python actually executes
+- Karel commands record world snapshots during trace
+- Replay phase yields recorded steps for visualization
+- Eliminates need for complex parsing or stepping logic
+
+### 3. **Control Flow Handling**
+
+- Only executed lines are highlighted (if branch taken, else branch skipped)
+- Control flow headers (if/while/for) highlighted but don't execute Karel actions
+- Loop bodies correctly highlight on each iteration
+- Nested control structures work naturally
+- No special handling needed - Python's trace tells us everything
+
+### 4. **Error Display**
+
+- Stack traces hidden from users
+- Only final error message shown
+- Line stays highlighted in red
+- Provides clear educational feedback
+
+### 5. **Pyodide Loading**
+
+- Dynamic script injection (not HTML script tag)
+- Version 0.24.1 for consistency
+- Singleton pattern prevents multiple loads
+- Loading indicator shown to users
+
+### 6. **Animation Speed Control**
+
+- Speed slider uses indices (0-5) instead of raw millisecond values
+- Prevents "Custom" speeds between defined presets
+- Instant mode (0ms) bypasses all animation for immediate results
+- Other speeds (50ms-1000ms) animate through each step
+- Speed preserved on reset
+
+---
+
+## File Structure
+
+```
+src/
+├── lib/
+│   ├── karel/
+│   │   ├── types.ts              # TypeScript types (KarelConfig, KarelWorld, etc.)
+│   │   ├── types.test.ts         # Type/validation unit tests
+│   │   ├── pyodide.ts            # Pyodide integration utilities
+│   │   └── pyodide.test.ts       # Pyodide unit tests
+│   ├── curriculum/
+│   │   ├── index.ts              # Curriculum content definitions (chapters, lessons)
+│   │   ├── types.ts              # Curriculum types (Lesson, SiteProgress, etc.)
+│   │   ├── progress.ts           # Progress store (Svelte writable + localStorage)
+│   │   └── progress.test.ts      # Progress store unit tests (31 tests)
+│   └── components/
+│       ├── KarelWorld.svelte     # SVG world display
+│       ├── KarelCodeEditor.svelte # CodeMirror editor
+│       ├── KarelControls.svelte   # Execution controls + Reset Code button
+│       ├── KarelOutput.svelte     # Output/error display
+│       ├── KarelEnvironment.svelte # Reusable Karel env (persistence, completion)
+│       ├── LessonShell.svelte    # Lesson page wrapper (nav, progress tracking)
+│       ├── NavDrawer.svelte      # Navigation drawer
+│       ├── TopBar.svelte         # Top navigation bar
+│       └── WorldEditor.svelte     # World editing interface
+├── routes/
+│   ├── +layout.svelte            # Root layout (hydrates progress store)
+│   ├── +page.svelte              # Home page
+│   ├── 1/
+│   │   ├── 1/ through 7/         # Karel lessons (7 lessons, 18 exercises)
+│   │   └── +page.svx             # MDsveX lesson files
+│   └── karel/
+│       └── playground/
+│           └── +page.svelte      # Main playground container
+└── tests/
+    └── karel.test.ts             # Playwright e2e tests (incl. exercise flow)
+```
+
+---
+
+## Dependencies Installed
+
+```json
+{
+  "pyodide": "^0.24.1",
+  "codemirror": "^6.x",
+  "@codemirror/lang-python": "^6.x",
+  "@codemirror/state": "^6.x",
+  "@codemirror/view": "^6.x",
+  "@codemirror/commands": "^6.x",
+  "@codemirror/language": "^6.x",
+  "mdsvex": "latest"
+}
+```
+
+---
+
+## Testing Checklist
+
+### ✅ Verified Working
+
+- [x] Load playground page
+- [x] Pyodide loads successfully
+- [x] Code editor accepts input
+- [x] Karel world renders correctly
+- [x] Move Karel with `move()`
+- [x] Turn Karel with `turn_left()`
+- [x] World boundaries prevent movement
+- [x] Step through code line by line
+- [x] Step into user-defined functions
+- [x] Nested function calls work
+- [x] Functions called before definition show NameError
+- [x] Animated Play mode with speed control
+- [x] Pause/Resume during Play execution
+- [x] Instant execution mode (no animation)
+- [x] Speed slider with discrete presets (no "Custom" values)
+- [x] Error line highlighted in red
+- [x] Error messages clean (no stack traces)
+- [x] Reset clears world and Python namespace
+- [x] World editor changes dimensions
+- [x] World editor sets Karel position/direction
+- [x] Export/import world JSON
+
+---
+
+## Known Limitations / Future Enhancements
+
+### Not Yet Implemented
+
+1. **Interactive World Editing**
+
+   - ✅ **Move Karel mode** - Click grid to move Karel (COMPLETE)
+   - ✅ **Add/Remove Walls mode** - Click wall segments to toggle walls (COMPLETE)
+   - Place Beepers mode not yet wired up
+
+2. **Polish**
+   - No animations between Karel movements
+   - No sound effects
+   - No achievement system
+
+### ~~Previously Not Implemented (Now Complete)~~
+
+- ~~Per-Lesson Feature Control~~ → ✅ `allowedFeatures` on `KarelConfig` supports per-exercise restrictions
+- ~~Validation Functions~~ → ✅ Full validation system with `tests.validate` callback
+- ~~Lesson data structures~~ → ✅ `Lesson` type with `exerciseCount`, curriculum index
+- ~~MDsveX integration~~ → ✅ 7 lessons authored as `.svx` files
+- ~~Progress tracking~~ → ✅ Progress store with hydration, exercise completion, auto-complete
+- ~~localStorage persistence~~ → ✅ Code persistence + progress persistence
+
+---
+
+## Next Steps (Phase 2)
+
+### Priority 1: Python Language Features
+
+1. ✅ `if`/`else`/`elif` support (implemented)
+2. ✅ `while` loop support (implemented)
+3. ✅ `for` loop with `range()` support (implemented)
+4. ✅ Variables work (implementation complete)
+5. ✅ **Implement feature restriction system** (AST-based validation complete)
+6. ✅ **Add custom educational error messages** (complete with line numbers)
+
+### Priority 2: Interactive World Editor
+
+1. ✅ Make grid cells clickable to set Karel position (COMPLETE)
+2. ✅ Wire up Add/Remove Walls mode with click detection on grid edges (COMPLETE)
+3. ✅ Click between cells to add/remove walls (COMPLETE)
+4. ✅ Visual feedback for edit modes - mode-specific overlays and hover effects (COMPLETE)
+5. Wire up Place Beepers mode with click detection and beeper count
+6. Click cells to add/remove beepers with configurable count
+
+### ~~Priority 3: Lessons System~~ ✅ COMPLETE
+
+1. ✅ Define lesson/exercise data structures (`Lesson` type, `KarelConfig`, `SiteProgress`)
+2. ✅ Create sample lessons (7 Karel lessons, 18 exercises)
+3. ✅ Integrate MDsveX for instructions (all lessons use `.svx` files)
+4. ✅ Build lesson navigation (LessonShell, NavDrawer, chapter/lesson routing)
+5. ✅ Add validation functions (each exercise has `tests.validate`)
+6. ✅ Progress tracking (progress store, exercise completion, lesson auto-complete)
+7. ✅ Code persistence (saved on Play/Run Tests, restored on load)
+
+### Priority 4: Polish
+
+1. Smooth animations for Karel movements
+2. Visual effects (beeper pickup/place)
+3. Accessibility improvements
+
+---
+
+## Development Server
+
+**Start:** `npm run dev`  
+**Karel Playground URL:** http://localhost:5173/karel/playground
+
+---
+
+## Important Code Patterns
+
+### Record-and-Replay Architecture
+
+```typescript
+// Phase 1: Record execution with sys.settrace
+async function recordExecution(code: string) {
+  const steps: RecordedStep[] = [];
+  let lastTracedLine = 0;
+
+  // Karel callbacks record world snapshots
+  const recordingCallbacks = {
+    move: () => {
+      move();
+      steps.push({ line: lastTracedLine, world: cloneWorld(currentWorld) });
+    }
+    // ... other commands
+  };
+
+  // Trace callback updates current line
+  pyodide.globals.set('__js_trace_cb__', (lineNo) => {
+    lastTracedLine = lineNo;
+  });
+
+  // Execute with tracing
+  await pyodide.runPythonAsync(`
+    import sys
+    def tracer(frame, event, arg):
+      if event == 'line':
+        __js_trace_cb__(frame.f_lineno)
+      return tracer
+    sys.settrace(tracer)
+    exec(compile(code, '<user>', 'exec'))
+  `);
+
+  return { steps };
+}
+
+// Phase 2: Replay recorded steps
+async function* createStepExecutor(code: string) {
+  const recording = await recordExecution(code);
+  currentWorld = cloneWorld(initialWorld);
+
+  for (const step of recording.steps) {
+    executionState.currentLine = step.line;
+    yield step.line;
+    currentWorld = cloneWorld(step.world);
+  }
+}
+```
+
+### Animation Delay (Play vs Step)
+
+```typescript
+// In generator: no delay - just yield
+async function* createStepExecutor(code: string) {
+  for (const step of recording.steps) {
+    yield step.line; // Instant for Step button
+    currentWorld = cloneWorld(step.world);
+  }
+}
+
+// In continueExecution: add delay for Play mode
+async function continueExecution() {
+  while (executionState.status === 'running') {
+    const result = await executionGenerator.next();
+    if (executionState.animationSpeed > 0) {
+      await new Promise((resolve) => setTimeout(resolve, executionState.animationSpeed));
+    }
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### Pyodide Version Mismatch
+
+- Ensure script URL and indexURL both use same version (0.24.1)
+- Script: `https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js`
+- Index: `https://cdn.jsdelivr.net/pyodide/v0.24.1/full/`
+
+### Functions Not Stepping
+
+- Check that function is in `functionDefinitions` map
+- Verify function added when `def` executes, not during parsing
+- Check `functionStartLine` offset calculation (startLine + i + 2)
+
+### Editor Not Updating
+
+- Ensure `value = newValue` comes before optional callback
+- CodeMirror needs both internal state update and parent notification
+
+---
+
+## Design Document Reference
+
+Full specification: [KAREL_DESIGN.md](KAREL_DESIGN.md)
+
+This implementation follows Phase 1 (Core Infrastructure) from the design document. The playground is fully functional for basic use cases with proper stepping, error handling, and world editing.
+

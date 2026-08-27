@@ -3,7 +3,7 @@
    * KarelEnvironment - Reusable Karel component for lessons and playground
    * Handles execution, animation, and Karel command implementations
    */
-  import { onMount, tick } from 'svelte';
+  import { onMount } from 'svelte';
   import KarelWorld from '$lib/components/KarelWorld.svelte';
   import KarelCodeEditor from '$lib/components/KarelCodeEditor.svelte';
   import KarelControls from '$lib/components/KarelControls.svelte';
@@ -15,10 +15,10 @@
     cloneWorld,
     type KarelWorld as KarelWorldType,
     type KarelConfig,
-    type ExecutionState,
     type DirectionType,
     type TestResult
   } from '$lib/karel/types';
+  import { checkWallInDirection } from '$lib/karel/walls';
   import {
     loadPyodide,
     injectKarelCommands,
@@ -37,6 +37,7 @@
   // State - capture initial values from config
   // We intentionally use the initial value of config.initialWorld here
   // This is mutable so it can be updated when a test world is loaded
+  // svelte-ignore state_referenced_locally
   let initialWorldSnapshot = cloneWorld(config.initialWorld);
   let currentWorld = $state(cloneWorld(initialWorldSnapshot));
   let executionState = $state(createDefaultExecutionState());
@@ -144,7 +145,6 @@
   };
 
   // Step-through execution state
-  let currentLineIndex = $state(0);
   let executionGenerator: AsyncGenerator<number, void, unknown> | null = null;
 
   // Load Pyodide on mount — also check localStorage directly for exercise completion
@@ -236,7 +236,7 @@
     }
 
     // Check walls
-    const hasWall = checkWallInDirection(pos.x, pos.y, dir);
+    const hasWall = checkWallInDirection(currentWorld.walls, pos.x, pos.y, dir);
     if (hasWall) {
       throw new Error('Cannot move into wall');
     }
@@ -304,25 +304,6 @@
     executionState.stepCount++;
   }
 
-  // Helper function to check for walls
-  function checkWallInDirection(x: number, y: number, dir: DirectionType): boolean {
-    for (const wall of currentWorld.walls) {
-      if (dir === 'north' && wall.type === 'horizontal' && wall.x === x && wall.y === y) {
-        return true;
-      }
-      if (dir === 'south' && wall.type === 'horizontal' && wall.x === x && wall.y === y - 1) {
-        return true;
-      }
-      if (dir === 'east' && wall.type === 'vertical' && wall.x === x && wall.y === y) {
-        return true;
-      }
-      if (dir === 'west' && wall.type === 'vertical' && wall.x === x - 1 && wall.y === y) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   // Sensor functions
   function front_is_clear(): boolean {
     const pos = currentWorld.karel.position;
@@ -349,7 +330,7 @@
     if (newX < 1 || newX > currentWorld.dimensions.width) return false;
     if (newY < 1 || newY > currentWorld.dimensions.height) return false;
 
-    return !checkWallInDirection(pos.x, pos.y, dir);
+    return !checkWallInDirection(currentWorld.walls, pos.x, pos.y, dir);
   }
 
   function front_is_blocked(): boolean {
@@ -366,7 +347,6 @@
   }
 
   function left_is_clear(): boolean {
-    const originalDir = currentWorld.karel.direction.type;
     turn_left();
     const result = front_is_clear();
     // Turn back
@@ -381,7 +361,6 @@
   }
 
   function right_is_clear(): boolean {
-    const originalDir = currentWorld.karel.direction.type;
     // Turn right
     turn_left();
     turn_left();
@@ -719,7 +698,6 @@ except:
     executionState.stepCount = 0;
     executionState.currentLine = null;
     currentWorld = cloneWorld(initialWorldSnapshot);
-    currentLineIndex = 0;
 
     // If speed is instant (0), run everything at once without animation
     if (executionState.animationSpeed === 0) {
@@ -773,8 +751,6 @@ except:
           executionGenerator = null;
           break;
         } else {
-          currentLineIndex = result.value;
-
           // Delay between steps for animated playback
           if (executionState.animationSpeed > 0) {
             await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -809,7 +785,6 @@ except:
       executionState.stepCount = 0;
       executionState.currentLine = null;
       currentWorld = cloneWorld(initialWorldSnapshot);
-      currentLineIndex = 0;
 
       // Create new execution generator
       executionGenerator = createStepExecutor(code);
@@ -828,7 +803,6 @@ except:
           executionGenerator = null;
         } else {
           executionState.status = 'paused';
-          currentLineIndex = result.value;
         }
       } catch (err) {
         executionState.status = 'error';
@@ -847,7 +821,6 @@ except:
     newState.animationSpeed = executionState.animationSpeed; // Preserve speed setting
     executionState = newState;
     executionGenerator = null;
-    currentLineIndex = 0;
     testResults = null; // Clear test results on reset
 
     // Clear Python namespace

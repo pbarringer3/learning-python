@@ -106,18 +106,30 @@ while front_is_clear():
         direction: { type: 'east' },
         beepers: 0
       },
-      walls: [],
+      walls: [
+        { type: 'vertical', x: 1, y: 1 },
+        { type: 'vertical', x: 2, y: 2 },
+        { type: 'vertical', x: 3, y: 3 },
+        { type: 'vertical', x: 4, y: 4 },
+        { type: 'vertical', x: 5, y: 5 },
+        { type: 'horizontal', x: 2, y: 2 },
+        { type: 'horizontal', x: 3, y: 3 },
+        { type: 'horizontal', x: 4, y: 4 },
+        { type: 'horizontal', x: 5, y: 5 },
+        { type: 'horizontal', x: 6, y: 6 }
+      ],
       beepers: []
     },
-    initialCode: `# Each step: move east, turn north, move up,
-# turn east again. Repeat until the wall!
+    initialCode: `# Each step: move north, turn east, move east,
+# turn north again. Repeat until the wall!
 
+turn_left()
 while front_is_clear():
   move()
-  while not_facing_north():
+  while not_facing_east():
     turn_left()
   move()
-  while not_facing_east():
+  while not_facing_north():
     turn_left()
 `
   };

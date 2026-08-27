@@ -167,7 +167,7 @@ Playwright's webServer config auto-starts `npm run dev` if it isn't already runn
 
 ## Version Control
 
-- **Never run `git commit`, `git add`, (or any command that creates a commit).** The user handles all commits themselves. Showing diffs is fine if helpful, but leave the actual commits and staging to the user.
+- **Never run `git commit`, `git add`, (or any command that creates a commit) unless explicitly asked to.** The user handles all commits themselves. Showing diffs is fine if helpful, but leave the actual commits and staging to the user.
 
 ## Starting a Session
 

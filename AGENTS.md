@@ -28,7 +28,57 @@ The site includes specialized interactive modules for teaching:
 - **Styling**: Tailwind CSS
 - **Python Runtime**: Pyodide (browser-based Python)
 - **Build Tool**: Vite
-- **Testing**: Playwright
+- **Testing**: Vitest (unit) and Playwright (e2e)
+
+## Commands
+
+```bash
+npm run dev            # Start dev server (Vite, port 5173)
+npm run build          # Production build (adapter-static -> build/, for GitHub Pages)
+npm run preview        # Preview production build
+npm run check          # svelte-kit sync + svelte-check (TypeScript/Svelte type checking)
+npm run lint           # prettier --check + eslint
+npm run format         # prettier --write
+npm test               # Full suite: vitest run + playwright test
+npm run test:unit      # Vitest only (unit tests, src/**/*.test.ts)
+npm run test:e2e       # Playwright only (e2e tests, tests/*.test.ts)
+```
+
+Running a single test:
+
+```bash
+npx vitest run src/lib/karel/types.test.ts   # single Vitest file
+npx vitest run -t "test name"                # by test name
+npx playwright test tests/karel.test.ts      # single Playwright file
+npx playwright test --project=chromium       # one browser only (chromium or webkit)
+```
+
+Playwright's webServer config auto-starts `npm run dev` if it isn't already running (see `playwright.config.ts`).
+
+## Architecture
+
+### Routing and the curriculum data model
+
+- `src/lib/curriculum/index.ts` is the single source of truth for chapters/lessons (`chapters` array). `src/lib/curriculum/types.ts` defines the `Chapter`/`Lesson` shapes and helpers (`progressKey`, `lessonPath`, `getChapterStatus`, etc.).
+- Lesson content lives at `src/routes/<chapterNumber>/<lessonNumber>/+page.svx` (MDsveX: markdown + embedded Svelte components), e.g. `src/routes/1/1/+page.svx` for Chapter 1, Lesson 1.
+- `src/routes/[chapter]/[lesson]/+page.svelte` is a dynamic fallback that renders a placeholder for any lesson number listed in the curriculum data that doesn't yet have a dedicated `.svx` file. `handleUnseenRoutes: 'warn'` in `svelte.config.js` allows this route to exist without prerenderable instances.
+- Every `.svx` lesson wraps its content in `<LessonShell chapterNumber={N} lessonNumber={N}>`, which resolves lesson metadata from the curriculum data and renders prev/next navigation.
+- `npm run build` uses `adapter-static`, deployed to GitHub Pages under the `/learning-python` base path (see `paths.base` in `svelte.config.js`, only applied when `NODE_ENV=production`).
+
+### Karel engine
+
+- `src/lib/karel/types.ts` defines the world model (`KarelWorld`, `Position`, `Direction`, `Wall`, `BeeperLocation`) and the `KarelConfig` shape used to embed a Karel environment in a lesson (initial world, initial code, `allowedFeatures` restrictions, `tests`, `persistenceKey`).
+- `src/lib/karel/pyodide.ts` bridges Python (via Pyodide) and the Karel UI:
+  - Karel commands (`move`, `turn_left`, `pick_beeper`, `put_beeper`, and sensor functions like `front_is_clear`) are injected into the Pyodide global namespace as JS callbacks (`injectKarelCommands`), so the app owns all world-state mutation — Python only calls into it.
+  - **`loadPyodide()` loads Pyodide from a CDN `<script>` tag (pinned to v0.24.1), not from the `pyodide` npm package.** The npm `pyodide` dependency is used only for its TypeScript types (`PyodideInterface`). Any Pyodide version bump must be made in both places, and the CDN version is authoritative for runtime behavior.
+  - `installCodeValidator` installs a Python AST-based validator (`validate_karel_code`) that allowlists syntax per exercise (e.g. no imports, no variable assignment except loop vars, no parameters) — this is what enforces `allowedFeatures` on student code before it's allowed to run.
+- `KarelEnvironment.svelte` is the top-level reusable component (used in both lessons and `/karel/playground`) that owns execution state, wires the code editor/world/controls/output subcomponents together, and persists student code to `localStorage` (keyed by `KarelConfig.persistenceKey`, convention `"<chapter>/<lesson>/<exercise>"`).
+- Exercises validate success via `KarelTests` (`src/lib/karel/types.ts`): a `validate(world)` function checks final world state, with optional `validateCode` (source-level checks) and `functionTests` (call one named student function in isolation against a specific world).
+
+### Progress tracking
+
+- `src/lib/curriculum/progress.ts` is a Svelte store backed by `localStorage` (key `learning-python-progress`, schema `version` field for future migrations). Must call `progressStore.hydrate()` client-side (done in the root layout's `onMount`) before any writes take effect.
+- Lesson/exercise completion keys use `progressKey(chapterNumber, lessonNumber)` → `"<chapter>/<lesson>"`, matching the route and persistence-key convention above.
 
 ## Development Guidelines
 
@@ -49,8 +99,8 @@ The site includes specialized interactive modules for teaching:
 
 ### Testing
 
-- Write Playwright tests in `tests/`
-- Run tests with `npm test`
+- Write unit tests (Vitest) alongside the code as `*.test.ts` in `src/lib/`; write e2e tests (Playwright) in `tests/`
+- Run tests with `npm test` (see Commands above for running individual test files)
 - Any time you are asked to add or change functionality you should use a red/green TDD approach.
 
 ### Design Principles
@@ -122,16 +172,6 @@ The site includes specialized interactive modules for teaching:
 ## Starting a Session
 
 If the user opens a session asking something like **"what's next"**, **"what should we work on"**, or similar, read `PROGRESS.md` (especially the "Project Status Overview" and "What's Next" sections) and summarize the current project status and recommended next steps based on it. Don't just repeat the doc verbatim — briefly confirm it's still accurate against the codebase if quick to check, then present the next steps clearly.
-
-## Getting Started
-
-```bash
-npm install          # Install dependencies
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run preview      # Preview production build
-npm test             # Run tests
-```
 
 ## Questions or Clarifications
 

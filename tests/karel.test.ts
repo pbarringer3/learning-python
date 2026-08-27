@@ -96,7 +96,7 @@ test.describe('Playground page', () => {
     // Should show loading initially (may already be loaded if fast)
     const loading = page.locator('text=Loading Python');
     // Either we see it loading or it already loaded
-    const isVisible = await loading.isVisible().catch(() => false);
+    await loading.isVisible().catch(() => false);
     // This is non-deterministic, so we just verify the page doesn't error
     expect(true).toBe(true);
   });
@@ -162,7 +162,7 @@ test.describe('Playground execution', () => {
     const cmContent = page.locator('.cm-content');
     await cmContent.click();
     // Select all and replace
-    await page.keyboard.press('Meta+a');
+    await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type('turn_left()\nturn_left()\nturn_left()\nmove()');
 
     const slider = page.locator('#speed-slider');
@@ -392,7 +392,7 @@ test.describe('Feature restrictions', () => {
     // Type code using pick_beeper() which is not in allowed commands for example 2
     const cmContent = env.locator('.cm-content');
     await cmContent.click();
-    await page.keyboard.press('Meta+a');
+    await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type('pick_beeper()');
 
     await env.locator('#speed-slider').fill('5');
@@ -410,7 +410,7 @@ test.describe('Feature restrictions', () => {
     // move() is allowed in example 2
     const cmContent = env.locator('.cm-content');
     await cmContent.click();
-    await page.keyboard.press('Meta+a');
+    await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type('move()');
 
     await env.locator('#speed-slider').fill('5');
@@ -427,7 +427,7 @@ test.describe('Feature restrictions', () => {
 
     const cmContent = env.locator('.cm-content');
     await cmContent.click();
-    await page.keyboard.press('Meta+a');
+    await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type('print("hello")');
 
     await env.locator('#speed-slider').fill('5');
@@ -443,7 +443,7 @@ test.describe('Feature restrictions', () => {
 
     const cmContent = env.locator('.cm-content');
     await cmContent.click();
-    await page.keyboard.press('Meta+a');
+    await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type('x = 5');
 
     await env.locator('#speed-slider').fill('5');
@@ -459,7 +459,7 @@ test.describe('Feature restrictions', () => {
 
     const cmContent = env.locator('.cm-content');
     await cmContent.click();
-    await page.keyboard.press('Meta+a');
+    await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type('import os');
 
     await env.locator('#speed-slider').fill('5');
@@ -559,7 +559,7 @@ test.describe('Exercise completion and persistence', () => {
   ) {
     const cmContent = env.locator('.cm-content');
     await cmContent.click();
-    await page.keyboard.press('Meta+a');
+    await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type(code, { delay: 5 });
   }
 
@@ -826,7 +826,7 @@ test.describe('Top-down stepping', () => {
       // Type a single-command program
       const cmContent = page.locator('.cm-content');
       await cmContent.click();
-      await page.keyboard.press('Meta+a');
+      await page.keyboard.press('ControlOrMeta+a');
       await page.keyboard.type('move()');
 
       const env = page.locator('.karel-environment');

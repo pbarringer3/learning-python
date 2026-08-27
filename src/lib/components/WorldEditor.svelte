@@ -1,10 +1,5 @@
 <script lang="ts">
-  import type {
-    KarelWorld as KarelWorldType,
-    Wall,
-    BeeperLocation,
-    DirectionType
-  } from '$lib/karel/types';
+  import type { KarelWorld as KarelWorldType, DirectionType } from '$lib/karel/types';
   import { createDefaultWorld } from '$lib/karel/types';
 
   interface Props {
@@ -211,7 +206,7 @@
           if (onupdate) {
             onupdate(world);
           }
-        } catch (err) {
+        } catch {
           alert('Invalid JSON file');
         }
       }

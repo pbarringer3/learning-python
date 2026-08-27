@@ -32,9 +32,6 @@
   const allTestsPassed = $derived(
     testResults && testResults.length > 0 && testResults.every((t) => t.passed)
   );
-  const someTestsFailed = $derived(
-    testResults && testResults.length > 0 && testResults.some((t) => !t.passed)
-  );
 </script>
 
 <div class="karel-output {className}">

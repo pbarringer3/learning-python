@@ -49,6 +49,9 @@ else:
 `;
 
   // Karel config for the environment
+  // The initial value of editableWorld is intended here; handleWorldUpdate
+  // rebuilds the config whenever the world is edited.
+  // svelte-ignore state_referenced_locally
   let karelConfig = $state<KarelConfig>({
     initialWorld: cloneWorld(editableWorld),
     initialCode: initialCode

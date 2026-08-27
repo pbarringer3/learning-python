@@ -129,11 +129,6 @@
     })
   );
 
-  // Check if Karel is on a beeper
-  const karelOnBeeper = $derived(
-    world.beepers.some((b) => b.x === world.karel.position.x && b.y === world.karel.position.y)
-  );
-
   // Generate interactive cells if needed
   const interactiveCells = $derived(
     interactive

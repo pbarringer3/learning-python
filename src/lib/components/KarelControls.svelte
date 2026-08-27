@@ -46,8 +46,6 @@
   ];
 
   const isRunning = $derived(status === 'running');
-  const isPaused = $derived(status === 'paused');
-  const isIdle = $derived(status === 'idle' || status === 'success' || status === 'error');
 
   function handleSpeedChange(event: Event) {
     const target = event.target as HTMLInputElement;

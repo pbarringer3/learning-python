@@ -203,7 +203,7 @@ describe('KarelConfig interface usage', () => {
       },
       tests: {
         worlds: { 'Test 1': cloneWorld(world) },
-        validate: (w) => ({ passed: true, message: 'ok' }),
+        validate: () => ({ passed: true, message: 'ok' }),
         loadableTests: ['Test 1']
       },
       showWorldEditor: true

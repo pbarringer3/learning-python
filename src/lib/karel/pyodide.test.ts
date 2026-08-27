@@ -6,6 +6,7 @@
  * so we mock PyodideInterface where needed.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { PyodideInterface } from 'pyodide';
 import { injectKarelCommands, type KarelCallbacks, type ValidationResult } from './pyodide';
 
 // Mock PyodideInterface
@@ -20,6 +21,11 @@ function createMockPyodide() {
     runPythonAsync: vi.fn(),
     _globals: globals
   };
+}
+
+// The mock implements only the slice of PyodideInterface that injectKarelCommands touches
+function asPyodide(mock: ReturnType<typeof createMockPyodide>): PyodideInterface {
+  return mock as unknown as PyodideInterface;
 }
 
 function createMockCallbacks(): KarelCallbacks {
@@ -59,7 +65,7 @@ describe('injectKarelCommands', () => {
   });
 
   it('injects all movement/action commands', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
     expect(mockPyodide.globals.set).toHaveBeenCalledWith('move', callbacks.move);
     expect(mockPyodide.globals.set).toHaveBeenCalledWith('turn_left', callbacks.turn_left);
@@ -68,7 +74,7 @@ describe('injectKarelCommands', () => {
   });
 
   it('injects front sensor commands', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
     expect(mockPyodide.globals.set).toHaveBeenCalledWith(
       'front_is_clear',
@@ -81,7 +87,7 @@ describe('injectKarelCommands', () => {
   });
 
   it('injects beeper sensor commands', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
     expect(mockPyodide.globals.set).toHaveBeenCalledWith(
       'beepers_present',
@@ -94,7 +100,7 @@ describe('injectKarelCommands', () => {
   });
 
   it('injects left/right sensor commands', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
     expect(mockPyodide.globals.set).toHaveBeenCalledWith('left_is_clear', callbacks.left_is_clear);
     expect(mockPyodide.globals.set).toHaveBeenCalledWith(
@@ -112,7 +118,7 @@ describe('injectKarelCommands', () => {
   });
 
   it('injects beeper bag sensor commands', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
     expect(mockPyodide.globals.set).toHaveBeenCalledWith(
       'beepers_in_bag',
@@ -125,9 +131,9 @@ describe('injectKarelCommands', () => {
   });
 
   it('injects all direction sensor commands', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
-    const directionSensors = [
+    const directionSensors: (keyof KarelCallbacks)[] = [
       'facing_north',
       'not_facing_north',
       'facing_south',
@@ -138,19 +144,19 @@ describe('injectKarelCommands', () => {
       'not_facing_west'
     ];
     for (const sensor of directionSensors) {
-      expect(mockPyodide.globals.set).toHaveBeenCalledWith(sensor, (callbacks as any)[sensor]);
+      expect(mockPyodide.globals.set).toHaveBeenCalledWith(sensor, callbacks[sensor]);
     }
   });
 
   it('injects exactly 22 commands total', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
     // 4 actions + 2 front + 2 beepers + 4 left/right + 2 bag + 8 direction = 22
     expect(mockPyodide.globals.set).toHaveBeenCalledTimes(22);
   });
 
   it('stores callable functions in globals', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
     const storedMove = mockPyodide._globals.get('move');
     expect(typeof storedMove).toBe('function');
@@ -160,7 +166,7 @@ describe('injectKarelCommands', () => {
   });
 
   it('stored callbacks are the same function references', () => {
-    injectKarelCommands(mockPyodide as any, callbacks);
+    injectKarelCommands(asPyodide(mockPyodide), callbacks);
 
     expect(mockPyodide._globals.get('move')).toBe(callbacks.move);
     expect(mockPyodide._globals.get('turn_left')).toBe(callbacks.turn_left);

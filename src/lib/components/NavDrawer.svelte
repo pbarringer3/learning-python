@@ -65,7 +65,9 @@
 
 <!-- Backdrop -->
 {#if open}
+  <!-- Escape closes the drawer (see svelte:window handler), so the backdrop needs no keyboard handler -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="fixed inset-0 z-40 bg-black/30 transition-opacity"
     class:opacity-100={open}

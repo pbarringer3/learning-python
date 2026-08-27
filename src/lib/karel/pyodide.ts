@@ -428,7 +428,7 @@ export async function executePythonCode(
     const error = new Error(validation.error || 'Invalid code');
     // Add line number to error if available
     if (validation.line) {
-      (error as any).lineNumber = validation.line;
+      (error as Error & { lineNumber?: number }).lineNumber = validation.line;
     }
     throw error;
   }

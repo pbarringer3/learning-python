@@ -486,6 +486,174 @@ while front_is_clear():
       ]
     }
   };
+
+  // Exercise 4: Northwest Corner Karel
+  const exercise4Config: KarelConfig = {
+    persistenceKey: '1/4/exercise-4',
+    initialWorld: {
+      dimensions: { width: 6, height: 5 },
+      karel: {
+        position: { x: 4, y: 2 },
+        direction: { type: 'south' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 1, y: 5, count: 3 }]
+    },
+    initialCode: `# Karel starts somewhere in the world, facing
+# some direction. 
+# 
+# Get Karel to the northwest corner and pick up
+# every beeper there.
+#
+# You know NOTHING in advance: not the world size,
+# not where Karel starts, not which way he faces,
+# and not how many beepers are in the pile.
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'pick_beeper', 'put_beeper',
+        'front_is_clear', 'front_is_blocked',
+        'beepers_present', 'no_beepers_present',
+        'facing_north', 'not_facing_north',
+        'facing_south', 'not_facing_south',
+        'facing_east', 'not_facing_east',
+        'facing_west', 'not_facing_west'
+      ]
+    },
+    tests: {
+      worlds: {
+        'Test 1: Start facing south': {
+          dimensions: { width: 6, height: 5 },
+          karel: {
+            position: { x: 4, y: 2 },
+            direction: { type: 'south' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 5, count: 3 }]
+        },
+        'Test 2: Start in the northeast corner': {
+          dimensions: { width: 8, height: 8 },
+          karel: {
+            position: { x: 8, y: 8 },
+            direction: { type: 'north' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 8, count: 7 }]
+        },
+        'Test 3: Start facing west': {
+          dimensions: { width: 5, height: 4 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'west' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 4, count: 1 }]
+        },
+        'Test 4: Wide world, one tall pile': {
+          dimensions: { width: 10, height: 3 },
+          karel: {
+            position: { x: 7, y: 3 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 3, count: 12 }]
+        },
+        'Test 5: Single row': {
+          dimensions: { width: 7, height: 1 },
+          karel: {
+            position: { x: 5, y: 1 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 1, count: 4 }]
+        },
+        'Test 6: Single column': {
+          dimensions: { width: 1, height: 6 },
+          karel: {
+            position: { x: 1, y: 3 },
+            direction: { type: 'south' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 6, count: 2 }]
+        },
+        'Test 7: Already in the corner, no beepers': {
+          dimensions: { width: 5, height: 5 },
+          karel: {
+            position: { x: 1, y: 5 },
+            direction: { type: 'east' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: []
+        },
+        'Test 8: Already in the corner, with beepers': {
+          dimensions: { width: 4, height: 6 },
+          karel: {
+            position: { x: 1, y: 6 },
+            direction: { type: 'west' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 6, count: 5 }]
+        },
+        'Test 9: Single cell world': {
+          dimensions: { width: 1, height: 1 },
+          karel: {
+            position: { x: 1, y: 1 },
+            direction: { type: 'north' },
+            beepers: 0
+          },
+          walls: [],
+          beepers: [{ x: 1, y: 1, count: 2 }]
+        }
+      },
+      validate: (world) => {
+        const cornerY = world.dimensions.height;
+        const onGround = world.beepers.filter((b) => b.count > 0);
+        const cornerPile = onGround.find((b) => b.x === 1 && b.y === cornerY);
+        const strays = onGround.filter((b) => !(b.x === 1 && b.y === cornerY));
+        const atCorner = world.karel.position.x === 1 && world.karel.position.y === cornerY;
+
+        if (!atCorner) {
+          return {
+            passed: false,
+            message: `Karel needs to end at the northwest corner (1, ${cornerY}). Currently at (${world.karel.position.x}, ${world.karel.position.y}).`
+          };
+        }
+        if (cornerPile) {
+          return {
+            passed: false,
+            message: `Karel reached the corner but left ${cornerPile.count} beeper(s) behind. Keep picking until none remain.`
+          };
+        }
+        if (strays.length > 0) {
+          const totalStray = strays.reduce((sum, b) => sum + b.count, 0);
+          return {
+            passed: false,
+            message: `Karel dropped ${totalStray} beeper(s) elsewhere in the world. Only pick up — don't put down.`
+          };
+        }
+        return {
+          passed: true,
+          message: 'Karel found the northwest corner and cleared the pile — in any world!'
+        };
+      },
+      loadableTests: [
+        'Test 1: Start facing south',
+        'Test 2: Start in the northeast corner',
+        'Test 3: Start facing west',
+        'Test 4: Wide world, one tall pile'
+      ]
+    }
+  };
 </script>
 
 <LessonShell chapterNumber={1} lessonNumber={4}>
@@ -659,6 +827,25 @@ This exercise requires **nested while loops**: an outer loop to walk down the ro
 
 ---
 
+## Exercise 4: Northwest Corner Karel
+
+Some number of beepers sit in the **northwest corner** of the world. Get Karel there and pick up every last one.
+
+This time nothing is given to you:
+
+- The world can be **any size**
+- Karel starts at **any position**
+- Karel starts facing **any direction**
+- The pile holds **any number** of beepers
+
+Your program must handle all of it. 
+
+The four test worlds in the dropdown are only a sample — your solution is checked against several hidden worlds too.
+
+<KarelEnvironment config={exercise4Config} />
+
+---
+
 ## What You Learned
 
 In this lesson you learned:
@@ -668,6 +855,6 @@ In this lesson you learned:
 - While loops let you write **general solutions** that work on worlds of any size
 - The **fencepost problem**: when looping, the last step often needs special handling
 
-In the next lesson, you'll learn about **for loops** — a way to repeat actions a specific number of times.
+In the next lesson, you'll learn about **for loops** — what to do when the world gives you nothing to sense and the count is the only thing you have.
 
 </LessonShell>

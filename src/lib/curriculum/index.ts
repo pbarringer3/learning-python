@@ -52,15 +52,16 @@ const karel: Chapter = {
         'Use while loops and sensor functions to write programs that adapt to different worlds.',
       number: 4,
       hasExercises: true,
-      exerciseCount: 2
+      exerciseCount: 4
     },
     {
       id: 'for-loops',
       title: 'For Loops',
-      description: 'Use for loops with range() to repeat actions a specific number of times.',
+      description:
+        'Use for loops with range() to count out a job the world gives you no way to sense.',
       number: 5,
       hasExercises: true,
-      exerciseCount: 3
+      exerciseCount: 4
     },
     {
       id: 'conditionals',
@@ -106,7 +107,7 @@ const karel: Chapter = {
     },
     {
       name: 'For Loops',
-      description: 'Repeat a fixed number of times',
+      description: 'Count out a fixed number of repetitions',
       lessonId: 'for-loops',
       icon: '🔢'
     },

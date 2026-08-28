@@ -715,4 +715,3 @@ async function continueExecution() {
 Full specification: [KAREL_DESIGN.md](KAREL_DESIGN.md)
 
 This implementation follows Phase 1 (Core Infrastructure) from the design document. The playground is fully functional for basic use cases with proper stepping, error handling, and world editing.
-

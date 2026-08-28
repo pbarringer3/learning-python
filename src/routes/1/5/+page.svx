@@ -1,274 +1,625 @@
 <script lang="ts">
   import LessonShell from '$lib/components/LessonShell.svelte';
   import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
-  import type { KarelConfig } from '$lib/karel/types';
+  import type { KarelConfig, KarelWorld, Wall } from '$lib/karel/types';
 
-  // Example 1: Place beepers in a row
-  const rowExample: KarelConfig = {
-    initialWorld: {
-      dimensions: { width: 6, height: 1 },
+  // ── Shared helpers ─────────────────────────────────────────────────────────
+
+  /** The generous command set used by the yard exercises (sensors included). */
+  const allCommands = [
+    'move', 'turn_left', 'put_beeper', 'pick_beeper',
+    'front_is_clear', 'front_is_blocked',
+    'beepers_present', 'no_beepers_present',
+    'facing_north', 'not_facing_north',
+    'facing_south', 'not_facing_south',
+    'facing_east', 'not_facing_east',
+    'facing_west', 'not_facing_west'
+  ];
+
+  /** Movement plus front sensors only — used by the park exercises. */
+  const countingCommands = [
+    'move', 'turn_left', 'put_beeper', 'pick_beeper',
+    'front_is_clear', 'front_is_blocked'
+  ];
+
+  /** An empty yard of the given size with Karel at (2, 2) facing east. */
+  function yard(width: number, height: number): KarelWorld {
+    return {
+      dimensions: { width, height },
+      karel: {
+        position: { x: 2, y: 2 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    };
+  }
+
+  /** Columns that hold a court in a park of the given width: 1, 4, 7, ... */
+  function courtColumns(width: number): number[] {
+    const columns: number[] = [];
+    for (let x = 1; x <= width; x += 3) columns.push(x);
+    return columns;
+  }
+
+  /** Side walls that frame one court column (rows 2-4). */
+  function courtWalls(column: number, width: number): Wall[] {
+    const walls: Wall[] = [];
+    for (let y = 2; y <= 4; y++) {
+      if (column > 1) walls.push({ type: 'vertical', x: column - 1, y });
+      if (column < width) walls.push({ type: 'vertical', x: column, y });
+    }
+    return walls;
+  }
+
+  /**
+   * A park: a path along row 1 with a 3-cell-deep court above every third
+   * column. Widths of the form 3n + 1 put the last court against the east wall.
+   */
+  function park(width: number): KarelWorld {
+    return {
+      dimensions: { width, height: 5 },
       karel: {
         position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: courtColumns(width).flatMap((c) => courtWalls(c, width)),
+      beepers: []
+    };
+  }
+
+  // ── Examples ───────────────────────────────────────────────────────────────
+
+  // Example 1: Counting in an open field, where sensors tell you nothing
+  const openFieldExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 9, height: 9 },
+      karel: {
+        position: { x: 2, y: 2 },
         direction: { type: 'east' },
         beepers: -1
       },
       walls: [],
       beepers: []
     },
-    initialCode: `# Place 5 beepers in a row.
-# for i in range(5) repeats the indented code 5 times.
+    initialCode: `# Mark the spot exactly 4 east and 4 north of here.
+# There is no wall out here to stop Karel,
+# so counting is the only way to find it.
 
-for i in range(5):
-  put_beeper()
+for i in range(4):
   move()
+
+turn_left()
+
+for i in range(4):
+  move()
+
+put_beeper()
 `
   };
 
-  // Example 2: Efficient turn_right with for loop
-  const turnRightForExample: KarelConfig = {
+  // Example 2: Nested for loops paving a rectangle
+  const paveExample: KarelConfig = {
     initialWorld: {
-      dimensions: { width: 5, height: 5 },
+      dimensions: { width: 8, height: 6 },
       karel: {
-        position: { x: 1, y: 1 },
+        position: { x: 2, y: 2 },
         direction: { type: 'east' },
         beepers: -1
       },
       walls: [],
       beepers: []
     },
-    initialCode: `# A cleaner way to write turn_right()!
+    initialCode: `# Pave a patch 4 wide and 3 tall,
+# starting from Karel's corner.
+
 def turn_right():
   for i in range(3):
     turn_left()
 
-# Use it to trace a square path,
-# placing a beeper at each corner.
-for i in range(4):
+def turn_around():
+  for i in range(2):
+    turn_left()
+
+def pave_row():
+  # 4 stones, but only 3 moves between them.
   put_beeper()
+  for i in range(3):
+    move()
+    put_beeper()
+
+def next_row():
+  # Back to the start of the row, then up one.
+  turn_around()
+  for i in range(3):
+    move()
+  turn_right()
   move()
+  turn_right()
+
+# 3 rows, but only 2 hops between them.
+for i in range(2):
+  pave_row()
+  next_row()
+
+pave_row()
+`
+  };
+
+  // Example 3: A known-size job repeated an unknown number of times
+  const bulbsExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 10, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# Plant 3 bulbs every third cell along the walkway.
+# The walkway length is unknown -> while loop.
+# Each planting is always 3 bulbs -> for loop.
+
+def plant():
+  for i in range(3):
+    put_beeper()
+
+plant()
+while front_is_clear():
+  for i in range(3):
+    move()
+  plant()
+`
+  };
+
+  // Example 4: The loop variable is a real number
+  const staircaseExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 6, height: 6 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    },
+    initialCode: `# i counts 0, 1, 2, 3 — and range() accepts it,
+# so each row can be a different length.
+
+def turn_right():
+  for i in range(3):
+    turn_left()
+
+def turn_around():
+  for i in range(2):
+    turn_left()
+
+for i in range(4):
+  # Row i gets i + 1 beepers.
+  for j in range(i + 1):
+    put_beeper()
+    move()
+  # Back to the west wall, then up one row.
+  turn_around()
+  while front_is_clear():
+    move()
+  turn_right()
   move()
   turn_right()
 `
   };
 
-  // Exercise 1: Place beepers at every position in a row
+  // ── Exercise 1: Stake the court ────────────────────────────────────────────
+
+  const courtCorners = [
+    { x: 2, y: 2 },
+    { x: 6, y: 2 },
+    { x: 6, y: 6 },
+    { x: 2, y: 6 }
+  ];
+
   const exercise1Config: KarelConfig = {
     persistenceKey: '1/5/exercise-1',
-    initialWorld: {
-      dimensions: { width: 5, height: 1 },
-      karel: {
-        position: { x: 1, y: 1 },
-        direction: { type: 'east' },
-        beepers: -1
-      },
-      walls: [],
-      beepers: []
-    },
-    initialCode: `# Place a beeper at EVERY position in the row,
-# including Karel's starting spot and the very end.
+    initialWorld: yard(9, 9),
+    initialCode: `# Pickleball Karel is laying out a court in the yard.
 #
-# The world is 5 cells wide.
+# Drive a stake into all four corners of a square
+# that is 5 cells on a side, with Karel's starting
+# cell as the southwest corner.
+#
+# Karel always starts at (2, 2) facing east, and
+# the yard is always big enough for the court —
+# but the yard is a different size every time.
+#
+# Finish back on the starting stake, facing east.
 
 `,
     allowedFeatures: {
-      karelCommands: [
-        'move', 'turn_left', 'put_beeper', 'pick_beeper',
-        'front_is_clear', 'front_is_blocked'
-      ]
+      karelCommands: allCommands
     },
     tests: {
       worlds: {
-        'Main Test': {
-          dimensions: { width: 5, height: 1 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: -1
-          },
-          walls: [],
-          beepers: []
-        }
+        'Test 1: 9x9 yard': yard(9, 9),
+        'Test 2: 12x10 yard': yard(12, 10),
+        'Test 3: 7x7 yard (barely fits)': yard(7, 7)
       },
       validate: (world) => {
-        const width = world.dimensions.width;
-        const missing = [];
-        for (let x = 1; x <= width; x++) {
-          const b = world.beepers.find((b) => b.x === x && b.y === 1 && b.count > 0);
-          if (!b) missing.push(x);
+        const onGround = world.beepers.filter((b) => b.count > 0);
+        const missing = courtCorners.filter(
+          (c) => !onGround.find((b) => b.x === c.x && b.y === c.y)
+        );
+        const strays = onGround.filter(
+          (b) => !courtCorners.find((c) => c.x === b.x && c.y === b.y)
+        );
+
+        if (missing.length > 0) {
+          const list = missing.map((c) => `(${c.x}, ${c.y})`).join(', ');
+          return { passed: false, message: `No stake at ${list}.` };
         }
-        if (missing.length === 0) {
-          return { passed: true, message: 'Every position has a beeper! Well done.' };
+        if (strays.length > 0) {
+          const list = strays.map((b) => `(${b.x}, ${b.y})`).join(', ');
+          return {
+            passed: false,
+            message: `Stakes dropped outside the corners: ${list}. The court has exactly four.`
+          };
+        }
+        const { x, y } = world.karel.position;
+        if (x !== 2 || y !== 2) {
+          return {
+            passed: false,
+            message: `Karel needs to finish back at (2, 2) but ended at (${x}, ${y}).`
+          };
+        }
+        if (world.karel.direction.type !== 'east') {
+          return {
+            passed: false,
+            message: `Karel is facing ${world.karel.direction.type} — a full lap around the court ends facing east.`
+          };
         }
         return {
-          passed: false,
-          message: `Missing beepers at column(s): ${missing.join(', ')}. Remember to cover both ends!`
+          passed: true,
+          message: 'Court staked out! The same counts worked in every yard.'
         };
-      }
+      },
+      loadableTests: ['Test 1: 9x9 yard', 'Test 2: 12x10 yard', 'Test 3: 7x7 yard (barely fits)']
     }
   };
 
-  // Exercise 2: Build a tower
+  // ── Exercise 2: Paint the kitchen ──────────────────────────────────────────
+
+  /** The non-volley zone: 5 wide, 3 deep, anchored at Karel's start. */
+  const kitchenCells: { x: number; y: number }[] = [];
+  for (let y = 2; y <= 4; y++) {
+    for (let x = 2; x <= 6; x++) {
+      kitchenCells.push({ x, y });
+    }
+  }
+
   const exercise2Config: KarelConfig = {
     persistenceKey: '1/5/exercise-2',
-    initialWorld: {
-      dimensions: { width: 5, height: 5 },
-      karel: {
-        position: { x: 3, y: 1 },
-        direction: { type: 'north' },
-        beepers: -1
-      },
-      walls: [],
-      beepers: []
-    },
-    initialCode: `# Build a tower: place a beeper at every position
-# in column 3, from (3,1) to (3,5).
+    initialWorld: yard(10, 8),
+    initialCode: `# Next, Karel paints the kitchen — the non-volley
+# zone of the court.
 #
-# Karel starts at (3, 1) facing north.
-# Use a for loop!
+# Paint (put a beeper on) every cell of a rectangle
+# 5 wide and 3 deep, with Karel's starting cell as
+# the southwest corner. That is 15 cells in all.
+#
+# Karel always starts at (2, 2) facing east, and the
+# yard is always big enough — but its size changes.
+#
+# Finish back on the starting cell.
 
 `,
     allowedFeatures: {
-      karelCommands: [
-        'move', 'turn_left', 'put_beeper', 'pick_beeper',
-        'front_is_clear', 'front_is_blocked'
-      ]
+      karelCommands: allCommands
     },
     tests: {
       worlds: {
-        'Main Test': {
-          dimensions: { width: 5, height: 5 },
-          karel: {
-            position: { x: 3, y: 1 },
-            direction: { type: 'north' },
-            beepers: -1
-          },
-          walls: [],
-          beepers: []
-        }
+        'Test 1: 10x8 yard': yard(10, 8),
+        'Test 2: 12x9 yard': yard(12, 9),
+        'Test 3: 7x5 yard (barely fits)': yard(7, 5)
       },
       validate: (world) => {
-        const missing = [];
-        for (let y = 1; y <= 5; y++) {
-          const b = world.beepers.find((b) => b.x === 3 && b.y === y && b.count > 0);
-          if (!b) missing.push(y);
+        const onGround = world.beepers.filter((b) => b.count > 0);
+        const missing = kitchenCells.filter(
+          (c) => !onGround.find((b) => b.x === c.x && b.y === c.y)
+        );
+        const strays = onGround.filter(
+          (b) => !kitchenCells.find((c) => c.x === b.x && c.y === b.y)
+        );
+
+        if (missing.length > 0) {
+          const list = missing
+            .slice(0, 4)
+            .map((c) => `(${c.x}, ${c.y})`)
+            .join(', ');
+          const more = missing.length > 4 ? `, and ${missing.length - 4} more` : '';
+          return {
+            passed: false,
+            message: `${missing.length} unpainted cell(s): ${list}${more}.`
+          };
         }
-        if (missing.length === 0) {
-          return { passed: true, message: 'Tower complete! 5 beepers stacked in column 3.' };
+        if (strays.length > 0) {
+          const list = strays.map((b) => `(${b.x}, ${b.y})`).join(', ');
+          return {
+            passed: false,
+            message: `Paint spilled outside the kitchen at ${list}.`
+          };
+        }
+        const { x, y } = world.karel.position;
+        if (x !== 2 || y !== 2) {
+          return {
+            passed: false,
+            message: `The kitchen is painted, but Karel needs to finish back at (2, 2) — currently at (${x}, ${y}).`
+          };
         }
         return {
-          passed: false,
-          message: `Missing beepers at row(s): ${missing.join(', ')} in column 3.`
+          passed: true,
+          message: 'Kitchen painted, all 15 cells, in every yard. Nice nesting!'
         };
-      }
+      },
+      loadableTests: ['Test 1: 10x8 yard', 'Test 2: 12x9 yard', 'Test 3: 7x5 yard (barely fits)']
     }
   };
 
-  // Exercise 3: Build a diamond outline
+  // ── Exercise 3: Set up one court ───────────────────────────────────────────
+
+  /** Checks the three court cells above `column`, plus Karel's final state. */
+  function validateOneCourt(world: KarelWorld, column: number) {
+    const onGround = world.beepers.filter((b) => b.count > 0);
+    const missing: number[] = [];
+    for (let y = 2; y <= 4; y++) {
+      if (!onGround.find((b) => b.x === column && b.y === y)) missing.push(y);
+    }
+    const strays = onGround.filter((b) => b.x !== column || b.y < 2 || b.y > 4);
+
+    if (missing.length > 0) {
+      return {
+        passed: false,
+        message: `No cone at row(s) ${missing.join(', ')} of the court in column ${column}.`
+      };
+    }
+    if (strays.length > 0) {
+      const list = strays.map((b) => `(${b.x}, ${b.y})`).join(', ');
+      return {
+        passed: false,
+        message: `Cones left outside the court at ${list}. A court takes exactly three.`
+      };
+    }
+    const { x, y } = world.karel.position;
+    if (x !== column || y !== 1) {
+      return {
+        passed: false,
+        message: `Karel must return to the path at (${column}, 1) but ended at (${x}, ${y}).`
+      };
+    }
+    if (world.karel.direction.type !== 'east') {
+      return {
+        passed: false,
+        message: `Karel must end facing east, not ${world.karel.direction.type}.`
+      };
+    }
+    return { passed: true, message: `Court in column ${column} is set up and Karel is back on the path.` };
+  }
+
+  const oneCourtWorld: KarelWorld = {
+    dimensions: { width: 3, height: 5 },
+    karel: {
+      position: { x: 2, y: 1 },
+      direction: { type: 'east' },
+      beepers: -1
+    },
+    walls: courtWalls(2, 3),
+    beepers: []
+  };
+
   const exercise3Config: KarelConfig = {
     persistenceKey: '1/5/exercise-3',
-    initialWorld: {
-      dimensions: { width: 3, height: 3 },
-      karel: {
-        position: { x: 2, y: 1 },
-        direction: { type: 'north' },
-        beepers: -1
-      },
-      walls: [],
-      beepers: []
-    },
-    initialCode: `# Place beepers around the edges of this 3x3 world.
-# That means every cell on the border:
-# Bottom: (1,1), (2,1), (3,1)
-# Right:  (3,2), (3,3)
-# Top:    (2,3), (1,3)
-# Left:   (1,2)
+    initialWorld: oneCourtWorld,
+    initialCode: `# The park's courts all need the same setup:
+# three cones, one on each cell of the court.
 #
-# Karel starts at (2, 1) facing north.
-# Use for loops and functions to keep it clean!
+# Write set_up_court() and call it.
+#
+# set_up_court()
+#   Pre:  Karel is on the path (row 1) at the foot of
+#         a court, facing east
+#   Post: a cone on each of the 3 court cells directly
+#         north of Karel, and Karel is back where it
+#         started, facing east
+#
+# Careful: the court is 3 cells deep, but there is no
+# wall at the top of it. Count — do not walk until
+# something stops you.
 
-def turn_right():
-  for i in range(3):
-    turn_left()
+def set_up_court():
+  pass
 
+set_up_court()
 `,
     allowedFeatures: {
-      karelCommands: [
-        'move', 'turn_left', 'put_beeper', 'pick_beeper',
-        'front_is_clear', 'front_is_blocked'
-      ]
+      karelCommands: countingCommands
     },
     tests: {
       worlds: {
-        'Main Test': {
-          dimensions: { width: 3, height: 3 },
-          karel: {
-            position: { x: 2, y: 1 },
-            direction: { type: 'north' },
-            beepers: -1
-          },
-          walls: [],
-          beepers: []
+        'Court in column 2': oneCourtWorld
+      },
+      validate: (world) => validateOneCourt(world, 2),
+      validateCode: {
+        name: 'Defined and called set_up_court()',
+        validate: (code) => {
+          const defines = /def\s+set_up_court\s*\(/.test(code);
+          const calls = code
+            .split('\n')
+            .some((line) => /^\s*set_up_court\s*\(/.test(line) && !/^\s*def\s/.test(line));
+          if (!defines) {
+            return { passed: false, message: 'You must define a function named set_up_court().' };
+          }
+          if (!calls) {
+            return { passed: false, message: 'Define set_up_court() and then call it.' };
+          }
+          return { passed: true, message: '' };
         }
       },
+      functionTests: [
+        {
+          name: 'set_up_court() works from column 4',
+          functionName: 'set_up_court',
+          world: {
+            dimensions: { width: 5, height: 5 },
+            karel: {
+              position: { x: 4, y: 1 },
+              direction: { type: 'east' },
+              beepers: -1
+            },
+            walls: courtWalls(4, 5),
+            beepers: []
+          },
+          validate: (world) => validateOneCourt(world, 4)
+        },
+        {
+          name: 'set_up_court() works from column 1',
+          functionName: 'set_up_court',
+          world: {
+            dimensions: { width: 4, height: 5 },
+            karel: {
+              position: { x: 1, y: 1 },
+              direction: { type: 'east' },
+              beepers: -1
+            },
+            walls: courtWalls(1, 4),
+            beepers: []
+          },
+          validate: (world) => validateOneCourt(world, 1)
+        }
+      ]
+    }
+  };
+
+  // ── Exercise 4: Tournament day ─────────────────────────────────────────────
+
+  const exercise4Config: KarelConfig = {
+    persistenceKey: '1/5/exercise-4',
+    initialWorld: park(7),
+    initialCode: `# Tournament day. Every court in the park needs the
+# same three cones.
+#
+# The path runs along row 1. A court sits above the
+# path at column 1, and at every third column after
+# that (1, 4, 7, ...). The last court is always
+# against the east wall.
+#
+# You do NOT know how many courts there are.
+# You DO know that every court is exactly 3 deep and
+# that courts are exactly 3 columns apart.
+#
+# Karel starts at (1, 1) facing east with unlimited
+# cones. Set up every court.
+
+`,
+    allowedFeatures: {
+      karelCommands: countingCommands
+    },
+    tests: {
+      worlds: {
+        'Test 1: 3 courts': park(7),
+        'Test 2: 2 courts': park(4),
+        'Test 3: 5 courts': park(13),
+        'Test 4: 1 court': park(1),
+        'Test 5: 4 courts': park(10)
+      },
       validate: (world) => {
-        const border = [
-          { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 },
-          { x: 3, y: 2 }, { x: 3, y: 3 },
-          { x: 2, y: 3 }, { x: 1, y: 3 },
-          { x: 1, y: 2 }
-        ];
-        const missing = border.filter(
-          (r) => !world.beepers.find((b) => b.x === r.x && b.y === r.y && b.count > 0)
+        const columns = courtColumns(world.dimensions.width);
+        const onGround = world.beepers.filter((b) => b.count > 0);
+
+        const missing: string[] = [];
+        for (const c of columns) {
+          for (let y = 2; y <= 4; y++) {
+            if (!onGround.find((b) => b.x === c && b.y === y)) missing.push(`(${c}, ${y})`);
+          }
+        }
+        const strays = onGround.filter(
+          (b) => !columns.includes(b.x) || b.y < 2 || b.y > 4
         );
-        if (missing.length === 0) {
-          return { passed: true, message: 'Border complete! Great use of for loops.' };
+
+        if (missing.length > 0) {
+          const list = missing.slice(0, 4).join(', ');
+          const more = missing.length > 4 ? `, and ${missing.length - 4} more` : '';
+          return {
+            passed: false,
+            message: `${columns.length} court(s) in this park. Missing cones at ${list}${more}.`
+          };
+        }
+        if (strays.length > 0) {
+          const list = strays
+            .slice(0, 4)
+            .map((b) => `(${b.x}, ${b.y})`)
+            .join(', ');
+          return {
+            passed: false,
+            message: `Cones dropped off the courts at ${list}. Nothing belongs on the path or above a court.`
+          };
         }
         return {
-          passed: false,
-          message: `${missing.length} border position(s) missing beepers.`
+          passed: true,
+          message: `All ${columns.length} court(s) set up — and the same code handles a park of any size.`
         };
-      }
+      },
+      loadableTests: [
+        'Test 1: 3 courts',
+        'Test 2: 2 courts',
+        'Test 3: 5 courts',
+        'Test 4: 1 court'
+      ]
     }
   };
 </script>
 
 <LessonShell chapterNumber={1} lessonNumber={5}>
 
-## When You Know Exactly How Many Times
+## Counting Instead of Sensing
 
-In the previous lesson, you used **while loops** to repeat actions until a condition changed — great for when you don't know the size of the world. But sometimes you know *exactly* how many times to repeat something.
+While loops ask the world a question: *is the front clear? are there beepers here?* Karel repeats until the answer changes. That works beautifully — as long as there is something out there to sense.
 
-For that, Python has **for loops**.
+Now picture Karel standing in the middle of a wide open field. No walls nearby, no beepers, nothing. The job is to walk exactly four cells east. Ask `front_is_clear()` and the answer is *yes* — and it is still *yes* after four steps, and after ten, and it stays *yes* until Karel slams into a wall that has nothing to do with the task.
+
+The world has no idea where you were going. **You** know the count. A **for loop** is how you spend that knowledge instead of hunting for a landmark that isn't there.
 
 ## The For Loop
 
-Here's the basic syntax:
-
 ```python
-for i in range(5):
+for i in range(4):
   move()
 ```
 
-This means: **"Repeat `move()` exactly 5 times."**
+This means: **"Do `move()` exactly 4 times."**
 
-- **`for i in range(5):`** — Sets up the loop to run 5 times
-- **`range(5)`** — Generates the numbers 0, 1, 2, 3, 4 (five numbers)
-- **`i`** — A loop variable that counts which repetition we're on (you don't have to use it)
-- **The indented code** — What gets repeated each time
+- **`for i in range(4):`** — sets up a loop that runs 4 times
+- **`range(4)`** — produces the numbers 0, 1, 2, 3 (four of them)
+- **`i`** — the loop variable, holding one of those numbers each time around
+- **The indented code** — what gets repeated
 
-> **Tip:** `range(n)` makes the loop run `n` times. `range(3)` runs 3 times, `range(10)` runs 10 times.
+> **Tip:** `range(n)` runs the loop `n` times. `range(3)` runs 3 times, `range(10)` runs 10 times.
 
-## Example: Place Beepers in a Row
+Notice there is no condition anywhere. Nothing gets checked, nothing gets sensed. The loop simply counts, and when the count runs out, it stops.
 
-Watch Karel place 5 beepers, one at each position, using a for loop. Notice how compact the code is compared to writing `put_beeper()` and `move()` five separate times:
+## Example: No Landmarks, No Problem
 
-<KarelEnvironment config={rowExample} />
+Karel is standing in a big empty field and needs to mark the spot four east and four north. Run it, and imagine what `while front_is_clear(): move()` would have done instead — Karel would have sailed straight past the mark and stopped at a wall eight cells away.
+
+<KarelEnvironment config={openFieldExample} />
 
 ---
 
 ## For Loops Inside Functions
 
-For loops are especially useful inside function definitions. Remember `turn_right()`? Instead of writing `turn_left()` three times, you can use a for loop:
+Remember `turn_right()`? Three left turns, written out three times. A for loop says it better:
 
 ```python
 def turn_right():
@@ -276,59 +627,137 @@ def turn_right():
     turn_left()
 ```
 
-This does the exact same thing — it just uses a loop instead of repeating the command.
+And its sibling, which you will want constantly:
 
-## Example: Tracing a Square
+```python
+def turn_around():
+  for i in range(2):
+    turn_left()
+```
 
-This example combines for loops with a function. Karel traces a square path, placing a beeper at each corner. Notice the **nested structure**: a for loop in the main program calls `turn_right()`, which itself contains a for loop!
+These are the smallest useful for loops you will ever write, and they are worth keeping in your toolkit for the rest of the chapter.
 
-<KarelEnvironment config={turnRightForExample} />
+## Nested For Loops
+
+A for loop can hold another for loop. This is how you cover an *area* rather than a line: an outer loop walks the rows, and an inner loop walks the cells within a row.
+
+Watch for the fencepost problem from the last lesson — it shows up twice here, and both times the fix is the same shape:
+
+- A row of 4 stones needs 4 `put_beeper()` calls but only **3** moves between them.
+- A patch of 3 rows needs 3 paved rows but only **2** hops between them.
+
+## Example: Paving a Rectangle
+
+<KarelEnvironment config={paveExample} />
+
+Two things to notice. First, `pave_row()` and `next_row()` are named for what they do, so the bottom of the program reads almost like English. Second, every single loop in this program is a for loop — there is not a wall in sight, and none is needed.
 
 ---
 
-## When to Use For vs. While
+## For and While Are Partners
 
-A common question: when should you use a `for` loop vs. a `while` loop?
+It is tempting to treat these as rivals. They are not. They answer different questions:
 
-- **For loop** — When you know the exact number of repetitions: "do this 5 times," "do this 3 times"
-- **While loop** — When you don't know how many times, but you know when to stop: "keep going until you hit a wall," "keep picking up until no beepers remain"
+| | For loop | While loop |
+| --- | --- | --- |
+| **Knows how many** | Yes, before it starts | No |
+| **Knows when to stop** | When the count runs out | When the world says so |
+| **Needs sensors** | No | Yes |
+| **Good for** | A job of a known size | A job of an unknown size |
 
-Both are important tools. As you practice, you'll develop an intuition for which one fits each situation.
+The interesting programs use both at once, because real jobs are usually **an unknown number of known things**. You do not know how many rooms are in the building, but you know every room has four walls. You do not know how many customers are in line, but you know every customer gets one receipt.
+
+That shape has a name worth remembering: a `while` loop on the outside for the part you cannot predict, and a `for` loop on the inside for the part you can.
+
+## Example: Known Job, Unknown Count
+
+Karel plants three bulbs every third cell along a walkway. The walkway could be any length — that is the while loop's problem. Every planting is exactly three bulbs and every gap is exactly three steps — that is the for loop's problem.
+
+<KarelEnvironment config={bulbsExample} />
+
+Note the fencepost pattern again: the first planting happens *before* the loop, and each trip through the loop moves and then plants.
 
 ---
 
-## Exercise 1: Fill the Row
+## Going Further: The Loop Variable Is a Number
 
-Place a beeper at **every** position in the 5-cell row, including the very first and very last position.
+So far `i` has just been along for the ride. But it really does hold a number — 0, then 1, then 2 — and `range()` is happy to accept it. That means the inner loop can be a different length every time around the outer loop:
 
-Karel starts at (1, 1) facing east with unlimited beepers. Think about how many times you need to place-and-move, and whether there's a beeper needed at the final position.
+```python
+for i in range(4):
+  for j in range(i + 1):
+    put_beeper()
+```
+
+Row 0 gets 1 beeper, row 1 gets 2, row 2 gets 3, row 3 gets 4 — a staircase. Run it and watch the rows grow:
+
+<KarelEnvironment config={staircaseExample} />
+
+You do not need this for the exercises below. It is here because it is your first glimpse of a loop variable being *used* rather than ignored, which is most of what loops do outside of Karel's world.
+
+---
+
+## Exercise 1: Pickleball Karel Stakes the Court
+
+Karel is putting a pickleball court in the back yard, and the first job is driving a stake into each of the four corners.
+
+The court is a square **5 cells on a side**, with Karel's starting cell as its southwest corner. Karel always starts at **(2, 2) facing east** with unlimited stakes, and the yard is always big enough — but the yard is a **different size in every test**, so there is no wall at a reliable distance to steer by.
+
+Place a stake on all four corners and finish back on the starting stake, facing east. Load the other test worlds from the dropdown to confirm your counts hold up.
 
 <KarelEnvironment config={exercise1Config} />
 
 ---
 
-## Exercise 2: Build a Tower
+## Exercise 2: Paint the Kitchen
 
-Karel starts at (3, 1) facing north in a 5×5 world. Place a beeper at every position going up column 3: (3,1), (3,2), (3,3), (3,4), and (3,5).
+Now the non-volley zone — the "kitchen." It is a rectangle **5 wide and 3 deep**, again with Karel's starting cell as its southwest corner. Put a beeper on all 15 cells, then finish back on the starting cell.
 
-Use a for loop to keep your code short.
+Same deal as before: Karel starts at (2, 2) facing east, and the yard changes size between tests.
+
+This one wants nested for loops and a couple of helper functions. Two fenceposts are waiting for you — one inside a row, one between rows. And think carefully about the last row: whatever you do to get from one row to the next, you must not do it after the final row.
 
 <KarelEnvironment config={exercise2Config} />
 
 ---
 
-## Exercise 3: Trace the Border
+## Exercise 3: One Court in the Park
 
-Place beepers along the entire border of a 3×3 world. That's all 8 border cells:
+Karel's yard court was such a hit that the city has asked for help setting up the park courts before a tournament.
 
-- **Bottom:** (1,1), (2,1), (3,1)
-- **Right side:** (3,2), (3,3)
-- **Top:** (2,3), (1,3)
-- **Left side:** (1,2)
+Each court sits **north of the path**, is **3 cells deep**, and needs a cone on each of its three cells. Write a function that handles exactly one court:
 
-Karel starts at (2, 1) facing north. A `turn_right()` helper is provided. Think about the pattern: move along one side placing beepers, turn, then do the next side.
+```python
+# set_up_court()
+#   Pre:  Karel is on the path (row 1) at the foot of a court, facing east
+#   Post: a cone on each of the 3 court cells directly north of Karel,
+#         and Karel is back where it started, facing east
+```
+
+Write it, call it, and mind the pre/post conditions — the next exercise depends on this function working from *anywhere* on the path, so it is tested from more than one starting column.
+
+> **Watch out:** the court is 3 deep, but there is **no wall** at the far end of it. Walking north until something blocks you takes Karel one cell too far. Count.
 
 <KarelEnvironment config={exercise3Config} />
+
+---
+
+## Exercise 4: Tournament Day
+
+Time to do the whole park.
+
+The path runs along row 1. A court sits above the path at column 1 and at **every third column** after that — columns 1, 4, 7, and so on — with the last court always against the east wall. Karel starts at **(1, 1) facing east** with unlimited cones.
+
+Here is the catch, and the point of the whole lesson:
+
+- You **do not** know how many courts there are. The park can be any size.
+- You **do** know that every court is exactly 3 deep, and that courts are exactly 3 columns apart.
+
+Set up every court in the park. Reuse `set_up_court()` from Exercise 3 — paste it in and build around it.
+
+Think about which part of the job each kind of loop owns, and remember the fencepost: the first court needs attention before the loop ever runs. The dropdown holds four sample parks, including a one-court park that breaks careless solutions; your code is checked against another park you cannot see.
+
+<KarelEnvironment config={exercise4Config} />
 
 ---
 
@@ -336,11 +765,12 @@ Karel starts at (2, 1) facing north. A `turn_right()` helper is provided. Think 
 
 In this lesson you learned:
 
-- **For loops** repeat code a specific number of times using `for i in range(n):`
-- `range(n)` makes the loop run exactly `n` times
-- For loops work great inside function definitions
-- **For loops** are for known counts; **while loops** are for unknown conditions
-- Loops and functions can be nested for powerful combinations
+- **For loops** repeat code a fixed number of times with `for i in range(n):` — no condition, no sensing
+- For loops are the right tool when **you** hold the count and the world offers no landmark
+- **Nested for loops** cover areas: an outer loop for rows, an inner loop for cells
+- The fencepost problem follows you into for loops — count the gaps, not just the items
+- **`while` outside, `for` inside** is the pattern for an unknown number of known things
+- The loop variable `i` is a real number you can use, not just a placeholder
 
 In the next lesson, you'll learn about **if/else statements** — making Karel choose different actions based on its surroundings.
 

@@ -1,99 +1,51 @@
 <script lang="ts">
   import LessonShell from '$lib/components/LessonShell.svelte';
   import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
-  import type { KarelConfig } from '$lib/karel/types';
+  import type { BeeperLocation, KarelConfig, KarelWorld, Wall } from '$lib/karel/types';
 
-  // Exercise 1: Fill the entire grid with beepers
-  const fillGridConfig: KarelConfig = {
-    persistenceKey: '1/7/exercise-1',
+  /** Beepers on a cell, or 0 if the cell is empty. */
+  function counter(world: KarelWorld): (x: number, y: number) => number {
+    return (x, y) => world.beepers.find((b) => b.x === x && b.y === y)?.count ?? 0;
+  }
+
+  // ── Example: Leaving a note ────────────────────────────────────────────────
+
+  const markerExample: KarelConfig = {
     initialWorld: {
-      dimensions: { width: 5, height: 4 },
+      dimensions: { width: 8, height: 1 },
       karel: {
         position: { x: 1, y: 1 },
         direction: { type: 'east' },
-        beepers: -1
+        beepers: 1
       },
       walls: [],
       beepers: []
     },
-    initialCode: `# Fill every cell in the grid with a beeper!
-# Karel starts at (1, 1) facing east.
-#
-# Strategy: fill one row, move up, fill the next row
-# going the other direction, and repeat.
-#
-# Your solution should work for any grid size.
-# Use while loops to handle unknown dimensions.
+    initialCode: `# Karel has no way to remember where it started.
+# So it leaves itself a note: a beeper on the ground.
 
-def turn_right():
-  for i in range(3):
-    turn_left()
+put_beeper()
 
-def turn_around():
-  turn_left()
-  turn_left()
+while front_is_clear():
+  move()
 
-`,
-    tests: {
-      worlds: {
-        'Test 1: 5x4': {
-          dimensions: { width: 5, height: 4 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: -1
-          },
-          walls: [],
-          beepers: []
-        },
-        'Test 2: 3x3': {
-          dimensions: { width: 3, height: 3 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: -1
-          },
-          walls: [],
-          beepers: []
-        },
-        'Test 3: 7x2': {
-          dimensions: { width: 7, height: 2 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: -1
-          },
-          walls: [],
-          beepers: []
-        }
-      },
-      validate: (world) => {
-        const { width, height } = world.dimensions;
-        const total = width * height;
-        let filled = 0;
-        for (let x = 1; x <= width; x++) {
-          for (let y = 1; y <= height; y++) {
-            const b = world.beepers.find((b) => b.x === x && b.y === y && b.count > 0);
-            if (b) filled++;
-          }
-        }
-        if (filled === total) {
-          return { passed: true, message: `All ${total} cells filled! Your grid-fill algorithm works!` };
-        }
-        return {
-          passed: false,
-          message: `${filled} out of ${total} cells have beepers. Make sure you cover every row and column.`
-        };
-      },
-      loadableTests: ['Test 1: 5x4', 'Test 2: 3x3', 'Test 3: 7x2']
-    }
+# Turn around and walk until Karel is standing
+# on its own marker again.
+turn_left()
+turn_left()
+
+while no_beepers_present():
+  move()
+
+pick_beeper()
+`
   };
 
-  // Exercise 2: Checkerboard pattern
-  const checkerboardConfig: KarelConfig = {
-    persistenceKey: '1/7/exercise-2',
-    initialWorld: {
-      dimensions: { width: 5, height: 5 },
+  // ── Exercise 1: Sowing the field ───────────────────────────────────────────
+
+  function field(width: number, height: number): KarelWorld {
+    return {
+      dimensions: { width, height },
       karel: {
         position: { x: 1, y: 1 },
         direction: { type: 'east' },
@@ -101,21 +53,26 @@ def turn_around():
       },
       walls: [],
       beepers: []
-    },
-    initialCode: `# Create a checkerboard pattern!
-# Place beepers on every other cell, like a chess board.
-# (1,1) should have a beeper, (2,1) should not,
-# (3,1) should, etc.
+    };
+  }
+
+  const fields: Record<string, { width: number; height: number }> = {
+    'Test 1: A 5x4 field': { width: 5, height: 4 },
+    'Test 2: A 3x3 field': { width: 3, height: 3 },
+    'Test 3: Long and shallow (7x2)': { width: 7, height: 2 },
+    'Test 4: A single furrow (1x6)': { width: 1, height: 6 },
+    'Test 5: One row across (6x1)': { width: 6, height: 1 },
+    'Test 6: A 4x5 field': { width: 4, height: 5 }
+  };
+
+  const exercise1Config: KarelConfig = {
+    persistenceKey: '1/7/exercise-1',
+    initialWorld: field(5, 4),
+    initialCode: `# Sow the whole field: exactly one seed on every cell.
 #
-# Row 1: beeper, skip, beeper, skip, beeper
-# Row 2: skip, beeper, skip, beeper, skip
-# Row 3: beeper, skip, beeper, skip, beeper
-# ...
-#
-# This is a challenging problem! Break it into steps:
-# 1. How do you fill one row with the right pattern?
-# 2. How do you move to the next row?
-# 3. How do rows alternate?
+# Karel starts at (1, 1) facing east with an endless
+# sack of seed. The field is a different shape in
+# every test, so nothing may be counted out in advance.
 
 def turn_right():
   for i in range(3):
@@ -127,82 +84,354 @@ def turn_around():
 
 `,
     tests: {
-      worlds: {
-        'Test: 5x5': {
-          dimensions: { width: 5, height: 5 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: -1
-          },
-          walls: [],
-          beepers: []
-        }
-      },
+      worlds: Object.fromEntries(
+        Object.entries(fields).map(([name, { width, height }]) => [name, field(width, height)])
+      ),
       validate: (world) => {
         const { width, height } = world.dimensions;
-        const errors = [];
+        const countAt = counter(world);
+
         for (let y = 1; y <= height; y++) {
           for (let x = 1; x <= width; x++) {
-            const shouldHave = (x + y) % 2 === 0;
-            const has = world.beepers.find((b) => b.x === x && b.y === y && b.count > 0);
-            if (shouldHave && !has) {
-              errors.push(`(${x},${y}) should have a beeper`);
+            const seeds = countAt(x, y);
+            if (seeds === 1) continue;
+            if (seeds === 0) {
+              return {
+                passed: false,
+                message: `(${x}, ${y}) is bare. Every cell in the field needs exactly one seed.`
+              };
             }
-            if (!shouldHave && has) {
-              errors.push(`(${x},${y}) should NOT have a beeper`);
-            }
+            return {
+              passed: false,
+              message: `(${x}, ${y}) holds ${seeds} seeds. One per cell — no doubling back over sown ground.`
+            };
           }
         }
-        if (errors.length === 0) {
-          return { passed: true, message: 'Perfect checkerboard! This is a really impressive solution.' };
-        }
-        if (errors.length <= 3) {
-          return { passed: false, message: `Almost! Issues: ${errors.join('; ')}` };
-        }
+
         return {
-          passed: false,
-          message: `${errors.length} cells have the wrong state. Remember: (1,1) should have a beeper, and the pattern alternates.`
+          passed: true,
+          message: `All ${width * height} cells sown, one seed each.`
         };
-      }
+      },
+      loadableTests: [
+        'Test 1: A 5x4 field',
+        'Test 2: A 3x3 field',
+        'Test 3: Long and shallow (7x2)',
+        'Test 4: A single furrow (1x6)',
+        'Test 5: One row across (6x1)'
+      ]
     }
   };
 
-  // Exercise 3: Collect all beepers in a room with walls
-  const roomCleanerConfig: KarelConfig = {
-    persistenceKey: '1/7/exercise-3',
-    initialWorld: {
-      dimensions: { width: 6, height: 4 },
+  // ── Exercise 2: The moneychanger ───────────────────────────────────────────
+
+  /** A counting bench: a stack of `stack` coins on (2, 1), everything else bare. */
+  function bench(width: number, stack: number): KarelWorld {
+    return {
+      dimensions: { width, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: stack > 0 ? [{ x: 2, y: 1, count: stack }] : []
+    };
+  }
+
+  const benches: Record<string, { width: number; stack: number }> = {
+    'Test 1: A stack of three': { width: 5, stack: 3 },
+    'Test 2: A single coin': { width: 6, stack: 1 },
+    'Test 3: A tall stack': { width: 7, stack: 7 },
+    'Test 4: An empty bench': { width: 8, stack: 0 },
+    'Test 5: A stack Karel cannot see': { width: 9, stack: 5 }
+  };
+
+  const benchByWidth = new Map(Object.values(benches).map(({ width, stack }) => [width, stack]));
+
+  const exercise2Config: KarelConfig = {
+    persistenceKey: '1/7/exercise-2',
+    initialWorld: bench(5, 3),
+    initialCode: `# Every coin on (2, 1) is worth two on (3, 1).
+#
+# Move the stack across and double it on the way:
+# column 2 ends empty, and column 3 ends holding
+# twice what column 2 started with.
+#
+# Karel's purse is bottomless, so the coins Karel
+# puts down need not be the ones it picked up.
+
+def turn_around():
+  turn_left()
+  turn_left()
+
+`,
+    tests: {
+      worlds: Object.fromEntries(
+        Object.entries(benches).map(([name, { width, stack }]) => [name, bench(width, stack)])
+      ),
+      validate: (world) => {
+        const stack = benchByWidth.get(world.dimensions.width);
+        if (stack === undefined) return { passed: false, message: 'Unknown bench.' };
+
+        const countAt = counter(world);
+        const stray = world.beepers.find(
+          (b) => b.count > 0 && !(b.y === 1 && (b.x === 2 || b.x === 3))
+        );
+        if (stray) {
+          return {
+            passed: false,
+            message: `(${stray.x}, ${stray.y}) holds ${stray.count} coin(s). When Karel is done, every coin in the world belongs on (3, 1).`
+          };
+        }
+
+        const source = countAt(2, 1);
+        if (source > 0) {
+          return {
+            passed: false,
+            message: `(2, 1) still holds ${source} coin(s). The whole stack has to come across.`
+          };
+        }
+
+        const doubled = countAt(3, 1);
+        if (doubled !== stack * 2) {
+          return {
+            passed: false,
+            message: `(2, 1) started with ${stack} coin(s), so (3, 1) should end with ${stack * 2}. It holds ${doubled}.`
+          };
+        }
+
+        if (stack === 0) {
+          return {
+            passed: true,
+            message: 'Nothing doubles to nothing — and Karel left the bench alone.'
+          };
+        }
+        return { passed: true, message: `${stack} doubled to ${stack * 2}.` };
+      },
+      loadableTests: [
+        'Test 1: A stack of three',
+        'Test 2: A single coin',
+        'Test 3: A tall stack',
+        'Test 4: An empty bench'
+      ]
+    }
+  };
+
+  // ── Exercise 3: Settling the score ─────────────────────────────────────────
+
+  /** A scoreboard row: the home tally on (1, 1), the visitors' at the far end. */
+  function scoreboard(width: number, home: number, away: number): KarelWorld {
+    const tallies: BeeperLocation[] = [];
+    if (home > 0) tallies.push({ x: 1, y: 1, count: home });
+    if (away > 0) tallies.push({ x: width, y: 1, count: away });
+
+    return {
+      dimensions: { width, height: 1 },
       karel: {
         position: { x: 1, y: 1 },
         direction: { type: 'east' },
         beepers: 0
       },
-      walls: [
-        // Create some internal walls to make it interesting
-        { type: 'vertical', x: 3, y: 1 },    // wall to right of (3,1)
-        { type: 'vertical', x: 3, y: 2 },    // wall to right of (3,2)
-        { type: 'horizontal', x: 5, y: 3 }   // wall below (5,3)
-      ],
-      beepers: [
-        { x: 2, y: 1, count: 1 },
-        { x: 1, y: 2, count: 1 },
-        { x: 5, y: 1, count: 1 },
-        { x: 6, y: 2, count: 1 },
-        { x: 3, y: 4, count: 1 },
-        { x: 6, y: 4, count: 1 }
+      walls: [],
+      beepers: tallies
+    };
+  }
+
+  const scoreboards: Record<string, { width: number; home: number; away: number }> = {
+    'Test 1: Five against three': { width: 7, home: 5, away: 3 },
+    'Test 2: Two against six': { width: 5, home: 2, away: 6 },
+    'Test 3: A dead heat': { width: 6, home: 4, away: 4 },
+    'Test 4: Nothing on the home board': { width: 4, home: 0, away: 3 },
+    'Test 5: A game Karel cannot see': { width: 8, home: 6, away: 1 }
+  };
+
+  const scoreboardByWidth = new Map(Object.values(scoreboards).map((s) => [s.width, s]));
+
+  const exercise3Config: KarelConfig = {
+    persistenceKey: '1/7/exercise-3',
+    initialWorld: scoreboard(7, 5, 3),
+    initialCode: `# The home tally sits on (1, 1); the visitors' tally
+# sits at the far end of the row.
+#
+# Cancel them one against one until a side runs out.
+# The lead stays on the board, and the loser's end
+# finishes bare.
+#
+# Karel's bag starts empty. Whatever Karel picks up
+# stays in the bag.
+
+def turn_around():
+  turn_left()
+  turn_left()
+
+`,
+    tests: {
+      worlds: Object.fromEntries(
+        Object.entries(scoreboards).map(([name, { width, home, away }]) => [
+          name,
+          scoreboard(width, home, away)
+        ])
+      ),
+      validate: (world) => {
+        const game = scoreboardByWidth.get(world.dimensions.width);
+        if (!game) return { passed: false, message: 'Unknown scoreboard.' };
+
+        const { width, home, away } = game;
+        const expectedHome = Math.max(home - away, 0);
+        const expectedAway = Math.max(away - home, 0);
+        const countAt = counter(world);
+
+        const stray = world.beepers.find(
+          (b) => b.count > 0 && !(b.y === 1 && (b.x === 1 || b.x === width))
+        );
+        if (stray) {
+          return {
+            passed: false,
+            message: `(${stray.x}, ${stray.y}) holds ${stray.count} marker(s). Cancelled markers go in the bag, not back on the board.`
+          };
+        }
+
+        const actualHome = countAt(1, 1);
+        const actualAway = countAt(width, 1);
+        if (actualHome !== expectedHome || actualAway !== expectedAway) {
+          const lead =
+            expectedHome > 0
+              ? `the home side leads by ${expectedHome}`
+              : expectedAway > 0
+                ? `the visitors lead by ${expectedAway}`
+                : 'the game is tied, so both ends finish bare';
+          return {
+            passed: false,
+            message: `The tallies started ${home} and ${away}, so ${lead}: (1, 1) should hold ${expectedHome} and (${width}, 1) should hold ${expectedAway}. Karel left ${actualHome} and ${actualAway}.`
+          };
+        }
+
+        if (expectedHome === 0 && expectedAway === 0) {
+          return { passed: true, message: 'Dead heat — both ends cancelled down to nothing.' };
+        }
+        return {
+          passed: true,
+          message: `Settled: ${home} against ${away} leaves a lead of ${expectedHome + expectedAway}.`
+        };
+      },
+      loadableTests: [
+        'Test 1: Five against three',
+        'Test 2: Two against six',
+        'Test 3: A dead heat',
+        'Test 4: Nothing on the home board'
+      ]
+    }
+  };
+
+  // ── Exercise 4: The vault run ──────────────────────────────────────────────
+
+  /** One vault: a shaft running north off the corridor. `crates[i]` sits on row i + 2. */
+  interface Vault {
+    column: number;
+    crates: number[];
+  }
+
+  /**
+   * A corridor along row 1 with sealed vaults opening north out of it.
+   * Everything above row 1 is walled off except the vault shafts.
+   */
+  function vaultRun(width: number, height: number, vaults: Vault[]): KarelWorld {
+    const walls: Wall[] = [];
+    const crates: BeeperLocation[] = [];
+    const openings = new Set(vaults.map((v) => v.column));
+
+    // Seal the corridor's ceiling everywhere except the vault doorways.
+    for (let x = 1; x <= width; x++) {
+      if (!openings.has(x)) walls.push({ type: 'horizontal', x, y: 2 });
+    }
+
+    for (const vault of vaults) {
+      const { column, crates: contents } = vault;
+      contents.forEach((count, i) => {
+        const y = i + 2;
+        if (column > 1) walls.push({ type: 'vertical', x: column - 1, y });
+        if (column < width) walls.push({ type: 'vertical', x: column, y });
+        if (count > 0) crates.push({ x: column, y, count });
+      });
+      const capY = contents.length + 2;
+      if (capY <= height) walls.push({ type: 'horizontal', x: column, y: capY });
+    }
+
+    return {
+      dimensions: { width, height },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls,
+      beepers: crates
+    };
+  }
+
+  const vaultRuns: Record<string, { width: number; height: number; vaults: Vault[] }> = {
+    'Test 1: Three vaults': {
+      width: 9,
+      height: 5,
+      vaults: [
+        { column: 3, crates: [2, 0, 1] },
+        { column: 6, crates: [1, 3] },
+        { column: 8, crates: [0, 1, 0, 2] }
       ]
     },
-    initialCode: `# Clean the room! Pick up every beeper.
-# Be careful — there are walls inside this room!
+    'Test 2: A vault at each end': {
+      width: 7,
+      height: 4,
+      vaults: [
+        { column: 1, crates: [1, 1, 1] },
+        { column: 4, crates: [2] },
+        { column: 7, crates: [0, 1] }
+      ]
+    },
+    'Test 3: One deep vault': {
+      width: 5,
+      height: 6,
+      vaults: [{ column: 3, crates: [3, 0, 0, 1, 2] }]
+    },
+    'Test 4: Nothing to collect': {
+      width: 6,
+      height: 3,
+      vaults: [
+        { column: 2, crates: [0, 0] },
+        { column: 5, crates: [0, 0] }
+      ]
+    },
+    'Test 5: A warehouse Karel cannot see': {
+      width: 8,
+      height: 5,
+      vaults: [
+        { column: 1, crates: [1, 0] },
+        { column: 4, crates: [1, 1, 1, 1] },
+        { column: 8, crates: [5] }
+      ]
+    }
+  };
+
+  const vaultRunByWidth = new Map(
+    Object.values(vaultRuns).map((run) => [
+      run.width,
+      run.vaults.reduce((sum, v) => sum + v.crates.reduce((a, b) => a + b, 0), 0)
+    ])
+  );
+
+  const exercise4Config: KarelConfig = {
+    persistenceKey: '1/7/exercise-4',
+    initialWorld: vaultRun(9, 5, vaultRuns['Test 1: Three vaults'].vaults),
+    initialCode: `# Empty every vault into the depot on (1, 1).
 #
-# You'll need all the skills you've learned:
-# - Functions for clean code
-# - While loops for moving
-# - If statements for checking beepers and walls
+# The vaults open north off the corridor. You do not
+# know how many there are, which columns they open
+# from, how deep they run, or how much each one holds.
 #
-# Hint: one approach is to sweep row by row,
-# but you'll need to handle the internal walls.
+# Karel's bag starts empty. Finish standing on (1, 1)
+# facing east, with every crate in the world piled up
+# there.
 
 def turn_right():
   for i in range(3):
@@ -214,80 +443,338 @@ def turn_around():
 
 `,
     tests: {
-      worlds: {
-        'Main Test': {
-          dimensions: { width: 6, height: 4 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: 0
-          },
-          walls: [
-            { type: 'vertical', x: 3, y: 1 },
-            { type: 'vertical', x: 3, y: 2 },
-            { type: 'horizontal', x: 5, y: 3 }
-          ],
-          beepers: [
-            { x: 2, y: 1, count: 1 },
-            { x: 1, y: 2, count: 1 },
-            { x: 5, y: 1, count: 1 },
-            { x: 6, y: 2, count: 1 },
-            { x: 3, y: 4, count: 1 },
-            { x: 6, y: 4, count: 1 }
-          ]
-        }
-      },
+      worlds: Object.fromEntries(
+        Object.entries(vaultRuns).map(([name, { width, height, vaults }]) => [
+          name,
+          vaultRun(width, height, vaults)
+        ])
+      ),
       validate: (world) => {
-        const remaining = world.beepers.filter((b) => b.count > 0);
-        if (remaining.length === 0) {
-          return { passed: true, message: 'Room is clean! All beepers collected. Excellent work!' };
+        const total = vaultRunByWidth.get(world.dimensions.width);
+        if (total === undefined) return { passed: false, message: 'Unknown warehouse.' };
+
+        const countAt = counter(world);
+        const stray = world.beepers.find((b) => b.count > 0 && !(b.x === 1 && b.y === 1));
+        if (stray) {
+          return {
+            passed: false,
+            message: `(${stray.x}, ${stray.y}) still holds ${stray.count} crate(s). Every vault has to come out empty.`
+          };
         }
-        return {
-          passed: false,
-          message: `${remaining.length} beeper(s) still on the ground. Make sure Karel visits every reachable cell.`
-        };
-      }
+
+        const depot = countAt(1, 1);
+        if (depot !== total) {
+          return {
+            passed: false,
+            message: `The warehouse holds ${total} crate(s), but the depot on (1, 1) has ${depot}. Karel is still carrying the rest.`
+          };
+        }
+
+        const { x, y } = world.karel.position;
+        if (x !== 1 || y !== 1) {
+          return {
+            passed: false,
+            message: `The crates are all in, but Karel finished on (${x}, ${y}) instead of the depot on (1, 1).`
+          };
+        }
+        if (world.karel.direction.type !== 'east') {
+          return {
+            passed: false,
+            message: `Karel is home but facing ${world.karel.direction.type}. Finish facing east.`
+          };
+        }
+
+        if (total === 0) {
+          return {
+            passed: true,
+            message: 'Every vault checked, nothing to haul, and Karel back at the depot.'
+          };
+        }
+        return { passed: true, message: `All ${total} crates stacked on the depot.` };
+      },
+      loadableTests: [
+        'Test 1: Three vaults',
+        'Test 2: A vault at each end',
+        'Test 3: One deep vault',
+        'Test 4: Nothing to collect'
+      ]
+    }
+  };
+
+  // ── Exercise 5: Tiling the floor ───────────────────────────────────────────
+
+  const floors: Record<string, { width: number; height: number }> = {
+    'Test 1: A 5x5 floor': { width: 5, height: 5 },
+    'Test 2: An even floor (4x4)': { width: 4, height: 4 },
+    'Test 3: Wide and low (6x3)': { width: 6, height: 3 },
+    'Test 4: A single column (1x5)': { width: 1, height: 5 },
+    'Test 5: A floor Karel cannot see': { width: 3, height: 6 }
+  };
+
+  const exercise5Config: KarelConfig = {
+    persistenceKey: '1/7/exercise-5',
+    initialWorld: field(5, 5),
+    initialCode: `# Tile the floor in a checkerboard: a beeper on
+# (1, 1), then every other cell, in both directions.
+#
+# A cell gets a tile when the cell below it does not,
+# and a cell gets a tile when the cell beside it does
+# not. Karel can only see the cell it is standing on
+# — so stand on the right cell before you ask.
+
+def turn_right():
+  for i in range(3):
+    turn_left()
+
+def turn_around():
+  turn_left()
+  turn_left()
+
+`,
+    tests: {
+      worlds: Object.fromEntries(
+        Object.entries(floors).map(([name, { width, height }]) => [name, field(width, height)])
+      ),
+      validate: (world) => {
+        const { width, height } = world.dimensions;
+        const countAt = counter(world);
+
+        for (let y = 1; y <= height; y++) {
+          for (let x = 1; x <= width; x++) {
+            const expected = (x + y) % 2 === 0 ? 1 : 0;
+            const actual = countAt(x, y);
+            if (actual === expected) continue;
+
+            if (expected === 1) {
+              return {
+                passed: false,
+                message:
+                  actual === 0
+                    ? `(${x}, ${y}) should hold a tile and is bare.`
+                    : `(${x}, ${y}) holds ${actual} tiles. One tile per cell.`
+              };
+            }
+            return {
+              passed: false,
+              message: `(${x}, ${y}) should stay bare — it sits between two tiles.`
+            };
+          }
+        }
+
+        return { passed: true, message: 'A perfect checkerboard, corner to corner.' };
+      },
+      loadableTests: [
+        'Test 1: A 5x5 floor',
+        'Test 2: An even floor (4x4)',
+        'Test 3: Wide and low (6x3)',
+        'Test 4: A single column (1x5)'
+      ]
+    }
+  };
+
+  // ── Exercise 6: Finding the center ─────────────────────────────────────────
+
+  function hall(width: number): KarelWorld {
+    return {
+      dimensions: { width, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: -1
+      },
+      walls: [],
+      beepers: []
+    };
+  }
+
+  const halls: Record<string, number> = {
+    'Test 1: Seven cells': 7,
+    'Test 2: An even hall (8 cells)': 8,
+    'Test 3: Five cells': 5,
+    'Test 4: The shortest hall (2 cells)': 2,
+    'Test 5: Eleven cells': 11,
+    'Test 6: A hall Karel cannot see': 9
+  };
+
+  const exercise6Config: KarelConfig = {
+    persistenceKey: '1/7/exercise-6',
+    initialWorld: hall(7),
+    initialCode: `# Put a single beeper on the middle cell of the hall
+# and finish standing on it. Nothing else may be left
+# lying on the floor.
+#
+# Karel cannot count the hall — but two markers
+# walking toward each other have to meet somewhere.
+#
+# The hall is at least 2 cells long. When it has an
+# even number of cells, either middle cell counts.
+
+def turn_around():
+  turn_left()
+  turn_left()
+
+`,
+    tests: {
+      worlds: Object.fromEntries(Object.entries(halls).map(([name, width]) => [name, hall(width)])),
+      validate: (world) => {
+        const { width } = world.dimensions;
+        const low = Math.floor((width + 1) / 2);
+        const high = Math.ceil((width + 1) / 2);
+        const target = low === high ? `(${low}, 1)` : `(${low}, 1) or (${high}, 1)`;
+        const placed = world.beepers.filter((b) => b.count > 0);
+
+        if (placed.length === 0) {
+          return {
+            passed: false,
+            message: `The floor is bare. A hall of ${width} cells wants one beeper on ${target}.`
+          };
+        }
+        if (placed.length > 1) {
+          return {
+            passed: false,
+            message: `${placed.length} cells still hold beepers. Karel's markers have to come back up — only the middle one stays.`
+          };
+        }
+        const mark = placed[0];
+        if (mark.count > 1) {
+          return {
+            passed: false,
+            message: `(${mark.x}, 1) holds ${mark.count} beepers. The middle is marked with exactly one.`
+          };
+        }
+        if (mark.x < low || mark.x > high) {
+          return {
+            passed: false,
+            message: `(${mark.x}, 1) is not the middle of a hall ${width} cells long — ${target} is.`
+          };
+        }
+        if (world.karel.position.x !== mark.x) {
+          return {
+            passed: false,
+            message: `The mark is in the right place, but Karel finished on (${world.karel.position.x}, 1) instead of standing on it.`
+          };
+        }
+
+        return { passed: true, message: `Dead center of ${width} cells, found without counting.` };
+      },
+      loadableTests: [
+        'Test 1: Seven cells',
+        'Test 2: An even hall (8 cells)',
+        'Test 3: Five cells',
+        'Test 4: The shortest hall (2 cells)',
+        'Test 5: Eleven cells'
+      ]
     }
   };
 </script>
 
 <LessonShell chapterNumber={1} lessonNumber={7}>
 
-## Time to Put It All Together
+## Everything, All at Once
 
-Over the past six lessons, you've learned a complete toolkit for programming Karel:
+Six lessons in, Karel's toolkit is complete:
 
-- **Basic commands**: `move()`, `turn_left()`, `pick_beeper()`, `put_beeper()`
-- **Functions**: Teaching Karel new tricks with `def`
-- **Decomposition**: Breaking big problems into smaller pieces
-- **While loops**: Repeating until a condition changes
-- **For loops**: Repeating a known number of times
-- **If/else**: Making decisions based on Karel's surroundings
+- **Commands** — `move()`, `turn_left()`, `pick_beeper()`, `put_beeper()`
+- **Functions** — naming a job once and calling it by name
+- **Decomposition** — breaking a big job into jobs small enough to name
+- **While loops** — repeating until the world says stop
+- **For loops** — repeating a count you worked out yourself
+- **If, else and elif** — choosing a branch from what the sensors say
 
-Now it's time to combine everything. Each exercise below requires multiple skills working together. There's no single "right" approach — think about the problem, plan your strategy, decompose it into functions, and use the right loops and conditionals for each part.
+Nothing new is added in this lesson. What changes is the size of the problems. Each exercise below needs several of those tools working together, and none of them can be solved by typing until it looks right — you have to decide on a plan first, in plain language, and only then write it down as functions.
 
-> **Advice:** Before writing code, think about the problem in plain language first. What's the overall plan? What are the major steps? Write those as function names, then fill in the details.
-
----
-
-## Exercise 1: Fill the Grid
-
-Fill **every cell** in the grid with a beeper. Karel starts at (1, 1) facing east with unlimited beepers.
-
-Your solution must work for any grid size! Think about:
-- How to fill one row (while loop moving forward, placing beepers)
-- How to move up to the next row
-- How to handle alternating directions (left-to-right, then right-to-left)
-
-This is tested against multiple grid sizes. Use the dropdown to see different configurations.
-
-<KarelEnvironment config={fillGridConfig} />
+> **Advice:** if you cannot say out loud what Karel is supposed to do, you are not ready to write it. Say the plan in a sentence, turn each part of the sentence into a function name, and fill the functions in one at a time.
 
 ---
 
-## Exercise 2: Checkerboard
+## Beepers Are the Only Memory Karel Has
 
-Create a checkerboard pattern — place beepers on alternating cells, like a chessboard:
+Here is the thing that makes the harder exercises below hard.
+
+A Karel program has nowhere to write anything down. There is no place to keep the height of a stack, or how many steps Karel has taken, or which cell Karel started on. Every other program you will ever write keeps that sort of thing in memory. Karel keeps it on the floor.
+
+Two consequences are worth taking seriously before you start:
+
+- **A beeper is a number.** A stack of seven beepers *is* the number seven, and the only way Karel can read it is to take it apart one beeper at a time. Moving a stack cell by cell is how Karel copies a number; removing one from each of two stacks until a side runs dry is how Karel compares two numbers.
+- **A beeper is a place.** Drop one, walk away, and Karel can find its way home by walking until `beepers_present()` says yes. A beeper on the ground is the closest thing Karel has to writing down *here*.
+
+### Example: Leaving a Note
+
+Karel walks to the far end of a hall and comes back to exactly where it started — without knowing, at any point, how long the hall is or how far it has come.
+
+<KarelEnvironment config={markerExample} />
+
+The marker does all the work. Karel never counts a thing.
+
+In the next chapter you will get **variables**, and Karel's habit of dropping beepers to remember things will look like what it is: a workaround. But the ideas underneath — counting something down to nothing, marking a position so you can return to it, comparing two quantities by cancelling them off against each other — are real algorithms, and you will use every one of them again on data that has nothing to do with robots.
+
+---
+
+## Exercise 1: Sowing the Field
+
+Karel is sowing a field. Every cell gets **exactly one** seed — no cell bare, no cell double-sown — and the sack of seed never runs out.
+
+Karel starts at (1, 1) facing east. The field is a different shape in every test, so the plan cannot rely on a count: sow a row, climb to the next one, and sow that one back the other way.
+
+Two of the loadable fields are the ones that break careless code — a field one column wide, and a field one row deep. Your solution is checked against a field you cannot load, too.
+
+<KarelEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Moneychanger
+
+Karel works a counting bench. A stack of coins sits on **(2, 1)**, and every coin on that cell is worth two on the cell next door.
+
+Move the stack east and double it on the way. When Karel is finished, **(2, 1) must be bare** and **(3, 1) must hold exactly twice** what (2, 1) started with — with nothing left anywhere else on the bench.
+
+Karel starts on (1, 1) with a bottomless purse, so the coins Karel puts down need not be the ones it picked up. What Karel does *not* have is any way to look at the stack and see how tall it is. `beepers_present()` answers yes or no and nothing more.
+
+So Karel has to take the number apart: one coin off the stack, two coins down next door, and back for the next one. The stack shrinking is what eventually stops the loop.
+
+The bench is a different length in every test, the stack is a different height — including one test where there is no stack at all — and one bench is hidden from you.
+
+<KarelEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: Settling the Score
+
+A scoreboard runs the length of a row. The home tally is a stack on **(1, 1)**; the visitors' tally is a stack on the **last cell of the row**. Karel has no idea how big either one is, or how far apart they are.
+
+Karel's job is to reduce the board to the **lead**. Take one marker off each side, again and again, until one of the sides runs out. Whatever is left standing is the margin, and the beaten side finishes bare. If the two tallies were level, both ends finish bare.
+
+Karel's bag starts **empty**, and every marker it cancels stays in the bag — cancelled markers never go back on the board.
+
+There is a catch, and it is the whole exercise. Karel can only see the cell it is standing on, so the only way to find out whether the far side still has markers is to walk over and look — and by then Karel is already carrying the marker it took from this side. When the far side turns out to be bare, that marker has to be walked back and put down where it came from.
+
+Four boards are loadable and a fifth is hidden. One of the loadable ones starts with an empty home tally.
+
+<KarelEnvironment config={exercise3Config} />
+
+---
+
+## Exercise 4: The Vault Run
+
+Karel is emptying a warehouse. A corridor runs east along row 1. Vaults open north out of it through gaps in the corridor ceiling, each one a shaft running north with crates stacked inside.
+
+Karel knows none of it: not how many vaults there are, not which columns they open from, not how deep any shaft runs, not how many crates sit on a given cell — and some cells inside a vault hold nothing at all.
+
+Bring every crate in the warehouse back to the **depot on (1, 1)** and pile it there. Karel's bag starts empty, so Karel can only put down what it has picked up. Finish standing on the depot **facing east**.
+
+This is the biggest job in the chapter, and it wants every tool you have: a `while` loop to work along a corridor of unknown length, a sensor to spot a doorway in passing, another `while` to climb a shaft of unknown depth, another to empty a stack of unknown height, and functions to keep the whole thing readable. Write `empty_one_vault()` first and get it right on its own — the corridor loop is easy once one vault works.
+
+> **Mind the doorway at the ends.** A vault can open from the very first column of the corridor, right above the depot, or from the very last. The fencepost problem is waiting at both ends of this one.
+
+Four warehouses are loadable — including one where every vault is empty — and a fifth is hidden.
+
+<KarelEnvironment config={exercise4Config} />
+
+---
+
+## Exercise 5: Tiling the Floor
+
+Lay a checkerboard: a tile on (1, 1), then every other cell, in both directions.
 
 ```
 Row 5: ◆ · ◆ · ◆
@@ -297,26 +784,31 @@ Row 2: · ◆ · ◆ ·
 Row 1: ◆ · ◆ · ◆
 ```
 
-Position (1,1) should have a beeper. The pattern alternates both horizontally and vertically.
+Sowing a row every other cell is the easy half. The hard half is the turn at the end of a row, because **whether the next row starts with a tile depends on the width of the floor**. On the 5-wide floor above, row 1 ends on a tile and row 2 must start bare. Make the floor 4 wide and row 1 ends bare, so row 2 must start with a tile. Code that always starts a row the same way gets one of those two floors wrong, and both are in the tests.
 
-This is one of the classic Karel challenges! Think about what pattern each row needs, and how adjacent rows differ. You might find it helpful to define a function that fills one row with the right spacing.
+Karel cannot measure the width. But it does not need to: the cell Karel is standing on when it finishes a row tells it everything, because **a cell and the cell above it are never the same**. If this one is tiled, the one above it is bare — and Karel can ask `beepers_present()` right where it stands.
 
-<KarelEnvironment config={checkerboardConfig} />
+The single-column floor is in the loadable set, and it is meaner than it looks. One floor is hidden.
+
+<KarelEnvironment config={exercise5Config} />
 
 ---
 
-## Exercise 3: Room Cleaner
+## Exercise 6: Finding the Center
 
-Karel is in a room with walls inside it, and beepers are scattered around. Pick up every single beeper!
+The last one. Karel stands at the west end of a hall of unknown length, and has to put a **single beeper on the middle cell** and finish standing on it. When the hall has an even number of cells, either of the two middle cells counts.
 
-The tricky part: internal walls block Karel's path, so you can't just sweep straight across. You'll need to check for walls as you go and figure out how to reach every area of the room.
+Nothing else may be left on the floor when Karel is done.
 
-Think about:
-- How to sweep a row while checking for walls
-- How to move to the next row
-- How to make sure you don't miss any beepers behind walls
+There is no counting your way out of this one, and no sensor that says "you are halfway". What there is, is the second idea from the top of this lesson: **a beeper is a place**. Mark the west end. Mark the east end. Then move each mark one cell inward, turn and turn about, walking from one to the other — because Karel has no other way to know where a mark is than to go and find it.
 
-<KarelEnvironment config={roomCleanerConfig} />
+Two marks closing in a cell at a time have to meet, and where they meet is the middle. When Karel picks up a mark, steps inward, and finds itself standing on the *other* mark, the search is over.
+
+Getting that to leave exactly one beeper behind takes care. If Karel keeps lifting each mark before it moves it, there are never more than two beepers on the floor in the first place — and the last one Karel lifts is the one it is still holding when the marks collide.
+
+Five halls are loadable, including the shortest one the rules allow, and a sixth is hidden.
+
+<KarelEnvironment config={exercise6Config} />
 
 ---
 
@@ -329,9 +821,10 @@ You've completed Chapter 1: Karel the Robot! Along the way, you've learned the s
 - **Decomposition** — breaking complex problems into simpler pieces
 - **Loops** — repeating actions (while loops for conditions, for loops for counting)
 - **Conditionals** — making decisions based on the current state
+- **State** — the world remembers what your program has done, and a program that can read that state can make plans
 
-These concepts aren't just for Karel — they're the foundation of **all programming**. In the next chapter, you'll start using these same ideas to write "real" Python programs with variables, strings, math, and more.
+These concepts aren't just for Karel — they're the foundation of **all programming**. In the next chapter you'll start writing "real" Python: variables, strings, numbers and the rest. Karel's beepers-as-memory tricks will retire, but the algorithms you built out of them won't.
 
-But for now, feel free to revisit any lesson, try the exercises again, or experiment in the Karel Playground where you can design your own worlds!
+For now, feel free to revisit any lesson, try the exercises again, or experiment in the Karel Playground where you can design your own worlds!
 
 </LessonShell>

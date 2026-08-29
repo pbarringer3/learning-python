@@ -77,7 +77,7 @@ const karel: Chapter = {
       description: "Combine everything you've learned to solve complex Karel challenges.",
       number: 7,
       hasExercises: true,
-      exerciseCount: 3
+      exerciseCount: 6
     }
   ],
   topics: [

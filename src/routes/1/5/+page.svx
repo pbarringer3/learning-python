@@ -5,7 +5,7 @@
 
   // ── Shared helpers ─────────────────────────────────────────────────────────
 
-  /** The generous command set used by the yard exercises (sensors included). */
+  /** The generous command set used by the first two exercises (sensors included). */
   const allCommands = [
     'move', 'turn_left', 'put_beeper', 'pick_beeper',
     'front_is_clear', 'front_is_blocked',
@@ -16,14 +16,14 @@
     'facing_west', 'not_facing_west'
   ];
 
-  /** Movement plus front sensors only — used by the park exercises. */
+  /** Movement plus front sensors only — used by the warehouse exercises. */
   const countingCommands = [
     'move', 'turn_left', 'put_beeper', 'pick_beeper',
     'front_is_clear', 'front_is_blocked'
   ];
 
-  /** An empty yard of the given size with Karel at (2, 2) facing east. */
-  function yard(width: number, height: number): KarelWorld {
+  /** An empty world of the given size with Karel at (2, 2) facing east. */
+  function emptyWorld(width: number, height: number): KarelWorld {
     return {
       dimensions: { width, height },
       karel: {
@@ -36,38 +36,57 @@
     };
   }
 
-  /** Columns that hold a court in a park of the given width: 1, 4, 7, ... */
-  function courtColumns(width: number): number[] {
+  /** Aisle columns Karel can stand in: 1, 4, 7, ... — each with a shelf to its east. */
+  function aisleColumns(width: number): number[] {
     const columns: number[] = [];
-    for (let x = 1; x <= width; x += 3) columns.push(x);
+    for (let x = 1; x + 1 <= width; x += 3) columns.push(x);
     return columns;
   }
 
-  /** Side walls that frame one court column (rows 2-4). */
-  function courtWalls(column: number, width: number): Wall[] {
+  /** The rows of a shelf's cubbies. */
+  const cubbyRows = [2, 3, 4, 5];
+
+  /**
+   * One shelf, standing east of `aisle`: four cubbies stacked at rows 2-5,
+   * each with a board above and below it and a back wall on the east, so the
+   * only way in is a step east out of the aisle.
+   */
+  function shelfWalls(aisle: number): Wall[] {
+    const shelf = aisle + 1;
     const walls: Wall[] = [];
-    for (let y = 2; y <= 4; y++) {
-      if (column > 1) walls.push({ type: 'vertical', x: column - 1, y });
-      if (column < width) walls.push({ type: 'vertical', x: column, y });
-    }
+    for (const y of cubbyRows) walls.push({ type: 'vertical', x: shelf, y });
+    for (let y = 2; y <= 6; y++) walls.push({ type: 'horizontal', x: shelf, y });
     return walls;
   }
 
   /**
-   * A park: a path along row 1 with a 3-cell-deep court above every third
-   * column. Widths of the form 3n + 1 put the last court against the east wall.
+   * A warehouse with `shelfCount` shelves: a corridor along row 1, an aisle at
+   * every third column (1, 4, 7, ...), and a shelf east of each one. A wall in
+   * the corridor east of the last aisle marks the end of the run — the world
+   * itself carries on past it.
    */
-  function park(width: number): KarelWorld {
+  function warehouse(shelfCount: number): KarelWorld {
+    const width = shelfCount * 3;
+    const aisles = aisleColumns(width);
     return {
-      dimensions: { width, height: 5 },
+      dimensions: { width, height: 7 },
       karel: {
         position: { x: 1, y: 1 },
         direction: { type: 'east' },
         beepers: -1
       },
-      walls: courtColumns(width).flatMap((c) => courtWalls(c, width)),
+      walls: [
+        ...aisles.flatMap((a) => shelfWalls(a)),
+        { type: 'vertical', x: aisles[aisles.length - 1], y: 1 }
+      ],
       beepers: []
     };
+  }
+
+  /** The same warehouse, with Karel parked in a different aisle. */
+  function warehouseAt(shelfCount: number, aisle: number): KarelWorld {
+    const world = warehouse(shelfCount);
+    return { ...world, karel: { ...world.karel, position: { x: aisle, y: 1 } } };
   }
 
   // ── Examples ───────────────────────────────────────────────────────────────
@@ -100,55 +119,7 @@ put_beeper()
 `
   };
 
-  // Example 2: Nested for loops paving a rectangle
-  const paveExample: KarelConfig = {
-    initialWorld: {
-      dimensions: { width: 8, height: 6 },
-      karel: {
-        position: { x: 2, y: 2 },
-        direction: { type: 'east' },
-        beepers: -1
-      },
-      walls: [],
-      beepers: []
-    },
-    initialCode: `# Pave a patch 4 wide and 3 tall,
-# starting from Karel's corner.
-
-def turn_right():
-  for i in range(3):
-    turn_left()
-
-def turn_around():
-  for i in range(2):
-    turn_left()
-
-def pave_row():
-  # 4 stones, but only 3 moves between them.
-  put_beeper()
-  for i in range(3):
-    move()
-    put_beeper()
-
-def next_row():
-  # Back to the start of the row, then up one.
-  turn_around()
-  for i in range(3):
-    move()
-  turn_right()
-  move()
-  turn_right()
-
-# 3 rows, but only 2 hops between them.
-for i in range(2):
-  pave_row()
-  next_row()
-
-pave_row()
-`
-  };
-
-  // Example 3: A known-size job repeated an unknown number of times
+  // Example 2: A known-size job repeated an unknown number of times
   const bulbsExample: KarelConfig = {
     initialWorld: {
       dimensions: { width: 10, height: 1 },
@@ -176,47 +147,9 @@ while front_is_clear():
 `
   };
 
-  // Example 4: The loop variable is a real number
-  const staircaseExample: KarelConfig = {
-    initialWorld: {
-      dimensions: { width: 6, height: 6 },
-      karel: {
-        position: { x: 1, y: 1 },
-        direction: { type: 'east' },
-        beepers: -1
-      },
-      walls: [],
-      beepers: []
-    },
-    initialCode: `# i counts 0, 1, 2, 3 — and range() accepts it,
-# so each row can be a different length.
+  // ── Exercise 1: Stake the claim ────────────────────────────────────────────
 
-def turn_right():
-  for i in range(3):
-    turn_left()
-
-def turn_around():
-  for i in range(2):
-    turn_left()
-
-for i in range(4):
-  # Row i gets i + 1 beepers.
-  for j in range(i + 1):
-    put_beeper()
-    move()
-  # Back to the west wall, then up one row.
-  turn_around()
-  while front_is_clear():
-    move()
-  turn_right()
-  move()
-  turn_right()
-`
-  };
-
-  // ── Exercise 1: Stake the court ────────────────────────────────────────────
-
-  const courtCorners = [
+  const claimCorners = [
     { x: 2, y: 2 },
     { x: 6, y: 2 },
     { x: 6, y: 6 },
@@ -225,16 +158,17 @@ for i in range(4):
 
   const exercise1Config: KarelConfig = {
     persistenceKey: '1/5/exercise-1',
-    initialWorld: yard(9, 9),
-    initialCode: `# Pickleball Karel is laying out a court in the yard.
+    initialWorld: emptyWorld(9, 9),
+    initialCode: `# Karel the surveyor is marking out a claim
+# on open prairie.
 #
 # Drive a stake into all four corners of a square
 # that is 5 cells on a side, with Karel's starting
 # cell as the southwest corner.
 #
 # Karel always starts at (2, 2) facing east, and
-# the yard is always big enough for the court —
-# but the yard is a different size every time.
+# the prairie is always big enough for the claim —
+# but the prairie is a different size every time.
 #
 # Finish back on the starting stake, facing east.
 
@@ -244,17 +178,17 @@ for i in range(4):
     },
     tests: {
       worlds: {
-        'Test 1: 9x9 yard': yard(9, 9),
-        'Test 2: 12x10 yard': yard(12, 10),
-        'Test 3: 7x7 yard (barely fits)': yard(7, 7)
+        'Test 1: 9x9 prairie': emptyWorld(9, 9),
+        'Test 2: 12x10 prairie': emptyWorld(12, 10),
+        'Test 3: 7x7 prairie (barely fits)': emptyWorld(7, 7)
       },
       validate: (world) => {
         const onGround = world.beepers.filter((b) => b.count > 0);
-        const missing = courtCorners.filter(
+        const missing = claimCorners.filter(
           (c) => !onGround.find((b) => b.x === c.x && b.y === c.y)
         );
         const strays = onGround.filter(
-          (b) => !courtCorners.find((c) => c.x === b.x && c.y === b.y)
+          (b) => !claimCorners.find((c) => c.x === b.x && c.y === b.y)
         );
 
         if (missing.length > 0) {
@@ -265,7 +199,7 @@ for i in range(4):
           const list = strays.map((b) => `(${b.x}, ${b.y})`).join(', ');
           return {
             passed: false,
-            message: `Stakes dropped outside the corners: ${list}. The court has exactly four.`
+            message: `Stakes dropped outside the corners: ${list}. The claim has exactly four.`
           };
         }
         const { x, y } = world.karel.position;
@@ -278,15 +212,19 @@ for i in range(4):
         if (world.karel.direction.type !== 'east') {
           return {
             passed: false,
-            message: `Karel is facing ${world.karel.direction.type} — a full lap around the court ends facing east.`
+            message: `Karel is facing ${world.karel.direction.type} — a full lap around the claim ends facing east.`
           };
         }
         return {
           passed: true,
-          message: 'Court staked out! The same counts worked in every yard.'
+          message: 'Claim staked out! The same counts worked on every prairie.'
         };
       },
-      loadableTests: ['Test 1: 9x9 yard', 'Test 2: 12x10 yard', 'Test 3: 7x7 yard (barely fits)']
+      loadableTests: [
+        'Test 1: 9x9 prairie',
+        'Test 2: 12x10 prairie',
+        'Test 3: 7x7 prairie (barely fits)'
+      ]
     }
   };
 
@@ -302,9 +240,9 @@ for i in range(4):
 
   const exercise2Config: KarelConfig = {
     persistenceKey: '1/5/exercise-2',
-    initialWorld: yard(10, 8),
-    initialCode: `# Next, Karel paints the kitchen — the non-volley
-# zone of the court.
+    initialWorld: emptyWorld(10, 8),
+    initialCode: `# Pickleball Karel is painting the kitchen —
+# the non-volley zone of a backyard court.
 #
 # Paint (put a beeper on) every cell of a rectangle
 # 5 wide and 3 deep, with Karel's starting cell as
@@ -321,9 +259,9 @@ for i in range(4):
     },
     tests: {
       worlds: {
-        'Test 1: 10x8 yard': yard(10, 8),
-        'Test 2: 12x9 yard': yard(12, 9),
-        'Test 3: 7x5 yard (barely fits)': yard(7, 5)
+        'Test 1: 10x8 yard': emptyWorld(10, 8),
+        'Test 2: 12x9 yard': emptyWorld(12, 9),
+        'Test 3: 7x5 yard (barely fits)': emptyWorld(7, 5)
       },
       validate: (world) => {
         const onGround = world.beepers.filter((b) => b.count > 0);
@@ -368,35 +306,35 @@ for i in range(4):
     }
   };
 
-  // ── Exercise 3: Set up one court ───────────────────────────────────────────
+  // ── Exercise 3: Stock one shelf ────────────────────────────────────────────
 
-  /** Checks the three court cells above `column`, plus Karel's final state. */
-  function validateOneCourt(world: KarelWorld, column: number) {
+  /** Checks the four cubbies of the shelf beside `aisle`, plus Karel's final state. */
+  function validateOneShelf(world: KarelWorld, aisle: number) {
+    const shelf = aisle + 1;
     const onGround = world.beepers.filter((b) => b.count > 0);
-    const missing: number[] = [];
-    for (let y = 2; y <= 4; y++) {
-      if (!onGround.find((b) => b.x === column && b.y === y)) missing.push(y);
-    }
-    const strays = onGround.filter((b) => b.x !== column || b.y < 2 || b.y > 4);
+    const missing = cubbyRows.filter(
+      (y) => !onGround.find((b) => b.x === shelf && b.y === y)
+    );
+    const strays = onGround.filter((b) => b.x !== shelf || !cubbyRows.includes(b.y));
 
     if (missing.length > 0) {
       return {
         passed: false,
-        message: `No cone at row(s) ${missing.join(', ')} of the court in column ${column}.`
+        message: `No crate in the cubby at row(s) ${missing.join(', ')} of the shelf in column ${shelf}.`
       };
     }
     if (strays.length > 0) {
       const list = strays.map((b) => `(${b.x}, ${b.y})`).join(', ');
       return {
         passed: false,
-        message: `Cones left outside the court at ${list}. A court takes exactly three.`
+        message: `Crates left outside the cubbies at ${list}. A shelf takes exactly four.`
       };
     }
     const { x, y } = world.karel.position;
-    if (x !== column || y !== 1) {
+    if (x !== aisle || y !== 1) {
       return {
         passed: false,
-        message: `Karel must return to the path at (${column}, 1) but ended at (${x}, ${y}).`
+        message: `Karel must return to the corridor at (${aisle}, 1) but ended at (${x}, ${y}).`
       };
     }
     if (world.karel.direction.type !== 'east') {
@@ -405,122 +343,101 @@ for i in range(4):
         message: `Karel must end facing east, not ${world.karel.direction.type}.`
       };
     }
-    return { passed: true, message: `Court in column ${column} is set up and Karel is back on the path.` };
+    return {
+      passed: true,
+      message: `Shelf in column ${shelf} is stocked and Karel is back in the corridor.`
+    };
   }
 
-  const oneCourtWorld: KarelWorld = {
-    dimensions: { width: 3, height: 5 },
-    karel: {
-      position: { x: 2, y: 1 },
-      direction: { type: 'east' },
-      beepers: -1
-    },
-    walls: courtWalls(2, 3),
-    beepers: []
-  };
+  const oneShelfWorld = warehouse(1);
 
   const exercise3Config: KarelConfig = {
     persistenceKey: '1/5/exercise-3',
-    initialWorld: oneCourtWorld,
-    initialCode: `# The park's courts all need the same setup:
-# three cones, one on each cell of the court.
+    initialWorld: oneShelfWorld,
+    initialCode: `# Every shelf in the warehouse needs the same job
+# done: a crate in each of its 4 cubbies.
 #
-# Write set_up_court() and call it.
+# Write stock_shelf() and call it.
 #
-# set_up_court()
-#   Pre:  Karel is on the path (row 1) at the foot of
-#         a court, facing east
-#   Post: a cone on each of the 3 court cells directly
-#         north of Karel, and Karel is back where it
-#         started, facing east
+# stock_shelf()
+#   Pre:  Karel is in an aisle (row 1) beside a shelf,
+#         facing east
+#   Post: a crate in each of the shelf's 4 cubbies,
+#         and Karel is back where it started, facing east
 #
-# Careful: the court is 3 cells deep, but there is no
-# wall at the top of it. Count — do not walk until
+# The cubbies only open onto the aisle, so Karel has to
+# step in and back out again for each one.
+#
+# Careful: the shelf is 4 cubbies tall, but the aisle
+# runs well past it. Count — do not walk until
 # something stops you.
 
-def set_up_court():
+def stock_shelf():
   pass
 
-set_up_court()
+stock_shelf()
 `,
     allowedFeatures: {
       karelCommands: countingCommands
     },
     tests: {
       worlds: {
-        'Court in column 2': oneCourtWorld
+        'Shelf beside aisle 1': oneShelfWorld
       },
-      validate: (world) => validateOneCourt(world, 2),
+      validate: (world) => validateOneShelf(world, 1),
       validateCode: {
-        name: 'Defined and called set_up_court()',
+        name: 'Defined and called stock_shelf()',
         validate: (code) => {
-          const defines = /def\s+set_up_court\s*\(/.test(code);
+          const defines = /def\s+stock_shelf\s*\(/.test(code);
           const calls = code
             .split('\n')
-            .some((line) => /^\s*set_up_court\s*\(/.test(line) && !/^\s*def\s/.test(line));
+            .some((line) => /^\s*stock_shelf\s*\(/.test(line) && !/^\s*def\s/.test(line));
           if (!defines) {
-            return { passed: false, message: 'You must define a function named set_up_court().' };
+            return { passed: false, message: 'You must define a function named stock_shelf().' };
           }
           if (!calls) {
-            return { passed: false, message: 'Define set_up_court() and then call it.' };
+            return { passed: false, message: 'Define stock_shelf() and then call it.' };
           }
           return { passed: true, message: '' };
         }
       },
       functionTests: [
         {
-          name: 'set_up_court() works from column 4',
-          functionName: 'set_up_court',
-          world: {
-            dimensions: { width: 5, height: 5 },
-            karel: {
-              position: { x: 4, y: 1 },
-              direction: { type: 'east' },
-              beepers: -1
-            },
-            walls: courtWalls(4, 5),
-            beepers: []
-          },
-          validate: (world) => validateOneCourt(world, 4)
+          name: 'stock_shelf() works from the second aisle',
+          functionName: 'stock_shelf',
+          world: warehouseAt(2, 4),
+          validate: (world) => validateOneShelf(world, 4)
         },
         {
-          name: 'set_up_court() works from column 1',
-          functionName: 'set_up_court',
-          world: {
-            dimensions: { width: 4, height: 5 },
-            karel: {
-              position: { x: 1, y: 1 },
-              direction: { type: 'east' },
-              beepers: -1
-            },
-            walls: courtWalls(1, 4),
-            beepers: []
-          },
-          validate: (world) => validateOneCourt(world, 1)
+          name: 'stock_shelf() works from the third aisle',
+          functionName: 'stock_shelf',
+          world: warehouseAt(3, 7),
+          validate: (world) => validateOneShelf(world, 7)
         }
       ]
     }
   };
 
-  // ── Exercise 4: Tournament day ─────────────────────────────────────────────
+  // ── Exercise 4: Restock the warehouse ──────────────────────────────────────
 
   const exercise4Config: KarelConfig = {
     persistenceKey: '1/5/exercise-4',
-    initialWorld: park(7),
-    initialCode: `# Tournament day. Every court in the park needs the
-# same three cones.
+    initialWorld: warehouse(3),
+    initialCode: `# Restock night. Every shelf in the warehouse needs
+# the same four crates.
 #
-# The path runs along row 1. A court sits above the
-# path at column 1, and at every third column after
-# that (1, 4, 7, ...). The last court is always
-# against the east wall.
+# The corridor runs along row 1. An aisle opens off
+# the corridor at column 1, and at every third column
+# after that (1, 4, 7, ...), with a shelf standing
+# beside each one.
 #
-# You do NOT know how many courts there are.
-# You DO know that every court is exactly 3 deep and
-# that courts are exactly 3 columns apart.
+# You do NOT know how many shelves there are.
+# You DO know that every shelf has exactly 4 cubbies,
+# that the aisles are exactly 3 columns apart, and
+# that a wall in the corridor marks the end of the run.
 #
 # Karel starts at (1, 1) facing east with unlimited
-# cones. Set up every court.
+# crates. Stock every shelf.
 
 `,
     allowedFeatures: {
@@ -528,24 +445,24 @@ set_up_court()
     },
     tests: {
       worlds: {
-        'Test 1: 3 courts': park(7),
-        'Test 2: 2 courts': park(4),
-        'Test 3: 5 courts': park(13),
-        'Test 4: 1 court': park(1),
-        'Test 5: 4 courts': park(10)
+        'Test 1: 3 shelves': warehouse(3),
+        'Test 2: 2 shelves': warehouse(2),
+        'Test 3: 5 shelves': warehouse(5),
+        'Test 4: 1 shelf': warehouse(1),
+        'Test 5: 4 shelves': warehouse(4)
       },
       validate: (world) => {
-        const columns = courtColumns(world.dimensions.width);
+        const shelves = aisleColumns(world.dimensions.width).map((a) => a + 1);
         const onGround = world.beepers.filter((b) => b.count > 0);
 
         const missing: string[] = [];
-        for (const c of columns) {
-          for (let y = 2; y <= 4; y++) {
-            if (!onGround.find((b) => b.x === c && b.y === y)) missing.push(`(${c}, ${y})`);
+        for (const s of shelves) {
+          for (const y of cubbyRows) {
+            if (!onGround.find((b) => b.x === s && b.y === y)) missing.push(`(${s}, ${y})`);
           }
         }
         const strays = onGround.filter(
-          (b) => !columns.includes(b.x) || b.y < 2 || b.y > 4
+          (b) => !shelves.includes(b.x) || !cubbyRows.includes(b.y)
         );
 
         if (missing.length > 0) {
@@ -553,7 +470,7 @@ set_up_court()
           const more = missing.length > 4 ? `, and ${missing.length - 4} more` : '';
           return {
             passed: false,
-            message: `${columns.length} court(s) in this park. Missing cones at ${list}${more}.`
+            message: `${shelves.length} shelf/shelves in this warehouse. Empty cubbies at ${list}${more}.`
           };
         }
         if (strays.length > 0) {
@@ -563,19 +480,19 @@ set_up_court()
             .join(', ');
           return {
             passed: false,
-            message: `Cones dropped off the courts at ${list}. Nothing belongs on the path or above a court.`
+            message: `Crates dropped outside the cubbies at ${list}. Nothing belongs in the corridor or the aisles.`
           };
         }
         return {
           passed: true,
-          message: `All ${columns.length} court(s) set up — and the same code handles a park of any size.`
+          message: `All ${shelves.length} shelf/shelves stocked — and the same code handles a warehouse of any size.`
         };
       },
       loadableTests: [
-        'Test 1: 3 courts',
-        'Test 2: 2 courts',
-        'Test 3: 5 courts',
-        'Test 4: 1 court'
+        'Test 1: 3 shelves',
+        'Test 2: 2 shelves',
+        'Test 3: 5 shelves',
+        'Test 4: 1 shelf'
       ]
     }
   };
@@ -602,7 +519,7 @@ This means: **"Do `move()` exactly 4 times."**
 
 - **`for i in range(4):`** — sets up a loop that runs 4 times
 - **`range(4)`** — produces the numbers 0, 1, 2, 3 (four of them)
-- **`i`** — the loop variable, holding one of those numbers each time around
+- **`i`** — the loop variable. Something the loop needs; we'll talk about it in more detail in a later chapter
 - **The indented code** — what gets repeated
 
 > **Tip:** `range(n)` runs the loop `n` times. `range(3)` runs 3 times, `range(10)` runs 10 times.
@@ -637,21 +554,6 @@ def turn_around():
 
 These are the smallest useful for loops you will ever write, and they are worth keeping in your toolkit for the rest of the chapter.
 
-## Nested For Loops
-
-A for loop can hold another for loop. This is how you cover an *area* rather than a line: an outer loop walks the rows, and an inner loop walks the cells within a row.
-
-Watch for the fencepost problem from the last lesson — it shows up twice here, and both times the fix is the same shape:
-
-- A row of 4 stones needs 4 `put_beeper()` calls but only **3** moves between them.
-- A patch of 3 rows needs 3 paved rows but only **2** hops between them.
-
-## Example: Paving a Rectangle
-
-<KarelEnvironment config={paveExample} />
-
-Two things to notice. First, `pave_row()` and `next_row()` are named for what they do, so the bottom of the program reads almost like English. Second, every single loop in this program is a for loop — there is not a wall in sight, and none is needed.
-
 ---
 
 ## For and While Are Partners
@@ -677,31 +579,15 @@ Karel plants three bulbs every third cell along a walkway. The walkway could be 
 
 Note the fencepost pattern again: the first planting happens *before* the loop, and each trip through the loop moves and then plants.
 
----
-
-## Going Further: The Loop Variable Is a Number
-
-So far `i` has just been along for the ride. But it really does hold a number — 0, then 1, then 2 — and `range()` is happy to accept it. That means the inner loop can be a different length every time around the outer loop:
-
-```python
-for i in range(4):
-  for j in range(i + 1):
-    put_beeper()
-```
-
-Row 0 gets 1 beeper, row 1 gets 2, row 2 gets 3, row 3 gets 4 — a staircase. Run it and watch the rows grow:
-
-<KarelEnvironment config={staircaseExample} />
-
-You do not need this for the exercises below. It is here because it is your first glimpse of a loop variable being *used* rather than ignored, which is most of what loops do outside of Karel's world.
+A loop inside a loop is called **nesting**, and nothing about this particular pairing is special. Any loop can go inside any other loop, as deep as the job needs — a `for` inside a `while`, a `for` inside a `for`, a `while` inside a `for`, three layers deep if that is what it takes. Each loop only ever asks its own question: *how many times?* or *are we there yet?*
 
 ---
 
-## Exercise 1: Pickleball Karel Stakes the Court
+## Exercise 1: Surveying the Homestead
 
-Karel is putting a pickleball court in the back yard, and the first job is driving a stake into each of the four corners.
+Karel is a land surveyor marking out a claim on open prairie, and the first job is driving a stake into each of the four corners.
 
-The court is a square **5 cells on a side**, with Karel's starting cell as its southwest corner. Karel always starts at **(2, 2) facing east** with unlimited stakes, and the yard is always big enough — but the yard is a **different size in every test**, so there is no wall at a reliable distance to steer by.
+The claim is a square **5 cells on a side**, with Karel's starting cell as its southwest corner. Karel always starts at **(2, 2) facing east** with unlimited stakes, and the prairie is always big enough — but it is a **different size in every test**, and out here there is no landmark at a reliable distance to steer by.
 
 Place a stake on all four corners and finish back on the starting stake, facing east. Load the other test worlds from the dropdown to confirm your counts hold up.
 
@@ -711,51 +597,53 @@ Place a stake on all four corners and finish back on the starting stake, facing 
 
 ## Exercise 2: Paint the Kitchen
 
-Now the non-volley zone — the "kitchen." It is a rectangle **5 wide and 3 deep**, again with Karel's starting cell as its southwest corner. Put a beeper on all 15 cells, then finish back on the starting cell.
+Pickleball Karel is putting a court in the back yard, and the non-volley zone — the "kitchen" — needs painting. It is a rectangle **5 wide and 3 deep**, with Karel's starting cell as its southwest corner. Put a beeper on all 15 cells, then finish back on the starting cell.
 
-Same deal as before: Karel starts at (2, 2) facing east, and the yard changes size between tests.
+Karel always starts at **(2, 2) facing east** with unlimited paint, and the yard is a different size in every test.
 
-This one wants nested for loops and a couple of helper functions. Two fenceposts are waiting for you — one inside a row, one between rows. And think carefully about the last row: whatever you do to get from one row to the next, you must not do it after the final row.
+This one wants a for loop inside a for loop, plus a couple of helper functions to keep it readable. Count carefully in both directions — a row of cells takes fewer moves than it has cells, and the same is true of the rows themselves. Think about how Karel gets from the end of one row to the start of the next, and make sure that trip does not happen after the final row.
 
 <KarelEnvironment config={exercise2Config} />
 
 ---
 
-## Exercise 3: One Court in the Park
+## Exercise 3: Stock One Shelf
 
-Karel's yard court was such a hit that the city has asked for help setting up the park courts before a tournament.
+Karel works the night shift in a warehouse. Aisles run north off the main corridor, and beside each aisle stands a shelf: **four cubbies** stacked one above another, boarded off from each other and walled at the back.
 
-Each court sits **north of the path**, is **3 cells deep**, and needs a cone on each of its three cells. Write a function that handles exactly one court:
+That leaves a cubby exactly one opening — the side facing the aisle. So Karel walks up the aisle and, at each cubby, steps in, drops a crate, and backs out again. Write a function that handles exactly one shelf:
 
 ```python
-# set_up_court()
-#   Pre:  Karel is on the path (row 1) at the foot of a court, facing east
-#   Post: a cone on each of the 3 court cells directly north of Karel,
+# stock_shelf()
+#   Pre:  Karel is in an aisle (row 1) beside a shelf, facing east
+#   Post: a crate in each of the shelf's 4 cubbies,
 #         and Karel is back where it started, facing east
 ```
 
-Write it, call it, and mind the pre/post conditions — the next exercise depends on this function working from *anywhere* on the path, so it is tested from more than one starting column.
+Write it, call it, and mind the pre/post conditions — the next exercise depends on this function working from *anywhere* in the corridor, so it is tested from more than one aisle.
 
-> **Watch out:** the court is 3 deep, but there is **no wall** at the far end of it. Walking north until something blocks you takes Karel one cell too far. Count.
+> **Watch out:** the shelf is 4 cubbies tall, but the aisle **runs well past it**. Walking north until something blocks you takes Karel two cells too far. Count.
 
 <KarelEnvironment config={exercise3Config} />
 
 ---
 
-## Exercise 4: Tournament Day
+## Exercise 4: Restock the Warehouse
 
-Time to do the whole park.
+Time to do the whole building.
 
-The path runs along row 1. A court sits above the path at column 1 and at **every third column** after that — columns 1, 4, 7, and so on — with the last court always against the east wall. Karel starts at **(1, 1) facing east** with unlimited cones.
+The corridor runs along row 1. An aisle opens off the corridor at column 1 and at **every third column** after that — columns 1, 4, 7, and so on — with a shelf standing beside each one. Karel starts at **(1, 1) facing east**, already in the first aisle, with unlimited crates.
 
 Here is the catch, and the point of the whole lesson:
 
-- You **do not** know how many courts there are. The park can be any size.
-- You **do** know that every court is exactly 3 deep, and that courts are exactly 3 columns apart.
+- You **do not** know how many shelves there are. The warehouse can be any size.
+- You **do** know that every shelf has exactly 4 cubbies, and that the aisles are exactly 3 columns apart.
 
-Set up every court in the park. Reuse `set_up_court()` from Exercise 3 — paste it in and build around it.
+A wall across the corridor marks the end of the run. The warehouse floor carries on past it, so it is that wall — not the edge of the world — that tells Karel when to stop.
 
-Think about which part of the job each kind of loop owns, and remember the fencepost: the first court needs attention before the loop ever runs. The dropdown holds four sample parks, including a one-court park that breaks careless solutions; your code is checked against another park you cannot see.
+Stock every shelf in the warehouse. Reuse `stock_shelf()` from Exercise 3 — paste it in and build around it.
+
+Think about which part of the job each kind of loop owns, and remember the fencepost: the first shelf needs attention before the loop ever runs. The dropdown holds four sample warehouses, including a one-shelf warehouse that breaks careless solutions; your code is checked against another warehouse you cannot see.
 
 <KarelEnvironment config={exercise4Config} />
 
@@ -767,10 +655,9 @@ In this lesson you learned:
 
 - **For loops** repeat code a fixed number of times with `for i in range(n):` — no condition, no sensing
 - For loops are the right tool when **you** hold the count and the world offers no landmark
-- **Nested for loops** cover areas: an outer loop for rows, an inner loop for cells
+- **Loops nest** in any combination and to any depth — a `for` in a `while`, a `for` in a `for`, whatever the job needs
 - The fencepost problem follows you into for loops — count the gaps, not just the items
 - **`while` outside, `for` inside** is the pattern for an unknown number of known things
-- The loop variable `i` is a real number you can use, not just a placeholder
 
 In the next lesson, you'll learn about **if/else statements** — making Karel choose different actions based on its surroundings.
 

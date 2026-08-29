@@ -1,303 +1,616 @@
 <script lang="ts">
   import LessonShell from '$lib/components/LessonShell.svelte';
   import KarelEnvironment from '$lib/components/KarelEnvironment.svelte';
-  import type { KarelConfig } from '$lib/karel/types';
+  import type { KarelConfig, KarelWorld, Position, Wall } from '$lib/karel/types';
 
-  // Example 1: Careful collector — while + if
-  const carefulCollectorExample: KarelConfig = {
+  // ── Shared helpers ─────────────────────────────────────────────────────────
+
+  /** Movement, beepers, and the front sensors — the baseline for most exercises. */
+  const baseCommands = [
+    'move', 'turn_left', 'pick_beeper', 'put_beeper',
+    'front_is_clear', 'front_is_blocked',
+    'beepers_present', 'no_beepers_present'
+  ];
+
+  /** Walls sealing a one-cell-wide pipe that follows `path`. */
+  function pipeWalls(path: Position[], width: number, height: number): Wall[] {
+    const key = (c: Position) => `${c.x},${c.y}`;
+    const walls: Wall[] = [];
+    const seen = new Set<string>();
+    const add = (w: Wall) => {
+      const k = `${w.type},${w.x},${w.y}`;
+      if (seen.has(k)) return;
+      seen.add(k);
+      walls.push(w);
+    };
+
+    path.forEach((cell, i) => {
+      const linked = new Set<string>();
+      if (i > 0) linked.add(key(path[i - 1]));
+      if (i < path.length - 1) linked.add(key(path[i + 1]));
+
+      const sides: { dx: number; dy: number; wall: Wall }[] = [
+        { dx: 1, dy: 0, wall: { type: 'vertical', x: cell.x, y: cell.y } },
+        { dx: -1, dy: 0, wall: { type: 'vertical', x: cell.x - 1, y: cell.y } },
+        { dx: 0, dy: 1, wall: { type: 'horizontal', x: cell.x, y: cell.y + 1 } },
+        { dx: 0, dy: -1, wall: { type: 'horizontal', x: cell.x, y: cell.y } }
+      ];
+
+      for (const side of sides) {
+        const nx = cell.x + side.dx;
+        const ny = cell.y + side.dy;
+        if (nx < 1 || nx > width || ny < 1 || ny > height) continue;
+        if (linked.has(`${nx},${ny}`)) continue;
+        add(side.wall);
+      }
+    });
+
+    return walls;
+  }
+
+  /**
+   * Ground for a terrain profile: `heights[i]` is the surface row of column i+1.
+   * Each column gets a floor, and each change in height gets a cliff face.
+   */
+  function terrainWalls(heights: number[]): Wall[] {
+    const walls: Wall[] = [];
+    heights.forEach((h, i) => {
+      const x = i + 1;
+      if (h > 1) walls.push({ type: 'horizontal', x, y: h });
+      const next = heights[i + 1];
+      if (next === undefined) return;
+      for (let y = Math.min(h, next); y < Math.max(h, next); y++) {
+        walls.push({ type: 'vertical', x, y });
+      }
+    });
+    return walls;
+  }
+
+  // ── Example 1: Marking the doorways ────────────────────────────────────────
+
+  const doorwayExample: KarelConfig = {
     initialWorld: {
-      dimensions: { width: 7, height: 1 },
-      karel: {
-        position: { x: 1, y: 1 },
-        direction: { type: 'east' },
-        beepers: 0
-      },
-      walls: [],
-      beepers: [
-        { x: 2, y: 1, count: 1 },
-        { x: 5, y: 1, count: 1 },
-        { x: 7, y: 1, count: 1 }
-      ]
-    },
-    initialCode: `# Walk the whole row and pick up beepers
-# only where they exist.
-# Without the "if", Karel would crash
-# trying to pick up from empty cells!
-
-while front_is_clear():
-  move()
-  if beepers_present():
-    pick_beeper()
-`
-  };
-
-  // Example 2: If/else — choose between two actions
-  const ifElseExample: KarelConfig = {
-    initialWorld: {
-      dimensions: { width: 5, height: 1 },
+      dimensions: { width: 9, height: 2 },
       karel: {
         position: { x: 1, y: 1 },
         direction: { type: 'east' },
         beepers: -1
       },
-      walls: [],
-      beepers: [
-        { x: 1, y: 1, count: 1 },
-        { x: 3, y: 1, count: 1 },
-        { x: 5, y: 1, count: 1 }
-      ]
-    },
-    initialCode: `# Invert the beepers!
-# If there's a beeper: pick it up.
-# If there's no beeper: put one down.
-
-def check_and_invert():
-  if beepers_present():
-    pick_beeper()
-  else:
-    put_beeper()
-
-check_and_invert()
-move()
-check_and_invert()
-move()
-check_and_invert()
-move()
-check_and_invert()
-move()
-check_and_invert()
-`
-  };
-
-  // Example 3: More sensors — left_is_clear, right_is_clear
-  const moreSensorsExample: KarelConfig = {
-    initialWorld: {
-      dimensions: { width: 5, height: 3 },
-      karel: {
-        position: { x: 1, y: 1 },
-        direction: { type: 'east' },
-        beepers: -1
-      },
-      walls: [
-        // Wall blocking upward from (2,1) — vertical wall to right of (2,1) wouldn't work
-        // Let's put a horizontal wall above (2,1) — that's a horizontal wall at (2,2)
-        // horizontal wall below (2,2) means between row 1 and row 2 at column 2
-        { type: 'horizontal', x: 2, y: 2 },
-        { type: 'horizontal', x: 4, y: 2 }
-      ],
+      walls: [1, 3, 4, 7, 8].map((x) => ({ type: 'horizontal', x, y: 2 }) as Wall),
       beepers: []
     },
-    initialCode: `# Walk east and put a beeper wherever
-# Karel's left side is clear (no wall).
-# Karel faces east, so "left" is north.
+    initialCode: `# A doorway is a gap in the wall to Karel's north.
+# Drop a beeper at every one.
 
 while front_is_clear():
   if left_is_clear():
     put_beeper()
   move()
 
-# Check the last position too
+# The loop stops one cell short of the end,
+# so the last cell needs its own check.
 if left_is_clear():
   put_beeper()
 `
   };
 
-  // Exercise 1: Selective collector
+  // ── Example 2: The pipe crawler ────────────────────────────────────────────
+
+  const pipePath: Position[] = [
+    { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 },
+    { x: 3, y: 2 }, { x: 3, y: 3 },
+    { x: 4, y: 3 }, { x: 5, y: 3 },
+    { x: 5, y: 2 },
+    { x: 6, y: 2 }, { x: 7, y: 2 },
+    { x: 7, y: 3 }, { x: 7, y: 4 },
+    { x: 6, y: 4 }, { x: 5, y: 4 },
+    { x: 5, y: 5 },
+    { x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }
+  ];
+
+  const pipeExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 7, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: pipeWalls(pipePath, 7, 5),
+      beepers: [{ x: 2, y: 5, count: 1 }]
+    },
+    initialCode: `# The pipe bends, but there is only ever one
+# way forward. Walk if you can; if you cannot,
+# turn toward whichever side is open.
+
+def turn_right():
+  for i in range(3):
+    turn_left()
+
+while no_beepers_present():
+  if front_is_clear():
+    move()
+  else:
+    if left_is_clear():
+      turn_left()
+    else:
+      turn_right()
+
+pick_beeper()
+`
+  };
+
+  // ── Example 3: The hillwalker ──────────────────────────────────────────────
+
+  const hillExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 10, height: 5 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: terrainWalls([1, 1, 2, 3, 3, 2, 2, 3, 2, 1]),
+      beepers: [{ x: 10, y: 1, count: 1 }]
+    },
+    initialCode: `# Three possibilities at every step: the ground
+# has fallen away, a step blocks the way ahead,
+# or the path is flat.
+
+def turn_right():
+  for i in range(3):
+    turn_left()
+
+while no_beepers_present():
+  if right_is_clear():
+    # nothing underfoot: climb down a step
+    turn_right()
+    move()
+    turn_left()
+  elif front_is_blocked():
+    # a step up: climb it and carry on
+    turn_left()
+    move()
+    turn_right()
+    move()
+  else:
+    move()
+
+pick_beeper()
+`
+  };
+
+  // ── Example 4: The trail follower ──────────────────────────────────────────
+
+  const trailExample: KarelConfig = {
+    initialWorld: {
+      dimensions: { width: 12, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: [{ x: 7, y: 1, count: 1 }]
+    },
+    initialCode: `# Two ways for this walk to end: the trail runs
+# into the wall, or Karel reaches the marker.
+
+while front_is_clear() and no_beepers_present():
+  move()
+
+if beepers_present():
+  pick_beeper()
+`
+  };
+
+  // ── Exercise 1: Prospector Karel ───────────────────────────────────────────
+
+  /** A one-row tunnel; `counts[i]` is the number of beepers on column i+1. */
+  function tunnel(counts: number[]): KarelWorld {
+    return {
+      dimensions: { width: counts.length, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: [],
+      beepers: counts
+        .map((count, i) => ({ x: i + 1, y: 1, count }))
+        .filter((b) => b.count > 0)
+    };
+  }
+
+  const tunnels: Record<string, number[]> = {
+    'Test 1: A mixed seam': [0, 1, 3, 0, 1, 1, 4, 0],
+    'Test 2: Ore underfoot': [2, 0, 1, 5, 1],
+    'Test 3: Nothing but pebbles': [1, 1, 1, 1, 1, 1],
+    'Test 4: All ore': [3, 3, 3],
+    'Test 5: A single pebble': [1],
+    'Test 6: A long seam': [1, 0, 2, 1, 0, 0, 7, 1, 1, 2]
+  };
+
+  /** Each tunnel has a distinct width, so the final world identifies which one ran. */
+  const tunnelByWidth = new Map<number, number[]>(
+    Object.values(tunnels).map((counts) => [counts.length, counts])
+  );
+
   const exercise1Config: KarelConfig = {
     persistenceKey: '1/6/exercise-1',
-    initialWorld: {
-      dimensions: { width: 6, height: 1 },
-      karel: {
-        position: { x: 1, y: 1 },
-        direction: { type: 'east' },
-        beepers: 0
-      },
-      walls: [],
-      beepers: [
-        { x: 1, y: 1, count: 1 },
-        { x: 3, y: 1, count: 1 },
-        { x: 4, y: 1, count: 1 },
-        { x: 6, y: 1, count: 1 }
-      ]
-    },
-    initialCode: `# Walk the entire row and pick up every beeper.
-# Not all positions have beepers — use "if" to check!
+    initialWorld: tunnel(tunnels['Test 1: A mixed seam']),
+    initialCode: `# Karel is working a mine tunnel that runs east.
 #
-# Your solution must work for any beeper arrangement.
+# A cell holding exactly one beeper is a pebble.
+# A cell holding two or more is a vein of ore.
+#
+# At the end, every cell that started with a
+# pebble must hold a pebble, and those must be
+# the only cells left holding any beepers.
 
 `,
-    allowedFeatures: {
-      karelCommands: [
-        'move', 'turn_left', 'pick_beeper', 'put_beeper',
-        'front_is_clear', 'front_is_blocked',
-        'beepers_present', 'no_beepers_present'
-      ]
-    },
+    allowedFeatures: { karelCommands: baseCommands },
     tests: {
-      worlds: {
-        'Test 1: Scattered': {
-          dimensions: { width: 6, height: 1 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: 0
-          },
-          walls: [],
-          beepers: [
-            { x: 1, y: 1, count: 1 },
-            { x: 3, y: 1, count: 1 },
-            { x: 4, y: 1, count: 1 },
-            { x: 6, y: 1, count: 1 }
-          ]
-        },
-        'Test 2: All beepers': {
-          dimensions: { width: 4, height: 1 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: 0
-          },
-          walls: [],
-          beepers: [
-            { x: 1, y: 1, count: 1 },
-            { x: 2, y: 1, count: 1 },
-            { x: 3, y: 1, count: 1 },
-            { x: 4, y: 1, count: 1 }
-          ]
-        },
-        'Test 3: Just one': {
-          dimensions: { width: 5, height: 1 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: 0
-          },
-          walls: [],
-          beepers: [
-            { x: 3, y: 1, count: 1 }
-          ]
-        }
-      },
+      worlds: Object.fromEntries(
+        Object.entries(tunnels).map(([name, counts]) => [name, tunnel(counts)])
+      ),
       validate: (world) => {
-        const remaining = world.beepers.filter((b) => b.count > 0);
-        if (remaining.length === 0) {
-          return { passed: true, message: 'All beepers collected! Your if-statement works perfectly.' };
+        const counts = tunnelByWidth.get(world.dimensions.width);
+        if (!counts) return { passed: false, message: 'Unknown tunnel.' };
+
+        for (let i = 0; i < counts.length; i++) {
+          const x = i + 1;
+          const expected = counts[i] === 1 ? 1 : 0;
+          const actual = world.beepers.find((b) => b.x === x && b.y === 1)?.count ?? 0;
+          if (actual === expected) continue;
+
+          if (expected === 1 && actual === 0) {
+            return {
+              passed: false,
+              message: `The lone pebble at (${x}, 1) is gone. Every cell that started with a pebble has to end with one.`
+            };
+          }
+          if (expected === 1) {
+            return {
+              passed: false,
+              message: `(${x}, 1) held a single pebble and now holds ${actual} beepers.`
+            };
+          }
+          return {
+            passed: false,
+            message: `${actual} beeper(s) left at (${x}, 1) — that cell was a vein of ore.`
+          };
         }
         return {
-          passed: false,
-          message: `${remaining.length} beeper(s) still on the ground. Check both the starting position and all positions after moving.`
+          passed: true,
+          message: 'Every vein cleared, every pebble untouched. Karel can tell one from many.'
         };
       },
-      loadableTests: ['Test 1: Scattered', 'Test 2: All beepers', 'Test 3: Just one']
+      loadableTests: [
+        'Test 1: A mixed seam',
+        'Test 2: Ore underfoot',
+        'Test 3: Nothing but pebbles',
+        'Test 4: All ore',
+        'Test 5: A single pebble'
+      ]
     }
   };
 
-  // Exercise 2: Beeper line inverter
-  const exercise2Config: KarelConfig = {
-    persistenceKey: '1/6/exercise-2',
-    initialWorld: {
-      dimensions: { width: 5, height: 1 },
-      karel: {
-        position: { x: 1, y: 1 },
-        direction: { type: 'east' },
-        beepers: -1
-      },
-      walls: [],
-      beepers: [
-        { x: 1, y: 1, count: 1 },
-        { x: 3, y: 1, count: 1 },
-        { x: 5, y: 1, count: 1 }
-      ]
-    },
-    initialCode: `# Invert the beeper pattern!
-# For each position in the row:
-#   - If there's a beeper, pick it up
-#   - If there's no beeper, put one down
-#
-# Use a while loop with an if/else inside.
+  // ── Exercise 2: The tally board ────────────────────────────────────────────
 
-`,
-    allowedFeatures: {
-      karelCommands: [
-        'move', 'turn_left', 'pick_beeper', 'put_beeper',
-        'front_is_clear', 'front_is_blocked',
-        'beepers_present', 'no_beepers_present'
-      ]
-    },
-    tests: {
-      worlds: {
-        'Test: Alternating': {
-          dimensions: { width: 5, height: 1 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: -1
-          },
-          walls: [],
-          beepers: [
-            { x: 1, y: 1, count: 1 },
-            { x: 3, y: 1, count: 1 },
-            { x: 5, y: 1, count: 1 }
-          ]
-        }
-      },
-      validate: (world) => {
-        // After inverting: beepers should be at 2 and 4 (not at 1, 3, 5)
-        const expected = [
-          { x: 2, y: 1, should: true },
-          { x: 4, y: 1, should: true },
-          { x: 1, y: 1, should: false },
-          { x: 3, y: 1, should: false },
-          { x: 5, y: 1, should: false }
-        ];
+  /** The board is exactly as tall as its tallest pile — a bar has no room to overshoot. */
+  function boardHeight(piles: number[]): number {
+    return Math.max(3, ...piles);
+  }
 
-        for (const exp of expected) {
-          const found = world.beepers.find(
-            (b) => b.x === exp.x && b.y === exp.y && b.count > 0
-          );
-          if (exp.should && !found) {
-            return {
-              passed: false,
-              message: `Expected a beeper at (${exp.x}, ${exp.y}) but didn't find one. Remember: if there's no beeper, put one down.`
-            };
-          }
-          if (!exp.should && found) {
-            return {
-              passed: false,
-              message: `Found a beeper at (${exp.x}, ${exp.y}) that should have been picked up.`
-            };
-          }
-        }
-        return { passed: true, message: 'Pattern inverted perfectly! Great use of if/else.' };
-      }
-    }
-  };
-
-  // Exercise 3: Safe navigation
-  const exercise3Config: KarelConfig = {
-    persistenceKey: '1/6/exercise-3',
-    initialWorld: {
-      dimensions: { width: 5, height: 5 },
+  function tallyBoard(piles: number[]): KarelWorld {
+    return {
+      dimensions: { width: piles.length, height: boardHeight(piles) },
       karel: {
         position: { x: 1, y: 1 },
         direction: { type: 'east' },
         beepers: 0
       },
-      walls: [
-        // Create a zigzag path by blocking certain directions
-        { type: 'vertical', x: 3, y: 1 },   // wall to right of (3,1)
-        { type: 'horizontal', x: 4, y: 3 },  // wall below (4,3)
-        { type: 'vertical', x: 2, y: 4 }     // wall to right of (2,4)
-      ],
-      beepers: [{ x: 5, y: 5, count: 1 }]
+      walls: [],
+      beepers: piles
+        .map((count, i) => ({ x: i + 1, y: 1, count }))
+        .filter((b) => b.count > 0)
+    };
+  }
+
+  const boards: Record<string, number[]> = {
+    'Test 1: A ragged board': [3, 1, 0, 4, 2, 5],
+    'Test 2: All ones': [1, 1, 1, 1],
+    'Test 3: An empty board': [0, 0, 0, 0, 0],
+    'Test 4: Tall and empty': [5, 0, 5],
+    'Test 5: A pyramid': [1, 2, 3, 4, 3, 2, 1],
+    'Test 6: A wide board': [2, 0, 3, 1, 4, 0, 1, 5]
+  };
+
+  const boardByWidth = new Map<number, number[]>(
+    Object.values(boards).map((piles) => [piles.length, piles])
+  );
+
+  const exercise2Config: KarelConfig = {
+    persistenceKey: '1/6/exercise-2',
+    initialWorld: tallyBoard(boards['Test 1: A ragged board']),
+    initialCode: `# Row 1 holds piles of beepers of different sizes.
+#
+# Stand each pile up into a bar: a column of
+# single beepers rising from row 1. A pile of 4
+# becomes one beeper on each of rows 1, 2, 3 and 4
+# of that column. An empty cell stays empty.
+#
+# The board is exactly as tall as its tallest pile.
+
+`,
+    allowedFeatures: {
+      karelCommands: [...baseCommands, 'beepers_in_bag', 'no_beepers_in_bag']
     },
-    initialCode: `# Navigate to the beeper at (5, 5).
-# There are walls in the way!
+    tests: {
+      worlds: Object.fromEntries(
+        Object.entries(boards).map(([name, piles]) => [name, tallyBoard(piles)])
+      ),
+      validate: (world) => {
+        const piles = boardByWidth.get(world.dimensions.width);
+        if (!piles) return { passed: false, message: 'Unknown board.' };
+        const countAt = (x: number, y: number) =>
+          world.beepers.find((b) => b.x === x && b.y === y)?.count ?? 0;
+
+        for (let i = 0; i < piles.length; i++) {
+          const x = i + 1;
+          const pile = piles[i];
+          for (let y = 1; y <= world.dimensions.height; y++) {
+            const expected = y <= pile ? 1 : 0;
+            const actual = countAt(x, y);
+            if (actual === expected) continue;
+
+            if (expected === 1 && actual === 0) {
+              return {
+                passed: false,
+                message: `Column ${x} started with ${pile} beepers, so its bar should reach (${x}, ${y}) — that cell is empty.`
+              };
+            }
+            if (expected === 1) {
+              return {
+                passed: false,
+                message: `(${x}, ${y}) holds ${actual} beepers. A bar is one beeper per cell.`
+              };
+            }
+            return {
+              passed: false,
+              message: `Column ${x} started with ${pile} beepers, so its bar is too tall: ${actual} beeper(s) at (${x}, ${y}).`
+            };
+          }
+        }
+        return {
+          passed: true,
+          message: 'Every pile stood up into a bar of exactly the right height.'
+        };
+      },
+      loadableTests: [
+        'Test 1: A ragged board',
+        'Test 2: All ones',
+        'Test 3: An empty board',
+        'Test 4: Tall and empty',
+        'Test 5: A pyramid'
+      ]
+    }
+  };
+
+  // ── Exercise 3: The ration run ─────────────────────────────────────────────
+
+  /** A street of houses; `supplied[i]` is 1 if column i+1 already has a crate. */
+  function street(supplied: number[], load: number): KarelWorld {
+    return {
+      dimensions: { width: supplied.length, height: 1 },
+      karel: {
+        position: { x: 1, y: 1 },
+        direction: { type: 'east' },
+        beepers: load
+      },
+      walls: [],
+      beepers: supplied
+        .map((count, i) => ({ x: i + 1, y: 1, count }))
+        .filter((b) => b.count > 0)
+    };
+  }
+
+  const streets: Record<string, { supplied: number[]; load: number }> = {
+    'Test 1: A short supply': { supplied: [0, 1, 0, 0, 1, 0, 0, 0], load: 3 },
+    'Test 2: Every house stocked': { supplied: [1, 1, 1, 1, 1, 1], load: 4 },
+    'Test 3: Crates to spare': { supplied: [0, 0, 0, 0, 0], load: 10 },
+    'Test 4: Out after two': { supplied: [0, 0, 1, 0, 0, 1, 0], load: 2 },
+    'Test 5: An empty truck': { supplied: [0, 0, 0, 0], load: 0 },
+    'Test 6: A long street': { supplied: [1, 0, 0, 1, 0, 0, 0, 1, 0], load: 3 }
+  };
+
+  const streetByWidth = new Map<number, { supplied: number[]; load: number }>(
+    Object.values(streets).map((s) => [s.supplied.length, s])
+  );
+
+  /** One crate to each needy house, west to east, until the truck runs dry. */
+  function deliveredStreet({ supplied, load }: { supplied: number[]; load: number }): number[] {
+    const result = [...supplied];
+    let remaining = load;
+    for (let i = 0; i < result.length && remaining > 0; i++) {
+      if (result[i] === 0) {
+        result[i] = 1;
+        remaining--;
+      }
+    }
+    return result;
+  }
+
+  const exercise3Config: KarelConfig = {
+    persistenceKey: '1/6/exercise-3',
+    initialWorld: street(
+      streets['Test 1: A short supply'].supplied,
+      streets['Test 1: A short supply'].load
+    ),
+    initialCode: `# Karel is driving a supply truck east along a
+# street of houses. Some houses already have a
+# crate; the rest have none.
 #
-# Strategy: Try to move east. If blocked, move north.
-# Keep going until you reach the beeper.
+# The truck holds a fixed number of crates, and
+# Karel does not know how many. Give one crate to
+# every house that has none, working east, until
+# the street or the load runs out.
 #
-# You'll need: while, if/else, and sensor functions.
+# (1, 1) is a house too: if it has no crate, it
+# gets one.
+#
+# Never leave two crates on one house.
+#
+# Finish back at the depot (1, 1), facing east.
+
+`,
+    allowedFeatures: {
+      karelCommands: [
+        'move', 'turn_left', 'put_beeper',
+        'front_is_clear', 'front_is_blocked',
+        'beepers_present', 'no_beepers_present',
+        'beepers_in_bag', 'no_beepers_in_bag'
+      ]
+    },
+    tests: {
+      worlds: Object.fromEntries(
+        Object.entries(streets).map(([name, s]) => [name, street(s.supplied, s.load)])
+      ),
+      validate: (world) => {
+        const entry = streetByWidth.get(world.dimensions.width);
+        if (!entry) return { passed: false, message: 'Unknown street.' };
+        const expected = deliveredStreet(entry);
+
+        for (let i = 0; i < expected.length; i++) {
+          const x = i + 1;
+          const actual = world.beepers.find((b) => b.x === x && b.y === 1)?.count ?? 0;
+          if (actual === expected[i]) continue;
+
+          if (actual === 0) {
+            return {
+              passed: false,
+              message: `The house at (${x}, 1) never got a crate, and the truck still had one to give.`
+            };
+          }
+          if (expected[i] === 0) {
+            return {
+              passed: false,
+              message: `A crate reached (${x}, 1), but the truck should have been empty before Karel got there.`
+            };
+          }
+          return {
+            passed: false,
+            message: `(${x}, 1) holds ${actual} crates. Every house takes exactly one.`
+          };
+        }
+
+        const { x, y } = world.karel.position;
+        if (x !== 1 || y !== 1) {
+          return {
+            passed: false,
+            message: `Karel has to finish back at the depot (1, 1) but ended at (${x}, ${y}).`
+          };
+        }
+        if (world.karel.direction.type !== 'east') {
+          return {
+            passed: false,
+            message: `Karel must finish facing east, not ${world.karel.direction.type}.`
+          };
+        }
+        return {
+          passed: true,
+          message: 'Every crate that could be delivered was, and the truck is back at the depot.'
+        };
+      },
+      loadableTests: [
+        'Test 1: A short supply',
+        'Test 2: Every house stocked',
+        'Test 3: Crates to spare',
+        'Test 4: Out after two',
+        'Test 5: An empty truck'
+      ]
+    }
+  };
+
+  // ── Exercise 4: The maze runner ────────────────────────────────────────────
+
+  /** Walls along every boundary between an open cell and a blocked one. */
+  function mazeWalls(rows: string[]): Wall[] {
+    const height = rows.length;
+    const width = rows[0].length;
+    const isOpen = (x: number, y: number) => rows[height - y][x - 1] !== '#';
+    const walls: Wall[] = [];
+
+    for (let y = 1; y <= height; y++) {
+      for (let x = 1; x <= width; x++) {
+        if (x < width && isOpen(x, y) !== isOpen(x + 1, y)) {
+          walls.push({ type: 'vertical', x, y });
+        }
+        if (y < height && isOpen(x, y) !== isOpen(x, y + 1)) {
+          walls.push({ type: 'horizontal', x, y: y + 1 });
+        }
+      }
+    }
+    return walls;
+  }
+
+  /** Locate a marker character in the ASCII map. Row 0 of `rows` is the top row. */
+  function mazeFind(rows: string[], marker: string): Position {
+    for (let r = 0; r < rows.length; r++) {
+      const c = rows[r].indexOf(marker);
+      if (c !== -1) return { x: c + 1, y: rows.length - r };
+    }
+    throw new Error(`Maze marker "${marker}" not found`);
+  }
+
+  /** Build a maze world: "#" is solid, "S" is Karel's start, "E" is the exit beeper. */
+  function maze(rows: string[]): KarelWorld {
+    const exit = mazeFind(rows, 'E');
+    return {
+      dimensions: { width: rows[0].length, height: rows.length },
+      karel: {
+        position: mazeFind(rows, 'S'),
+        direction: { type: 'east' },
+        beepers: 0
+      },
+      walls: mazeWalls(rows),
+      beepers: [{ x: exit.x, y: exit.y, count: 1 }]
+    };
+  }
+
+  const mazes: Record<string, string[]> = {
+    'Test 1: The first maze': [
+      'S.#....#.',
+      '.#.#.##..',
+      '.#...#..#',
+      '...#.#.#.',
+      '##.#...#.',
+      '.....###.',
+      '.#.#....E'
+    ],
+    'Test 2: Dead ends': [
+      'S....#..',
+      '####.#.#',
+      '...#.#..',
+      '.#.#.#.#',
+      '.#...#..',
+      '.#####.#',
+      '.......E'
+    ],
+    'Test 3: A short hop': ['S.#', '.#E', '...'],
+    'Test 4: A spiral': ['S........', '########.', '.E.......', '.#######.', '.........']
+  };
+
+  const exercise4Config: KarelConfig = {
+    persistenceKey: '1/6/exercise-4',
+    initialWorld: maze(mazes['Test 1: The first maze']),
+    initialCode: `# Karel has been dropped into a maze. A beeper
+# marks the way out. Reach it and pick it up.
+#
+# Karel gets out the way people have escaped mazes
+# for centuries: by putting one hand on the wall
+# and never taking it off.
 
 def turn_right():
   for i in range(3):
@@ -306,169 +619,252 @@ def turn_right():
 `,
     allowedFeatures: {
       karelCommands: [
-        'move', 'turn_left', 'pick_beeper', 'put_beeper',
+        'move', 'turn_left', 'pick_beeper',
         'front_is_clear', 'front_is_blocked',
-        'beepers_present', 'no_beepers_present',
         'left_is_clear', 'left_is_blocked',
         'right_is_clear', 'right_is_blocked',
-        'facing_north', 'not_facing_north',
-        'facing_east', 'not_facing_east',
-        'facing_south', 'not_facing_south',
-        'facing_west', 'not_facing_west'
+        'beepers_present', 'no_beepers_present'
       ]
     },
     tests: {
-      worlds: {
-        'Main Test': {
-          dimensions: { width: 5, height: 5 },
-          karel: {
-            position: { x: 1, y: 1 },
-            direction: { type: 'east' },
-            beepers: 0
-          },
-          walls: [
-            { type: 'vertical', x: 3, y: 1 },
-            { type: 'horizontal', x: 4, y: 3 },
-            { type: 'vertical', x: 2, y: 4 }
-          ],
-          beepers: [{ x: 5, y: 5, count: 1 }]
-        }
-      },
+      worlds: Object.fromEntries(
+        Object.entries(mazes).map(([name, rows]) => [name, maze(rows)])
+      ),
       validate: (world) => {
-        const beepersOnGround = world.beepers.filter((b) => b.count > 0);
-        if (beepersOnGround.length === 0) {
-          return { passed: true, message: 'Karel navigated the walls and found the beeper! Nicely done.' };
+        const left = world.beepers.filter((b) => b.count > 0);
+        if (left.length === 0) {
+          return { passed: true, message: 'Karel followed the wall all the way out.' };
         }
+        const b = left[0];
         return {
           passed: false,
-          message: 'Karel needs to reach (5, 5) and pick up the beeper. Use sensors to check for walls before moving.'
+          message: `Karel never reached the exit beeper at (${b.x}, ${b.y}).`
         };
-      }
+      },
+      loadableTests: ['Test 1: The first maze', 'Test 2: Dead ends', 'Test 3: A short hop']
     }
   };
 </script>
 
 <LessonShell chapterNumber={1} lessonNumber={6}>
 
-## Making Decisions
+## Two Questions a Program Can Ask
 
-So far, Karel's programs have been straightforward — move, turn, repeat. But what if Karel needs to **make a choice**? What if there might be a beeper, or there might not? What if there might be a wall ahead, or there might not?
+You already know how to make Karel repeat something until the world changes:
 
-**If/else statements** let Karel decide what to do based on its surroundings.
+```python
+while beepers_present():
+  pick_beeper()
+```
 
-## The If Statement
-
-The simplest form checks one condition:
+And here is a new statement that looks almost identical:
 
 ```python
 if beepers_present():
   pick_beeper()
 ```
 
-This says: **"If there's a beeper here, pick it up. Otherwise, do nothing."**
+On a cell holding a single beeper, those two do exactly the same thing. So it is fair to ask what the `if` is even for — it looks like a `while` loop that gave up early.
 
-Without the `if`, calling `pick_beeper()` on an empty cell would crash. The `if` statement protects Karel from errors.
+The difference is in the question each one asks. A `while` loop asks **"again?"** It re-checks its condition after every pass and keeps going until the answer is no. An `if` statement asks **"which way?"** It checks once, takes a road, and never looks back.
 
-## If/Else: Two Choices
+That sounds like a small distinction. It isn't.
 
-Sometimes you want Karel to do one thing if a condition is true, and *something different* if it's false:
+## The Conditions Karel Can't Change
+
+A `while` loop only ends if its own body changes the answer to its condition. `while beepers_present(): pick_beeper()` finishes because picking beepers up is the very thing that eventually makes `beepers_present()` false.
+
+Now look at this:
 
 ```python
-if beepers_present():
-  pick_beeper()
-else:
+while left_is_clear():
   put_beeper()
 ```
 
-This says: **"If there's a beeper, pick it up. Otherwise, put one down."** Karel always does exactly one of the two — never both, never neither.
+`left_is_clear()` asks whether there is a wall beside Karel. Putting down a beeper does not build a wall. The answer is *yes* before the first beeper, *yes* after the hundredth, and *yes* forever. This loop never ends.
 
-## Example: Careful Collector
-
-This is the pattern you'll use most often: a **while loop** with an **if statement** inside. Karel walks the whole row, checking for beepers at each position:
-
-<KarelEnvironment config={carefulCollectorExample} />
-
-Notice how the `if` lets Karel only pick up beepers where they exist, avoiding crashes on empty cells.
-
----
-
-## Example: Beeper Inverter
-
-Here's `if/else` in action. Each position either has a beeper or doesn't. Karel inverts the pattern — picking up where there's a beeper, placing where there isn't:
-
-<KarelEnvironment config={ifElseExample} />
-
----
-
-## More Sensors
-
-Now that you can use if/else, here are more sensor functions that become useful:
-
-| Sensor | Opposite | What it checks |
-| --- | --- | --- |
-| `left_is_clear()` | `left_is_blocked()` | Is there a wall to Karel's left? |
-| `right_is_clear()` | `right_is_blocked()` | Is there a wall to Karel's right? |
-| `facing_north()` | `not_facing_north()` | Which way is Karel facing? |
-| `facing_east()` | `not_facing_east()` | |
-| `facing_south()` | `not_facing_south()` | |
-| `facing_west()` | `not_facing_west()` | |
-
-## Example: Checking Left and Right
-
-In this example, Karel walks east and places a beeper only where the left side (north) is clear — no wall above:
-
-<KarelEnvironment config={moreSensorsExample} />
-
----
-
-## Combining Everything
-
-The real power comes from combining `if/else` with `while` loops and functions. Here's a common pattern:
+Beepers Karel can pick up and put down. Direction Karel can change by turning. But the walls around Karel do not move — the only way to change what `left_is_clear()` says is to go somewhere else. For a condition like that, a `while` loop is a trap, and an `if` statement is the only tool that does the job:
 
 ```python
-while front_is_clear():
-  if beepers_present():
-    pick_beeper()
+if left_is_clear():
+  put_beeper()
+```
+
+Check once. Act or don't. Move on.
+
+## Karel's Full Sensor Set
+
+Now that Karel can ask questions without getting stuck in them, the rest of the sensors become useful. Here is every one of them:
+
+| Sensor | Opposite | What it asks |
+| --- | --- | --- |
+| `front_is_clear()` | `front_is_blocked()` | Is there open space ahead? |
+| `left_is_clear()` | `left_is_blocked()` | Is there open space to Karel's left? |
+| `right_is_clear()` | `right_is_blocked()` | Is there open space to Karel's right? |
+| `beepers_present()` | `no_beepers_present()` | Are there beepers on this cell? |
+| `beepers_in_bag()` | `no_beepers_in_bag()` | Does Karel still have beepers to place? |
+| `facing_north()` | `not_facing_north()` | Which way is Karel pointing? |
+| `facing_south()` | `not_facing_south()` | |
+| `facing_east()` | `not_facing_east()` | |
+| `facing_west()` | `not_facing_west()` | |
+
+"Left" and "right" are from Karel's point of view, not yours. Facing east, Karel's left is north and its right is south.
+
+## Example: Marking the Doorways
+
+Karel patrols a corridor. Some cells have a wall to the north; some have a gap — a doorway. Karel drops a beeper at every doorway it passes.
+
+<KarelEnvironment config={doorwayExample} />
+
+The last check sits outside the loop, because `front_is_clear()` stops Karel one cell short of the end. That is the fencepost problem from Lesson 4, turning up again.
+
+Now change that `if` to a `while` and run it. Karel drops a beeper, the doorway is still a doorway, so it drops another, and another, until the step limit cuts it off. One word is the whole difference between the two statements.
+
+---
+
+## Else: The Fork in the Road
+
+An `if` on its own gives Karel two options: do the thing, or skip it. Adding `else` gives it a real choice between two *different* jobs:
+
+```python
+if front_is_clear():
+  move()
+else:
+  turn_left()
+```
+
+Exactly one of those branches runs. Never both, never neither. A `while` loop has no equivalent — it can repeat a job or skip a job, but it cannot pick between two.
+
+And just as loops nest inside loops, an `if` can go inside the `else` of another `if`.
+
+## Example: The Pipe Crawler
+
+Karel is inside a pipe one cell wide that bends without warning. There is only ever one way forward, and Karel's rule is simple: walk if you can, and if you can't, turn toward whichever side is open.
+
+<KarelEnvironment config={pipeExample} />
+
+---
+
+## Elif: More Than Two Roads
+
+That nested `if` inside an `else` is such a common shape that Python has a shorthand for it: `elif`, short for "else if".
+
+```python
+if right_is_clear():
+  turn_right()
+elif front_is_clear():
+  move()
+else:
+  turn_left()
+```
+
+You can chain as many `elif` branches as you like. Python checks them from the top and runs the **first** branch whose condition is true — then skips all the rest, even if their conditions are true too.
+
+Read that last part twice, because it is the part that bites people. **Only one branch ever runs, and it is the first one that matches.** If two branches have conditions that can both be true at the same time, then swapping them changes what your program does. The order of the branches is part of the logic, not a matter of taste.
+
+## Example: The Hillwalker
+
+Karel is crossing a range of hills, heading east toward a flag. The ground rises and falls a step at a time, so at each point there are three possibilities: the ground under Karel has fallen away, a step up blocks the way ahead, or the path is flat.
+
+<KarelEnvironment config={hillExample} />
+
+The last column proves the point about ordering. When Karel steps out over the final drop, two conditions are true at once: the ground has fallen away, *and* the way ahead is blocked — because ahead is the edge of the world. Since the drop is checked first, Karel climbs down and reaches the flag. Swap the first two branches and Karel tries to climb the edge of the world instead. Try it.
+
+---
+
+## Asking Two Questions at Once
+
+Every loop you have written so far had exactly one thing that could stop it. Real jobs are not always so tidy, so conditions can be combined with **`and`** and **`or`**:
+
+```python
+while front_is_clear() and no_beepers_present():
   move()
 ```
 
-This walks the entire row, picking up beepers wherever they exist. The `while` handles the repetition, and the `if` handles the decision at each step.
+`and` is true only when *both* sides are true, so this loop keeps walking only while the way is clear **and** the cell is empty. Either a wall or a beeper will stop it.
+
+`or` is true when *either* side is true. It often lets you say the same thing from the other direction — "keep going while the way is clear and nothing is here" is the same rule as "stop if the way is blocked or something is here":
+
+```python
+if front_is_blocked() or beepers_present():
+  put_beeper()
+```
+
+Combining sensors also lets Karel recognize *situations* rather than bare facts. A wall ahead is not very interesting on its own, but a wall ahead **and** a wall to the right means Karel is standing in a corner:
+
+```python
+if front_is_blocked() and right_is_blocked():
+  put_beeper()
+```
+
+There is a third operator, **`not`**, which simply flips a condition: `not front_is_clear()` is true exactly when the front is blocked.
+
+But look at that sensor table again. Every single one of Karel's sensors comes with a ready-made opposite. `front_is_blocked()` already means `not front_is_clear()`, and it reads better, so in this chapter you will hardly ever reach for `not` — prefer the twin.
+
+Those twins are a courtesy of Karel's world, not a feature of Python. In the next chapter you will start asking questions that nobody wrote an opposite for, and `not` is how you flip *any* condition at all.
+
+## Example: The Trail Follower
+
+Karel follows a trail that ends either at a marker or at the wall, whichever comes first. One loop, two ways to stop.
+
+<KarelEnvironment config={trailExample} />
 
 ---
 
-## Exercise 1: Selective Collector
+## Exercise 1: Prospector Karel
 
-Walk the entire row and pick up every beeper, but be careful — not all positions have beepers! Use `if` to check before picking up.
+Karel is working a mine tunnel that runs east from the entrance. Scattered along it are two kinds of thing, and from the outside they look identical:
 
-Your solution must work for any arrangement of beepers. Use the dropdown to test different configurations.
+- A **pebble** — a single beeper sitting on its own. Worthless.
+- A **vein of ore** — two or more beepers on one cell. Karel wants all of it.
 
-> **Hint:** Don't forget to check Karel's starting position. The loop condition `front_is_clear()` only controls moving — you need to check for beepers separately.
+When Karel is done prospecting, every cell that started with a pebble must hold a pebble, and those must be the only cells left holding any beepers.
+
+Remember that `beepers_present()` only answers yes or no. It will not tell Karel how many are there, and no other sensor will either.
+
+The tunnel is a different length in every test, and Karel starts at its west end with an empty bag. Your code is also checked against a tunnel you cannot load.
 
 <KarelEnvironment config={exercise1Config} />
 
 ---
 
-## Exercise 2: Beeper Inverter
+## Exercise 2: The Tally Board
 
-Invert the beeper pattern across the entire row:
-- If a position has a beeper → pick it up
-- If a position has no beeper → put one down
+Row 1 of the board holds piles of beepers of different sizes — some tall, some a single beeper, some nothing at all. Karel's job is to stand each pile up into a **bar**: a column of single beepers rising from row 1.
 
-The starting pattern has beepers at positions 1, 3, and 5. After your program runs, beepers should be at positions 2 and 4 instead.
+A pile of 4 becomes one beeper on each of rows 1, 2, 3 and 4 of that column. A pile of 1 becomes a single beeper on row 1, right where it already was. An empty cell stays empty.
+
+Karel starts at (1, 1) facing east with an empty bag. The width of the board and the sizes of the piles change from test to test, and the board is always **exactly as tall as its tallest pile** — there is no headroom above the highest bar. One board is hidden from you.
 
 <KarelEnvironment config={exercise2Config} />
 
 ---
 
-## Exercise 3: Wall Navigator
+## Exercise 3: The Ration Run
 
-Navigate Karel from (1, 1) to the beeper at (5, 5) — but there are walls in the way!
+Karel is driving a supply truck east along a street. Every cell in the row is a house, and some of them already have a crate — a beeper — sitting outside. That includes (1, 1): the depot stands outside a house like any other, so if (1, 1) has no crate it takes the first one out of the truck.
 
-You'll need to use sensors to detect walls and choose alternate paths. One strategy: try to move east; if blocked, try north. Use a combination of while loops, if/else, and sensor functions.
+The truck holds a **fixed number of crates**, and Karel has no idea how many. Once they are gone, they are gone. Give one crate to every house that doesn't have one, working east from the depot at (1, 1), until either the street runs out or the truck does. Never leave two crates on one house.
 
-> **Hint:** All the sensors are available for this exercise. Use `front_is_clear()` to check before moving, and `turn_left()` to try a different direction when blocked.
+When the deliveries are done, drive back to the depot and finish there facing east.
+
+The length of the street, which houses are already stocked, and the size of the load all change from test to test — including a street you cannot load.
 
 <KarelEnvironment config={exercise3Config} />
+
+---
+
+## Exercise 4: The Maze Runner
+
+Karel has been dropped into a maze. Somewhere inside it a beeper marks the way out. Reach it and pick it up.
+
+Karel is going to get out the way people have escaped mazes for centuries: by putting one hand on the wall and never taking it off. Follow the wall faithfully enough and it will lead you around every dead end and out the other side.
+
+Turning that into code is the exercise. At every step Karel has three possible moves, and — as the Hillwalker showed — the order you check them in is the difference between escaping and going in circles.
+
+Three mazes are loadable and a fourth is hidden.
+
+<KarelEnvironment config={exercise4Config} />
 
 ---
 
@@ -476,12 +872,13 @@ You'll need to use sensors to detect walls and choose alternate paths. One strat
 
 In this lesson you learned:
 
-- **If statements** let Karel check conditions before acting
-- **If/else** lets Karel choose between two different actions
-- Combining **while loops + if/else** creates powerful, safe programs
-- More sensor functions: `left_is_clear()`, `right_is_clear()`, `facing_north()`, etc.
-- How to protect Karel from crashes by checking before acting
+- **`if`** asks *which way?* and runs once, where **`while`** asks *again?* and repeats
+- Some conditions — walls above all — Karel cannot act its way out of, and a `while` loop on one of those never ends
+- **`else`** gives Karel a choice between two different jobs, something a loop cannot do
+- **`elif`** chains any number of choices, and **only the first matching branch runs**, so the order of the branches is part of the logic
+- **`and`** and **`or`** combine conditions, letting a single loop watch more than one thing
+- **`not`** flips any condition — rarely needed with Karel's paired sensors, but essential once you leave Karel behind
 
-In the final lesson, you'll **put everything together** to solve complex Karel challenges!
+In the final lesson, you'll **put everything together** to solve some larger Karel challenges.
 
 </LessonShell>

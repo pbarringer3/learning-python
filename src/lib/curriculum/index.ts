@@ -66,10 +66,10 @@ const karel: Chapter = {
     {
       id: 'conditionals',
       title: 'If/Else Statements',
-      description: 'Make Karel decide what to do based on its surroundings using conditionals.',
+      description: 'Branch with if, else and elif, and combine conditions with and, or, and not.',
       number: 6,
       hasExercises: true,
-      exerciseCount: 3
+      exerciseCount: 4
     },
     {
       id: 'putting-it-together',

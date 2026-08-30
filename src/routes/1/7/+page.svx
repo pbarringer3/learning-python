@@ -14,7 +14,7 @@
     initialWorld: {
       dimensions: { width: 8, height: 1 },
       karel: {
-        position: { x: 1, y: 1 },
+        position: { x: 3, y: 1 },
         direction: { type: 'east' },
         beepers: 1
       },
@@ -157,9 +157,6 @@ def turn_around():
 # Move the stack across and double it on the way:
 # column 2 ends empty, and column 3 ends holding
 # twice what column 2 started with.
-#
-# Karel's purse is bottomless, so the coins Karel
-# puts down need not be the ones it picked up.
 
 def turn_around():
   turn_left()
@@ -254,9 +251,9 @@ def turn_around():
     initialCode: `# The home tally sits on (1, 1); the visitors' tally
 # sits at the far end of the row.
 #
-# Cancel them one against one until a side runs out.
-# The lead stays on the board, and the loser's end
-# finishes bare.
+# Reduce the board to the lead: the beaten side
+# finishes bare, and the winning side keeps exactly
+# the margin between the two tallies.
 #
 # Karel's bag starts empty. Whatever Karel picks up
 # stays in the bag.
@@ -518,9 +515,7 @@ def turn_around():
 # (1, 1), then every other cell, in both directions.
 #
 # A cell gets a tile when the cell below it does not,
-# and a cell gets a tile when the cell beside it does
-# not. Karel can only see the cell it is standing on
-# — so stand on the right cell before you ask.
+# and when the cell beside it does not.
 
 def turn_right():
   for i in range(3):
@@ -602,9 +597,6 @@ def turn_around():
     initialCode: `# Put a single beeper on the middle cell of the hall
 # and finish standing on it. Nothing else may be left
 # lying on the floor.
-#
-# Karel cannot count the hall — but two markers
-# walking toward each other have to meet somewhere.
 #
 # The hall is at least 2 cells long. When it has an
 # even number of cells, either middle cell counts.
@@ -695,7 +687,7 @@ A Karel program has nowhere to write anything down. There is no place to keep th
 
 Two consequences are worth taking seriously before you start:
 
-- **A beeper is a number.** A stack of seven beepers *is* the number seven, and the only way Karel can read it is to take it apart one beeper at a time. Moving a stack cell by cell is how Karel copies a number; removing one from each of two stacks until a side runs dry is how Karel compares two numbers.
+- **A beeper is a number.** A stack of seven beepers *is* the number seven, and the only way Karel can read it is to take it apart one beeper at a time.
 - **A beeper is a place.** Drop one, walk away, and Karel can find its way home by walking until `beepers_present()` says yes. A beeper on the ground is the closest thing Karel has to writing down *here*.
 
 ### Example: Leaving a Note
@@ -706,7 +698,7 @@ Karel walks to the far end of a hall and comes back to exactly where it started 
 
 The marker does all the work. Karel never counts a thing.
 
-In the next chapter you will get **variables**, and Karel's habit of dropping beepers to remember things will look like what it is: a workaround. But the ideas underneath — counting something down to nothing, marking a position so you can return to it, comparing two quantities by cancelling them off against each other — are real algorithms, and you will use every one of them again on data that has nothing to do with robots.
+In the next chapter you will get **variables**, and Karel's habit of dropping beepers to remember things will look like what it is: a workaround. But the ideas underneath are real algorithms, and you will meet them again on data that has nothing to do with robots.
 
 ---
 
@@ -714,9 +706,9 @@ In the next chapter you will get **variables**, and Karel's habit of dropping be
 
 Karel is sowing a field. Every cell gets **exactly one** seed — no cell bare, no cell double-sown — and the sack of seed never runs out.
 
-Karel starts at (1, 1) facing east. The field is a different shape in every test, so the plan cannot rely on a count: sow a row, climb to the next one, and sow that one back the other way.
+Karel starts at (1, 1) facing east. The field is a different shape in every test, so nothing can be counted out in advance.
 
-Two of the loadable fields are the ones that break careless code — a field one column wide, and a field one row deep. Your solution is checked against a field you cannot load, too.
+The loadable fields include one a single column wide and one a single row deep. Your solution is checked against a field you cannot load, too.
 
 <KarelEnvironment config={exercise1Config} />
 
@@ -728,11 +720,9 @@ Karel works a counting bench. A stack of coins sits on **(2, 1)**, and every coi
 
 Move the stack east and double it on the way. When Karel is finished, **(2, 1) must be bare** and **(3, 1) must hold exactly twice** what (2, 1) started with — with nothing left anywhere else on the bench.
 
-Karel starts on (1, 1) with a bottomless purse, so the coins Karel puts down need not be the ones it picked up. What Karel does *not* have is any way to look at the stack and see how tall it is. `beepers_present()` answers yes or no and nothing more.
+Karel starts on (1, 1) with a bottomless purse.
 
-So Karel has to take the number apart: one coin off the stack, two coins down next door, and back for the next one. The stack shrinking is what eventually stops the loop.
-
-The bench is a different length in every test, the stack is a different height — including one test where there is no stack at all — and one bench is hidden from you.
+The overall length of the bench is unspecified as is the height of the stack.
 
 <KarelEnvironment config={exercise2Config} />
 
@@ -742,13 +732,9 @@ The bench is a different length in every test, the stack is a different height �
 
 A scoreboard runs the length of a row. The home tally is a stack on **(1, 1)**; the visitors' tally is a stack on the **last cell of the row**. Karel has no idea how big either one is, or how far apart they are.
 
-Karel's job is to reduce the board to the **lead**. Take one marker off each side, again and again, until one of the sides runs out. Whatever is left standing is the margin, and the beaten side finishes bare. If the two tallies were level, both ends finish bare.
+Karel's job is to reduce the board to the **lead**. When Karel is finished, the beaten side's cell is bare and the winning side holds exactly the margin between the two tallies. If the tallies were level, both ends finish bare.
 
-Karel's bag starts **empty**, and every marker it cancels stays in the bag — cancelled markers never go back on the board.
-
-There is a catch, and it is the whole exercise. Karel can only see the cell it is standing on, so the only way to find out whether the far side still has markers is to walk over and look — and by then Karel is already carrying the marker it took from this side. When the far side turns out to be bare, that marker has to be walked back and put down where it came from.
-
-Four boards are loadable and a fifth is hidden. One of the loadable ones starts with an empty home tally.
+Karel's bag starts **empty**, and markers that come off the board stay in it. The two tally cells are the only cells that may be holding anything when Karel is done.
 
 <KarelEnvironment config={exercise3Config} />
 
@@ -760,11 +746,7 @@ Karel is emptying a warehouse. A corridor runs east along row 1. Vaults open nor
 
 Karel knows none of it: not how many vaults there are, not which columns they open from, not how deep any shaft runs, not how many crates sit on a given cell — and some cells inside a vault hold nothing at all.
 
-Bring every crate in the warehouse back to the **depot on (1, 1)** and pile it there. Karel's bag starts empty, so Karel can only put down what it has picked up. Finish standing on the depot **facing east**.
-
-This is the biggest job in the chapter, and it wants every tool you have: a `while` loop to work along a corridor of unknown length, a sensor to spot a doorway in passing, another `while` to climb a shaft of unknown depth, another to empty a stack of unknown height, and functions to keep the whole thing readable. Write `empty_one_vault()` first and get it right on its own — the corridor loop is easy once one vault works.
-
-> **Mind the doorway at the ends.** A vault can open from the very first column of the corridor, right above the depot, or from the very last. The fencepost problem is waiting at both ends of this one.
+Bring every crate in the warehouse back to the **depot on (1, 1)** and pile it there. Finish standing on the depot **facing east**.
 
 Four warehouses are loadable — including one where every vault is empty — and a fifth is hidden.
 
@@ -784,11 +766,7 @@ Row 2: · ◆ · ◆ ·
 Row 1: ◆ · ◆ · ◆
 ```
 
-Sowing a row every other cell is the easy half. The hard half is the turn at the end of a row, because **whether the next row starts with a tile depends on the width of the floor**. On the 5-wide floor above, row 1 ends on a tile and row 2 must start bare. Make the floor 4 wide and row 1 ends bare, so row 2 must start with a tile. Code that always starts a row the same way gets one of those two floors wrong, and both are in the tests.
-
-Karel cannot measure the width. But it does not need to: the cell Karel is standing on when it finishes a row tells it everything, because **a cell and the cell above it are never the same**. If this one is tiled, the one above it is bare — and Karel can ask `beepers_present()` right where it stands.
-
-The single-column floor is in the loadable set, and it is meaner than it looks. One floor is hidden.
+Karel starts at (1, 1) facing east with unlimited tiles. The floors vary in width and height, and both even and odd widths are in the tests.
 
 <KarelEnvironment config={exercise5Config} />
 
@@ -796,17 +774,9 @@ The single-column floor is in the loadable set, and it is meaner than it looks. 
 
 ## Exercise 6: Finding the Center
 
-The last one. Karel stands at the west end of a hall of unknown length, and has to put a **single beeper on the middle cell** and finish standing on it. When the hall has an even number of cells, either of the two middle cells counts.
+The last one in Chapter 1. Karel stands at the west end of a hall of unknown length, and has to put a **single beeper on the middle cell** and finish standing on it. When the hall has an even number of cells, either of the two middle cells counts.
 
-Nothing else may be left on the floor when Karel is done.
-
-There is no counting your way out of this one, and no sensor that says "you are halfway". What there is, is the second idea from the top of this lesson: **a beeper is a place**. Mark the west end. Mark the east end. Then move each mark one cell inward, turn and turn about, walking from one to the other — because Karel has no other way to know where a mark is than to go and find it.
-
-Two marks closing in a cell at a time have to meet, and where they meet is the middle. When Karel picks up a mark, steps inward, and finds itself standing on the *other* mark, the search is over.
-
-Getting that to leave exactly one beeper behind takes care. If Karel keeps lifting each mark before it moves it, there are never more than two beepers on the floor in the first place — and the last one Karel lifts is the one it is still holding when the marks collide.
-
-Five halls are loadable, including the shortest one the rules allow, and a sixth is hidden.
+Nothing else may be left on the floor when Karel is done. Karel's bag is bottomless, and the hall is a different length in every test.
 
 <KarelEnvironment config={exercise6Config} />
 
@@ -821,10 +791,7 @@ You've completed Chapter 1: Karel the Robot! Along the way, you've learned the s
 - **Decomposition** — breaking complex problems into simpler pieces
 - **Loops** — repeating actions (while loops for conditions, for loops for counting)
 - **Conditionals** — making decisions based on the current state
-- **State** — the world remembers what your program has done, and a program that can read that state can make plans
 
 These concepts aren't just for Karel — they're the foundation of **all programming**. In the next chapter you'll start writing "real" Python: variables, strings, numbers and the rest. Karel's beepers-as-memory tricks will retire, but the algorithms you built out of them won't.
-
-For now, feel free to revisit any lesson, try the exercises again, or experiment in the Karel Playground where you can design your own worlds!
 
 </LessonShell>

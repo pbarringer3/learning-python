@@ -1,6 +1,8 @@
 # Chapter 1: Karel the Robot — ✅ Complete
 
-**Status:** Phase 4 Complete - Progress Tracking, Code Persistence & Exercise Completion
+**Status:** Complete — implementation (Phase 4) plus a full curriculum and quality review of all
+7 lessons, finished 2026-08-29. No further work is planned for this chapter; the next priority is
+the Python Environment for Chapter 2 (see [PROGRESS.md](PROGRESS.md)).
 
 > The sections below are a detailed implementation record of Chapter 1, preserved for reference if
 > this chapter needs to be revisited, extended (e.g., Karel exercises reused in later chapters per
@@ -20,9 +22,29 @@ Successfully refactored the Karel playground into a reusable component architect
 - **Reset Code** button to restore original code and clear completion state
 - **Progress store** — Svelte writable store backed by localStorage with hydration pattern
 - Full playground functionality preserved (Play/Edit modes, world editor)
-- 7 Karel lessons with 18 exercises, all wired with persistence
+- 7 Karel lessons with 26 exercises, all wired with persistence
 - **2-space Python indentation** convention for all student-facing code, enforced by automated tests
 - Comprehensive test coverage (31 unit tests + 5 Playwright e2e tests + 45 lesson style tests)
+
+---
+
+## Curriculum & Quality Review — ✅ Complete (2026-08-29)
+
+A pass over the chapter's pedagogy and prose, lesson by lesson, on top of the completed
+implementation. Lessons 1.4–1.7 received the bulk of the edits (see commits `67fd3b4`, `ca2f50d`,
+`2468434`, `3162c0c`, `a61f5fe`).
+
+| Lesson | Title                   | Exercises | Reviewed |
+| ------ | ----------------------- | --------- | -------- |
+| 1.1    | Meet Karel              | 2         | ✅       |
+| 1.2    | Defining Functions      | 3         | ✅       |
+| 1.3    | Decomposition           | 3         | ✅       |
+| 1.4    | While Loops             | 4         | ✅       |
+| 1.5    | For Loops               | 4         | ✅       |
+| 1.6    | If/Else Statements      | 4         | ✅       |
+| 1.7    | Putting It All Together | 6         | ✅       |
+
+**Chapter 1 is done.** Reopen it only for bug fixes, or if a later chapter reuses Karel exercises.
 
 ---
 
@@ -64,8 +86,8 @@ Successfully refactored the Karel playground into a reusable component architect
 5. **Lesson Content** ([src/routes/1/1 through 1/7](src/routes/1/))
 
    - 7 Karel lessons fully authored with prose, examples, and exercises
-   - 18 exercises total, all with `persistenceKey` for persistence
-   - Exercise counts: L1=2, L2=3, L3=2, L4=2, L5=3, L6=3, L7=3
+   - 26 exercises total, all with `persistenceKey` for persistence
+   - Exercise counts: L1=2, L2=3, L3=3, L4=4, L5=4, L6=4, L7=6
 
 6. **Reset Code Button** ([src/lib/components/KarelControls.svelte](src/lib/components/KarelControls.svelte))
 
@@ -487,7 +509,7 @@ src/
 │   ├── +layout.svelte            # Root layout (hydrates progress store)
 │   ├── +page.svelte              # Home page
 │   ├── 1/
-│   │   ├── 1/ through 7/         # Karel lessons (7 lessons, 18 exercises)
+│   │   ├── 1/ through 7/         # Karel lessons (7 lessons, 26 exercises)
 │   │   └── +page.svx             # MDsveX lesson files
 │   └── karel/
 │       └── playground/
@@ -569,7 +591,10 @@ src/
 
 ---
 
-## Next Steps (Phase 2)
+## Historical: Phase 2 Plan (all resolved)
+
+_Kept as an implementation record. Everything blocking Chapter 1 is done; the few unchecked items
+below are deliberately-deferred polish, not outstanding work._
 
 ### Priority 1: Python Language Features
 
@@ -592,7 +617,7 @@ src/
 ### ~~Priority 3: Lessons System~~ ✅ COMPLETE
 
 1. ✅ Define lesson/exercise data structures (`Lesson` type, `KarelConfig`, `SiteProgress`)
-2. ✅ Create sample lessons (7 Karel lessons, 18 exercises)
+2. ✅ Create sample lessons (7 Karel lessons, 26 exercises)
 3. ✅ Integrate MDsveX for instructions (all lessons use `.svx` files)
 4. ✅ Build lesson navigation (LessonShell, NavDrawer, chapter/lesson routing)
 5. ✅ Add validation functions (each exercise has `tests.validate`)

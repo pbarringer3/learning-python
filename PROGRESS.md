@@ -6,11 +6,11 @@ This document tracks the overall implementation status of the Learning Python cu
 
 ## Project Status Overview
 
-| Chapter | Title                                                                                                                                                    | Status                                    |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| 1       | Karel the Robot                                                                                                                                          | ✅ Complete (see `CHAPTER_1_PROGRESS.md`) |
-| 2       | Hello, Python!                                                                                                                                           | 🚧 Not started — **next up**              |
-| 3+      | Variables & Types, Functions, Strings, Lists, Dictionaries, Graphics, Classes, Building a Game, Files & Exceptions, Recursion, Searching & Sorting, etc. | 📋 Planned — see `CURRICULUM_DESIGN.md`   |
+| Chapter | Title                                                                                                                                                    | Status                                                       |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 1       | Karel the Robot                                                                                                                                          | ✅ Complete — built + reviewed (see `CHAPTER_1_PROGRESS.md`) |
+| 2       | Hello, Python!                                                                                                                                           | 🚧 Not started — **next up**                                 |
+| 3+      | Variables & Types, Functions, Strings, Lists, Dictionaries, Graphics, Classes, Building a Game, Files & Exceptions, Recursion, Searching & Sorting, etc. | 📋 Planned — see `CURRICULUM_DESIGN.md`                      |
 
 **Cross-cutting infrastructure status:**
 
@@ -39,7 +39,10 @@ The Call Stack Visualizer and Graphics Environment are follow-on work after Chap
 
 ## Chapter 1: Karel the Robot — ✅ Complete
 
-Fully implemented (Phase 4 complete: progress tracking, code persistence, exercise completion). The detailed implementation record — component architecture, Pyodide integration, step-through execution design, error handling, world editing, file structure, dependencies, code patterns, and troubleshooting notes — has been moved to **[CHAPTER_1_PROGRESS.md] (CHAPTER_1_PROGRESS.md)** to keep this document lean. Read that file if revisiting/extending Chapter 1, reusing Karel exercises in later chapters, or looking for implementation patterns to reuse when building `PythonEnvironment`.
+Fully implemented (Phase 4 complete: progress tracking, code persistence, exercise completion) and
+**curriculum/quality reviewed across all 7 lessons (26 exercises) as of 2026-08-29** — pedagogy,
+prose, examples, and exercise wording. The chapter is closed; reopen only for bug fixes or if later
+chapters reuse Karel exercises. The detailed implementation record — component architecture, Pyodide integration, step-through execution design, error handling, world editing, file structure, dependencies, code patterns, and troubleshooting notes — has been moved to **[CHAPTER_1_PROGRESS.md] (CHAPTER_1_PROGRESS.md)** to keep this document lean. Read that file if revisiting/extending Chapter 1, reusing Karel exercises in later chapters, or looking for implementation patterns to reuse when building `PythonEnvironment`.
 
 ---
 

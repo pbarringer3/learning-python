@@ -43,7 +43,7 @@ const karel: Chapter = {
       description: 'Break complex problems into smaller, reusable pieces using top-down design.',
       number: 3,
       hasExercises: true,
-      exerciseCount: 2
+      exerciseCount: 3
     },
     {
       id: 'while-loops',

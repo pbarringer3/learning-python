@@ -15,7 +15,12 @@ gives `input()` and streaming `stdout` their behaviour whether or not the
 visualizer panel is shown.
 
 This doc captures the architecture decisions and the reasoning behind them.
-**Status: implemented.** See §10 for what lives where.
+**Status: built and working.** See §10 for what lives where.
+
+**§12 is a specified-but-unbuilt refactor** of the controls, panel layout, and
+breakpoint support, agreed in full and ready to pick up. Read it before changing
+`PythonEnvironment.svelte`, `PythonControls.svelte`, or the worker's pause logic
+— several current behaviours are deliberately on their way out.
 
 ---
 
@@ -583,3 +588,191 @@ structures and gives exactly one entry per reference.
 - [x] Visualizer: label-entry highlighting, focus parity, hit targets
 - [x] Toggle persistence by qualified path; expansion collapses on snapshot change
 - [x] End-to-end tests (`reference labels` group in `tests/python.test.ts`)
+
+---
+
+## 12. Planned Refactor: Controls, Breakpoints and Layout
+
+**Status: specified, not built.** Agreed in full with the project owner; every
+decision below is settled, including the ones where the first proposal was
+rejected. Read this section before touching `PythonEnvironment.svelte`,
+`PythonControls.svelte`, or the worker's pause logic.
+
+### 12.1 Panel order and sizing
+
+Top to bottom in the left column: **code editor, output console, controls.** The
+visualizer stays in its own column to the right.
+
+- **Editor: minimum 10 lines, maximum 20**, scrolling past that. It currently
+  starts at ~14 lines and grows without limit. The minimum matters as much as
+  the maximum: without a floor, a short program resizes the editor on nearly
+  every keystroke, and since the visualizer is sized to match this column, the
+  panel beside it would jump too. `PythonConfig.editorLines` — declared but
+  never wired up — becomes the per-exercise override for the maximum.
+- **Output console: fixed at ~10rem** (about seven lines), scrolling
+  internally. It currently grows between 6rem and 16rem, which was harmless
+  when the controls sat above it. With the controls _below_, a program that
+  prints while being stepped pushes the buttons downward between clicks, moving
+  Step out from under the pointer mid-session. A fixed height also makes the
+  whole left column a stable height, which stops the visualizer resizing.
+- The console is **cleared at the start of each run**, and not otherwise. That
+  is what makes a Clear button unnecessary: starting a run _is_ the reset, and
+  the transcript always shows exactly one program's output.
+  - _Considered and declined:_ accumulating output across runs. Useful for
+    comparing attempts, but unbounded without a Clear button, and confusing
+    about which output came from which attempt. If it is ever wanted, it needs
+    a run separator (`─── run 2 ───`) at minimum.
+
+### 12.2 Controls
+
+Five buttons in **two rows** — execution above, everything else below:
+
+```
+▶ Play / ■ Stop     ⇥ Step     ⏭ To breakpoint
+👁                  ↺ Reset code
+```
+
+Reset code is last and set apart because it is the only button that destroys
+work; it currently sits mid-row next to the buttons people click repeatedly.
+
+**Removed: Clear, Auto, and the auto-speed slider.**
+
+Clear wiped the console, snapshot and error without running anything — but every
+run already does that, so it only ever acted while idle, tidying a console about
+to be overwritten. Auto-stepping goes because a breakpoint inside a loop plus
+repeated **To breakpoint** covers the same ground, and does it with intent
+rather than on a timer.
+
+#### Play / Stop is one button
+
+| Runner state                | Button  |
+| --------------------------- | ------- |
+| ready / finished / error    | ▶ Play |
+| running                     | ■ Stop  |
+| awaiting `input()`          | ■ Stop  |
+| paused at a line/breakpoint | ▶ Play |
+
+Stop appears while waiting on `input()` even though nothing is executing. That
+is a deliberate exception: the program cannot advance without a value, so
+without Stop a student who has decided not to answer the prompt can only escape
+via **Reset code**, which throws away everything they have written.
+
+Paused deliberately shows Play, not Stop. Abandoning from a pause is still
+possible — press Play, and if it turns out to be an infinite loop the button
+becomes Stop.
+
+#### What each button does
+
+- **Play** — start, or resume, running to the end or the next `input()`.
+  **Ignores breakpoints entirely**, from idle and from a pause alike.
+- **Step** — advance one trace event. Enabled when idle or paused.
+- **To breakpoint** — start or resume, stopping at the next breakpoint; falls
+  through to the end (or the next `input()`) if none lies ahead. **Disabled
+  whenever no breakpoints are set at all**, with a tooltip along the lines of
+  "Click a line number to set a breakpoint".
+- **👁** — show/hide the visualizer. Always enabled. See §12.4.
+- **Reset code** — restores the starter program. Enabled only when idle.
+
+_Considered and declined:_ making Play honour breakpoints and renaming the other
+button "Finish". The worry was that a student sets a breakpoint, presses the
+obvious button, and sails past it. A clearly labelled **To breakpoint** sitting
+in the same row resolves that by making the right button visible, so Play keeps
+its plain "just run my program" meaning.
+
+Avoid "Debug" or "Watch" as the label. "Debug" reads as a mode rather than an
+action, and "Watch" already means something specific and different in real
+debuggers — the kind of near-miss vocabulary that misleads students later.
+
+### 12.3 Breakpoints
+
+Click the editor gutter to toggle a breakpoint. Execution pauses **before** the
+marked line runs, matching the `line` trace event the tracer already fires.
+
+**Which lines accept one.** Any non-blank, non-comment line, judged in
+JavaScript. This is a heuristic: it also accepts `else:` and continuation lines,
+which produce no trace event and so will never fire. Accepted knowingly as the
+cheap option — those constructs are rare in the code these chapters ask for.
+
+- _Follow-on, deliberately deferred:_ compile the source in the idle worker on
+  every edit (debounced) to get the exact executable-line set, draw unfireable
+  breakpoints hollow, **and get inline syntax errors as a side effect.** That
+  last part is the real prize and makes this worth doing as its own feature
+  rather than as part of this refactor.
+
+**Lifetime.**
+
+- While editing: stored as CodeMirror document positions so they ride along with
+  their statement when lines are inserted above them.
+- On Reset code: cleared, since the program they referred to is gone.
+- Across reloads: persisted next to the student's code under the same
+  `persistenceKey`, so returning mid-debugging finds the marks intact.
+
+**Delivery to the worker — the one non-obvious constraint.** Breakpoints can be
+toggled while the program is _paused_, and a paused worker is blocked inside
+`Atomics.wait`, so a `postMessage` would sit unread until the run ended. The
+breakpoint set therefore has to travel through **shared memory** like every
+other command (see §2), not as a message: a small `SharedArrayBuffer` region the
+tracer reads on each event. Sending it only with the `run` message would make
+breakpoints added mid-pause silently do nothing.
+
+**Tracer installation.** Play from idle still installs no tracer, preserving the
+fast path. **To breakpoint** and **Step** install it. Play pressed while paused
+runs with the tracer already installed and simply stops pausing — slightly
+slower than a cold Play, and correct either way.
+
+### 12.4 Show / hide the visualizer
+
+- Icon-only button in the controls: an inline **SVG eye / eye-with-slash**, not
+  an emoji, since emoji render inconsistently and this button has no text label
+  to fall back on. It carries an `aria-label` and tooltip switching between
+  "Show call stack" and "Hide call stack".
+- Available on **every** exercise. `PythonConfig.showVisualizer` becomes the
+  _initial_ state only — the pedagogical default for first arrival.
+- **The student's choice persists** under the exercise's `persistenceKey`, like
+  their code and breakpoints. Resetting to the lesson default on every visit
+  would quietly undo a deliberate action each time they came back.
+- When hidden, the editor column expands — but **capped at a comfortable reading
+  width**, not stretched across the full `max-w-7xl` page. Very long lines of
+  Python are hard to scan, and the space is better left as whitespace.
+
+### 12.5 The final snapshot
+
+When a program ends, **the last snapshot stays on screen** with a banner at the
+top of the visualizer saying what happened. The same final view appears however
+the program got there — stepping to the end, Play, or To breakpoint with no
+breakpoint ahead.
+
+| Ending            | Banner                          | What the snapshot shows            |
+| ----------------- | ------------------------------- | ---------------------------------- |
+| Ran to completion | "Program complete"              | Final globals                      |
+| Uncaught error    | "Program stopped with an error" | The frames at the point of failure |
+| User pressed Stop | "Stopped"                       | Whatever was last displayed        |
+
+_Originally specified as wiping the visualizer, then reversed:_ wiping is honest
+about the frames being gone, but it blanks the panel at exactly the moment a
+student might want to check how their variables ended up. The banner solves the
+staleness problem without throwing the information away.
+
+**Both cases work without the tracer**, so Play keeps its fast path:
+
+- The clean finish is synthesised from `user_globals`, which `run_user_code`
+  still holds after `exec` returns.
+- The error case is serialised from the frames hanging off `exc.__traceback__`,
+  which are reachable after the fact — so Run and Step show the same view of a
+  failure.
+
+### 12.6 Checklist
+
+- [ ] Editor min 10 / max 20 lines; wire up `PythonConfig.editorLines`
+- [ ] Reorder to editor / output / controls; fix console at ~10rem
+- [ ] Rebuild the control row: two rows, combined Play/Stop, drop Clear and Auto
+- [ ] Breakpoint gutter, toggling, and the non-blank/non-comment rule
+- [ ] Breakpoint persistence with the code; cleared by Reset code
+- [ ] Shared-memory breakpoint region the tracer reads per event
+- [ ] "To breakpoint" run mode; disabled when no breakpoints exist
+- [ ] Show/hide visualizer button, persisted; capped width when hidden
+- [ ] Final snapshot retained with per-ending banners
+- [ ] Synthesise the final snapshot from globals, and the error snapshot from
+      the traceback, so both work without the tracer
+- [ ] Unit tests for the new pure logic; e2e for breakpoints, the button state
+      machine, and the final-snapshot banners

@@ -29,11 +29,13 @@ This document tracks the overall implementation status of the Learning Python cu
 
 ## What's Next
 
-The Python environment and sandbox are done, so **Chapter 2 ("Hello, Python!") is now unblocked** and is the immediate priority:
+Two tracks are open. The environment refactor is fully specified and can be picked up cold; Chapter 2 is unblocked either way.
 
-1. **Chapter 2 lessons** — author the 5 lessons (`From Karel to Python`, `Your First Python Program`, `Getting Input`, `Expressions & Math`, capstone) as `.svx` files under `src/routes/2/`, plus the `Chapter` entry in `src/lib/curriculum/index.ts`. Embed `PythonEnvironment` with a `PythonConfig`; use `showVisualizer: false` where the visualizer would be noise and `true` where watching state change is the lesson.
-2. **Revisit the deferred `allowedFeatures` / `tests` design** once a few lessons exist — by then the shape of "check this exercise" will be evident from real exercises instead of guessed at.
-3. Follow the conventions from Chapter 1: 2-space indentation in student-facing code, `persistenceKey`-based code persistence (`"<chapter>/<lesson>/<exercise>"`), TDD per `AGENTS.md`.
+1. **Python environment refactor — specified, not built.** Controls, panel layout, and **breakpoint support**, written up in **[PythonInterpreterDesign.md](PythonInterpreterDesign.md) §12** with a checklist. Every decision is settled, including the reasoning behind the ones that were reversed during design, so it needs no further input to start. Highlights: editor capped at 20 lines, panels reordered to editor/output/controls, a combined Play/Stop button, a `To breakpoint` run mode, a universal show/hide toggle for the visualizer, and the final snapshot kept on screen with a banner instead of being wiped.
+2. **Chapter 2 lessons** — author the 5 lessons (`From Karel to Python`, `Your First Python Program`, `Getting Input`, `Expressions & Math`, capstone) as `.svx` files under `src/routes/2/`, plus the `Chapter` entry in `src/lib/curriculum/index.ts`. Embed `PythonEnvironment` with a `PythonConfig`; use `showVisualizer: false` where the visualizer would be noise and `true` where watching state change is the lesson.
+3. **Revisit the deferred `allowedFeatures` / `tests` design** once a few lessons exist — by then the shape of "check this exercise" will be evident from real exercises instead of guessed at.
+
+Follow the conventions from Chapter 1 throughout: 2-space indentation in student-facing code, `persistenceKey`-based persistence (`"<chapter>/<lesson>/<exercise>"`), TDD per `AGENTS.md`.
 
 `GraphicsEnvironment` remains follow-on work for Chapters 8–10.
 

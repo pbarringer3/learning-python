@@ -4,6 +4,7 @@
  */
 
 import type { PyodideInterface } from 'pyodide';
+import { PYODIDE_INDEX_URL } from '$lib/python/config';
 
 // Declare loadPyodide on window
 declare global {
@@ -27,7 +28,11 @@ async function ensurePyodideScript(): Promise<void> {
   // Load the Pyodide script
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
+    script.src = `${PYODIDE_INDEX_URL}pyodide.js`;
+    // Requesting in CORS mode is required once the site is cross-origin
+    // isolated: under COEP require-corp an opaque cross-origin script is
+    // blocked. jsDelivr sends Access-Control-Allow-Origin, so this passes.
+    script.crossOrigin = 'anonymous';
     script.onload = () => resolve();
     script.onerror = () => reject(new Error('Failed to load Pyodide script'));
     document.head.appendChild(script);
@@ -52,7 +57,7 @@ export async function loadPyodide(): Promise<PyodideInterface> {
 
     // Now load Pyodide
     const pyodide = await window.loadPyodide({
-      indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
+      indexURL: PYODIDE_INDEX_URL
     });
     pyodideInstance = pyodide;
     return pyodide;

@@ -172,6 +172,16 @@
         <span>🎮</span>
         <span>Karel Playground</span>
       </a>
+      <a
+        href="{base}/python/playground"
+        class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
+        class:bg-blue-50={isCurrentPath(`${base}/python/playground`)}
+        class:text-blue-700={isCurrentPath(`${base}/python/playground`)}
+        onclick={handleClose}
+      >
+        <span>🐍</span>
+        <span>Python Playground</span>
+      </a>
     </div>
   </div>
 </nav>

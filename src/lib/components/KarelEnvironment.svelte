@@ -5,7 +5,7 @@
    */
   import { onMount } from 'svelte';
   import KarelWorld from '$lib/components/KarelWorld.svelte';
-  import KarelCodeEditor from '$lib/components/KarelCodeEditor.svelte';
+  import CodeEditor from '$lib/components/CodeEditor.svelte';
   import KarelControls from '$lib/components/KarelControls.svelte';
   import KarelOutput from '$lib/components/KarelOutput.svelte';
   import { progressStore } from '$lib/curriculum/progress';
@@ -582,13 +582,17 @@ for _node in _ast.walk(_tree):
 `;
       await pyodide.runPythonAsync(astCode);
 
-      // Read def_lines from Python into JS
+      // Read def_lines from Python into JS.
+      //
+      // The converter is explicit on purpose: `toJs()` returned a Map in
+      // Pyodide 0.24 but returns a plain object in 0.29, which would silently
+      // leave this empty (and drop every "define" step) rather than fail. Going
+      // through Map also keeps the keys as numbers, matching `defLines.has(lineNo)`.
       const pyDefLines = pyodide.globals.get('_def_lines');
       if (pyDefLines) {
-        const jsMap = pyDefLines.toJs();
-        if (jsMap instanceof Map) {
-          defLines = jsMap;
-        }
+        defLines = pyDefLines.toJs({
+          dict_converter: (entries: Iterable<[number, string]>) => new Map(entries)
+        }) as Map<number, string>;
         pyDefLines.destroy();
       }
 
@@ -1019,7 +1023,7 @@ for var in user_vars:
   <div class="flex flex-col gap-4 lg:flex-row">
     <!-- Left side: Code editor and controls -->
     <div class="flex flex-1 flex-col gap-4">
-      <KarelCodeEditor
+      <CodeEditor
         bind:value={code}
         highlightedLine={executionState.currentLine}
         isError={executionState.status === 'error'}

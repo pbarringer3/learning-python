@@ -73,10 +73,17 @@ world. Execution is animated step by step with highlighted lines and descriptive
 
 ### Python Environment (Chapters 2–7, Part 2)
 
-A `PythonEnvironment` component (analogous to `KarelEnvironment`) for general Python exercises.
-Includes a code editor, output panel, and a **Call Stack Visualizer** that shows variable state
-at each step — making execution concrete for non-Karel programs. Configured per-exercise as a
-guided challenge with test cases. Also available as an open sandbox at `/python/playground`.
+The `PythonEnvironment` component (analogous to `KarelEnvironment`) for general Python exercises.
+Includes a code editor, output panel, and a **Call Stack Visualizer** that shows the call stack and
+every object the program has created at each step — including two names pointing at the same list,
+which is the thing this makes concrete that plain output cannot. Also available as an open sandbox
+at `/python/playground`.
+
+**Built** — see `PythonInterpreterDesign.md` for the architecture and `PROGRESS.md` for status.
+Programs execute in a Web Worker and genuinely pause between steps, so `input()` blocks for a real
+answer rather than being faked with a queue, and a runaway loop is killable. Per-exercise test cases
+are not built yet; that is a deliberate deferral recorded in `PROGRESS.md`, to be designed against
+real lessons.
 
 ### Graphics Environment (Chapters 8–10)
 

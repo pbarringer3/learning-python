@@ -185,7 +185,7 @@ implementation. Lessons 1.4–1.7 received the bulk of the edits (see commits `6
    - Educational error messages for disallowed syntax
    - Two-pass validation (collect functions first, then validate)
    - Validator persists through namespace resets
-   - Version: Pyodide 0.24.1
+   - Version: Pyodide 0.29.3 (was 0.24.1; bumped when the Python engine was added so both share one cached runtime — pinned in `src/lib/python/config.ts`)
 
 ### ✅ Display Components
 
@@ -466,7 +466,7 @@ implementation. Lessons 1.4–1.7 received the bulk of the edits (see commits `6
 ### 5. **Pyodide Loading**
 
 - Dynamic script injection (not HTML script tag)
-- Version 0.24.1 for consistency
+- Version pinned once in `src/lib/python/config.ts` (`PYODIDE_VERSION`), shared with the Python engine
 - Singleton pattern prevents multiple loads
 - Loading indicator shown to users
 
@@ -524,7 +524,7 @@ src/
 
 ```json
 {
-  "pyodide": "^0.24.1",
+  "pyodide": "^0.29.3",
   "codemirror": "^6.x",
   "@codemirror/lang-python": "^6.x",
   "@codemirror/state": "^6.x",
@@ -718,9 +718,10 @@ async function continueExecution() {
 
 ### Pyodide Version Mismatch
 
-- Ensure script URL and indexURL both use same version (0.24.1)
-- Script: `https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js`
-- Index: `https://cdn.jsdelivr.net/pyodide/v0.24.1/full/`
+- `PyProxy.toJs()` on a Python dict returns a **plain object** in Pyodide 0.29 (it returned a `Map` in 0.24). Pass an explicit `dict_converter` rather than testing `instanceof Map` — the silent-empty failure mode cost real debugging time when the version was bumped.
+- Ensure script URL and indexURL both use the same version — both now derive from `PYODIDE_INDEX_URL` in `src/lib/python/config.ts`
+- Script: `https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js` (loaded with `crossOrigin = 'anonymous'`, required under COEP)
+- Index: `https://cdn.jsdelivr.net/pyodide/v0.29.3/full/`
 
 ### Functions Not Stepping
 

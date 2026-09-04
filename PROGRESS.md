@@ -17,23 +17,25 @@ This document tracks the overall implementation status of the Learning Python cu
 - ✅ Curriculum data model (`Chapter`/`Lesson` types, progress store, lesson routing) — chapter-agnostic, ready to extend for Chapter 2+
 - ✅ Site shell (`LessonShell`, `NavDrawer`, `TopBar`) — reusable across chapters
 - ✅ `KarelEnvironment` — interactive environment for Chapter 1 (and any later Karel practice in later chapters)
-- ❌ **`PythonEnvironment`** — general-purpose Python code editor + output/`input()` sandbox needed for Chapter 2 onward. **Does not exist yet — this is the next major piece of infrastructure to build.**
-- ❌ **Call Stack Visualizer** — planned per `CURRICULUM_DESIGN.md` for showing variable/frame state step-by-step in non-Karel Python lessons. Not started.
+- ✅ **`PythonEnvironment` + Call Stack Visualizer** — built as one piece, not two. The stepping engine (Pyodide in a Web Worker, paused via `SharedArrayBuffer` + `Atomics`) is what gives blocking `input()` and streaming `print()` output their behaviour, so the environment and the visualizer share it. Set `showVisualizer: false` on a `PythonConfig` for lessons that only want editor + output. Sandbox lives at `/python/playground`. See **[PythonInterpreterDesign.md](PythonInterpreterDesign.md)** — §10 maps every concern to a file.
 - ❌ `GraphicsEnvironment` — needed for Chapters 8–10. Not started (library TBD).
+
+**Deferred on purpose** (`PythonConfig` is shaped so both are additive, not a rewrite):
+
+- `allowedFeatures` — an opt-in AST allowlist so a lesson can forbid syntax it hasn't taught yet, generalizing Karel's `validate_karel_code`. Python runs **unrestricted** today.
+- `tests` — per-exercise validation (captured stdout, etc.). Both are waiting on real Chapter 2 lessons to design against rather than being guessed at.
 
 ---
 
 ## What's Next
 
-The immediate priority is standing up the **Python Environment and sandbox**, since Chapter 2 ("Hello, Python!") and every subsequent Part 1/Part 2 chapter depend on it:
+The Python environment and sandbox are done, so **Chapter 2 ("Hello, Python!") is now unblocked** and is the immediate priority:
 
-1. **General-purpose Pyodide execution utility** — extend/generalize `src/lib/karel/pyodide.ts` (or create a parallel `src/lib/python/pyodide.ts`) to run arbitrary Python: support `print()` output capture and `input()` (likely via a queued/mocked stdin fed from a UI prompt). **Default behavior should allow full standard Python syntax** (unrestricted by default, unlike Karel's playground) — but generalize the AST-based validator pattern from `validateKarelCode` into an opt-in, per-exercise allow/deny-list mechanism (e.g. an `allowedFeatures` option on a `PythonConfig`, mirroring `KarelConfig.allowedFeatures.karelCommands`) so individual lessons can restrict students to only the syntax taught so far when needed (e.g. disallow `for` loops before loops are formally introduced). _(Note: this default-open-but-restrictable design is not yet decided — confirm with the user before building.)_
-2. **`PythonEnvironment` Svelte component** — analogous to `KarelEnvironment`: code editor (reuse `KarelCodeEditor` or generalize it into a shared `CodeEditor`), output console, Run button, and (for exercises) a test/validation mechanism — likely checking captured stdout and/or return values rather than Karel world state.
-3. **Sandbox route** — `/python/playground`, an open-ended scratchpad mirroring `/karel/playground`, per `CURRICULUM_DESIGN.md`'s "Python Environment" spec.
-4. **Chapter 2 lessons** — once the environment exists, author the 5 lessons (`From Karel to Python`, `Your First Python Program`, `Getting Input`, `Expressions & Math`, capstone) as `.svx` files under `src/routes/2/`, plus add the `Chapter` entry to `src/lib/curriculum/index.ts`.
-5. Follow the same conventions established in Chapter 1: 2-space indentation in student-facing code, `persistenceKey`-based code/progress persistence, TDD (write tests first per `AGENTS.md`).
+1. **Chapter 2 lessons** — author the 5 lessons (`From Karel to Python`, `Your First Python Program`, `Getting Input`, `Expressions & Math`, capstone) as `.svx` files under `src/routes/2/`, plus the `Chapter` entry in `src/lib/curriculum/index.ts`. Embed `PythonEnvironment` with a `PythonConfig`; use `showVisualizer: false` where the visualizer would be noise and `true` where watching state change is the lesson.
+2. **Revisit the deferred `allowedFeatures` / `tests` design** once a few lessons exist — by then the shape of "check this exercise" will be evident from real exercises instead of guessed at.
+3. Follow the conventions from Chapter 1: 2-space indentation in student-facing code, `persistenceKey`-based code persistence (`"<chapter>/<lesson>/<exercise>"`), TDD per `AGENTS.md`.
 
-The Call Stack Visualizer and Graphics Environment are follow-on work after Chapter 2 is solid — not blocking, but worth keeping in mind when designing `PythonEnvironment` so it can be extended (e.g., a hook point for frame/variable inspection) rather than needing a rewrite later.
+`GraphicsEnvironment` remains follow-on work for Chapters 8–10.
 
 ---
 
@@ -48,7 +50,7 @@ chapters reuse Karel exercises. The detailed implementation record — component
 
 ## Future Work Reference
 
-For the full roadmap beyond Chapter 1 (all remaining chapters, lesson topics, capstones, and design principles), see **[CURRICULUM_DESIGN.md](CURRICULUM_DESIGN.md)** — that document is the single source of truth for curriculum planning. This document (`PROGRESS.md`) should be updated as each chapter/module reaches completion; see the **What's Next** section near the top for the immediate priority (the Python Environment and sandbox).
+For the full roadmap beyond Chapter 1 (all remaining chapters, lesson topics, capstones, and design principles), see **[CURRICULUM_DESIGN.md](CURRICULUM_DESIGN.md)** — that document is the single source of truth for curriculum planning. This document (`PROGRESS.md`) should be updated as each chapter/module reaches completion; see the **What's Next** section near the top for the immediate priority (Chapter 2 lessons).
 
 ---
 

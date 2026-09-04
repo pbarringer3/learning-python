@@ -1,8 +1,20 @@
 <script lang="ts">
+  /**
+   * Shared Python code editor, used by both the Karel and Python environments.
+   *
+   * Indentation is fixed at two spaces to match the convention every piece of
+   * student-facing code in the curriculum follows.
+   */
   import { onMount, onDestroy } from 'svelte';
   import { minimalSetup } from 'codemirror';
   import { python } from '@codemirror/lang-python';
-  import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
+  import {
+    Compartment,
+    EditorState,
+    type Extension,
+    StateEffect,
+    StateField
+  } from '@codemirror/state';
   import {
     Decoration,
     type DecorationSet,
@@ -37,6 +49,10 @@
   let editorContainer: HTMLDivElement;
   let editorView: EditorView | null = null;
 
+  // Editability changes while a program runs, so it has to be reconfigurable
+  // rather than baked into the initial state.
+  const editableCompartment = new Compartment();
+
   // Effect for updating highlighted line
   const setHighlightedLineEffect = StateEffect.define<number | null>();
 
@@ -56,7 +72,10 @@
           if (effect.value === null) {
             decorations = Decoration.none;
           } else {
-            const line = tr.state.doc.line(Math.min(effect.value, tr.state.doc.lines));
+            // Clamp both ends: an out-of-range line makes `doc.line` throw,
+            // and a throw inside the update cycle takes the editor down.
+            const lineNumber = Math.min(Math.max(effect.value, 1), tr.state.doc.lines);
+            const line = tr.state.doc.line(lineNumber);
             const className = isErrorHighlight ? 'cm-error-line' : 'cm-highlighted-line';
             decorations = Decoration.set([Decoration.line({ class: className }).range(line.from)]);
           }
@@ -95,7 +114,7 @@
           }
         }
       }),
-      EditorView.editable.of(!readonly)
+      editableCompartment.of(EditorView.editable.of(!readonly))
     ];
 
     const startState = EditorState.create({
@@ -140,10 +159,9 @@
 
   // Update readonly state
   $effect(() => {
-    if (editorView && readonly !== undefined) {
-      // For now, readonly state changes require recreating the editor
-      // This is a simplified approach
-    }
+    editorView?.dispatch({
+      effects: editableCompartment.reconfigure(EditorView.editable.of(!readonly))
+    });
   });
 </script>
 

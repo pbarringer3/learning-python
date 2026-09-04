@@ -19,7 +19,7 @@ All Python code runs client-side in the browser via Pyodide (Python compiled to 
 The site includes specialized interactive modules for teaching:
 
 - **Karel Environment** — Grid-based robot world with code editor, execution controls, and animated step-through. Fully implemented.
-- **Call Stack Visualizer** (planned) — Will allow students to visualize the call stack and trace through regular Python code execution.
+- **Python Environment + Call Stack Visualizer** — Code editor, output console, blocking `input()`, and a side panel showing the call stack and heap objects (with arrows for aliasing) as the program runs, one line at a time. Fully implemented; open sandbox at `/python/playground`.
 - More modules may be added as the curriculum expands.
 
 ## Technology Stack
@@ -70,10 +70,25 @@ Playwright's webServer config auto-starts `npm run dev` if it isn't already runn
 - `src/lib/karel/types.ts` defines the world model (`KarelWorld`, `Position`, `Direction`, `Wall`, `BeeperLocation`) and the `KarelConfig` shape used to embed a Karel environment in a lesson (initial world, initial code, `allowedFeatures` restrictions, `tests`, `persistenceKey`).
 - `src/lib/karel/pyodide.ts` bridges Python (via Pyodide) and the Karel UI:
   - Karel commands (`move`, `turn_left`, `pick_beeper`, `put_beeper`, and sensor functions like `front_is_clear`) are injected into the Pyodide global namespace as JS callbacks (`injectKarelCommands`), so the app owns all world-state mutation — Python only calls into it.
-  - **`loadPyodide()` loads Pyodide from a CDN `<script>` tag (pinned to v0.24.1), not from the `pyodide` npm package.** The npm `pyodide` dependency is used only for its TypeScript types (`PyodideInterface`). Any Pyodide version bump must be made in both places, and the CDN version is authoritative for runtime behavior.
+  - **`loadPyodide()` loads Pyodide from a CDN `<script>` tag, not from the `pyodide` npm package.** The npm `pyodide` dependency is used only for its TypeScript types (`PyodideInterface`). The version is pinned once, in `PYODIDE_VERSION` / `PYODIDE_INDEX_URL` (`src/lib/python/config.ts`), and shared by Karel and the Python worker so a student who visits both downloads one runtime. The CDN version is authoritative for runtime behavior; keep the npm dependency in step with it.
+  - The script tag sets `crossOrigin = 'anonymous'`. This is required, not cosmetic: once the isolation service worker is active the whole site runs under `COEP: require-corp`, which blocks an opaque cross-origin script.
   - `installCodeValidator` installs a Python AST-based validator (`validate_karel_code`) that allowlists syntax per exercise (e.g. no imports, no variable assignment except loop vars, no parameters) — this is what enforces `allowedFeatures` on student code before it's allowed to run.
 - `KarelEnvironment.svelte` is the top-level reusable component (used in both lessons and `/karel/playground`) that owns execution state, wires the code editor/world/controls/output subcomponents together, and persists student code to `localStorage` (keyed by `KarelConfig.persistenceKey`, convention `"<chapter>/<lesson>/<exercise>"`).
 - Exercises validate success via `KarelTests` (`src/lib/karel/types.ts`): a `validate(world)` function checks final world state, with optional `validateCode` (source-level checks) and `functionTests` (call one named student function in isolation against a specific world).
+
+### Python engine and call stack visualizer
+
+- `src/lib/python/` holds the engine. `PythonInterpreterDesign.md` §10 maps every concern to its file; read that before changing any of it.
+- **Execution runs in a Web Worker** (`worker.ts`), not on the main thread, because pausing is the whole point. The worker blocks in `Atomics.wait` on a `SharedArrayBuffer` until the UI issues a command. `postMessage` _into_ the worker is useless while it is blocked — that is why commands go through shared memory and only snapshots come back over `postMessage`.
+- `tracer.py` is real Python, imported into the worker with `?raw` and written to Pyodide's virtual filesystem as a module, so its names never reach the namespace the student's code runs in. It uses `sys.settrace` with a **per-frame** `co_filename` check, and serializes state into an `id()`-keyed heap so aliasing is visible.
+- Constants are declared in both languages (`protocol.ts` and `tracer.py`). `tracer.test.ts` pins the two copies together — a mismatch would show up as a silently ignored Stop, not a type error.
+- **`SharedArrayBuffer` requires a cross-origin isolated document.** In dev/preview the headers come from the `crossOriginIsolation` plugin in `vite.config.ts` (middleware, because SvelteKit's dev handler ignores Vite's `server.headers`). In production they come from `static/coi-serviceworker.js`, registered **lazily from Python routes only** (`coi.ts`) so Karel and landing-page visitors never see the one-time bootstrap reload. There is no degraded fallback: a browser that can't isolate gets a clear message.
+- **Never hand `TextEncoder`/`TextDecoder` a view over a `SharedArrayBuffer`** — browsers reject it, Node does not, so it passes unit tests and fails in the browser. `protocol.ts` copies through a private scratch buffer; `protocol.test.ts` guards it.
+- `PythonEnvironment.svelte` is the embeddable component (the Python counterpart to `KarelEnvironment`), configured by a `PythonConfig`. Python is **unrestricted** by default; the opt-in `allowedFeatures` allowlist and per-exercise `tests` are deliberately deferred — see `PROGRESS.md`.
+
+### Shared components
+
+- `CodeEditor.svelte` (formerly `KarelCodeEditor.svelte`) is the CodeMirror editor shared by both environments. Indentation is fixed at two spaces to match the curriculum's student-facing code convention.
 
 ### Progress tracking
 
@@ -102,6 +117,7 @@ Playwright's webServer config auto-starts `npm run dev` if it isn't already runn
 - Write unit tests (Vitest) alongside the code as `*.test.ts` in `src/lib/`; write e2e tests (Playwright) in `tests/`
 - Run tests with `npm test` (see Commands above for running individual test files)
 - Any time you are asked to add or change functionality you should use a red/green TDD approach.
+- **Anything touching Pyodide, workers, or shared memory needs an e2e test.** Vitest runs in Node, where there is no interpreter, no real worker, and where shared-memory APIs are more permissive than a browser's — several real bugs in the Python engine passed unit tests and only failed in Chromium. `tests/python.test.ts` seeds the editor through `localStorage` rather than typing into CodeMirror, since auto-indent would otherwise mangle multi-line Python.
 
 ### Design Principles
 
@@ -162,6 +178,7 @@ Playwright's webServer config auto-starts `npm run dev` if it isn't already runn
 - `README.md` — Project overview and user-facing information
 - `SITE_DESIGN.md` — Overall site design (layout, navigation, landing page, progress tracking)
 - `KAREL_DESIGN.md` — Design decisions for the Karel module
+- `PythonInterpreterDesign.md` — Design decisions for the Python engine and call stack visualizer
 - `LESSON_AUTHORING_GUIDE.md` — How to author lessons (Karel and beyond)
 - `PROGRESS.md` — Implementation progress tracking
 

@@ -47,9 +47,10 @@ print(countdown(3))
   <header class="mb-6">
     <h1 class="text-2xl font-bold text-gray-900">Python Playground</h1>
     <p class="mt-1 text-gray-600">
-      Write whatever you like and press <strong>Run</strong> to execute it, or
-      <strong>Step</strong> to move through it one line at a time. The panel on the right shows the call
-      stack and every object your program has in memory.
+      Write whatever you like and press <strong>Play</strong> to execute it, or
+      <strong>Step</strong> to move through it one line at a time. Click a line number to set a
+      breakpoint, then use <strong>To breakpoint</strong> to run straight there. The panel on the right
+      shows the call stack and every object your program has in memory.
     </p>
   </header>
 

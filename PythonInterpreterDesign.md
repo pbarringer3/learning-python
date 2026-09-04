@@ -17,10 +17,10 @@ visualizer panel is shown.
 This doc captures the architecture decisions and the reasoning behind them.
 **Status: built and working.** See §10 for what lives where.
 
-**§12 is a specified-but-unbuilt refactor** of the controls, panel layout, and
-breakpoint support, agreed in full and ready to pick up. Read it before changing
-`PythonEnvironment.svelte`, `PythonControls.svelte`, or the worker's pause logic
-— several current behaviours are deliberately on their way out.
+**§12 — the controls, panel layout, and breakpoint refactor — is now built.**
+It is kept here as the record of what was decided and why, including the
+decisions that were reversed during design. §12.7 notes where the built thing
+departs from what was specified.
 
 ---
 
@@ -404,6 +404,8 @@ code it explains and a large heap stretching the whole page downward.
 | Tracer, heap serializer, stdout/stdin, error formatting | `src/lib/python/tracer.py`                                                               |
 | Pyodide host: blocking handshake, `input()`, run loop   | `src/lib/python/worker.ts`                                                               |
 | Main-thread controller and state machine                | `src/lib/python/runner.ts`                                                               |
+| Breakpoint rules, toggling, persistence encoding        | `src/lib/python/breakpoints.ts`                                                          |
+| Control-row state machine (which buttons are live)      | `src/lib/python/controls.ts`                                                             |
 | Cross-origin isolation bootstrap and failure copy       | `src/lib/python/coi.ts`                                                                  |
 | Version pins, caps, `PythonConfig`                      | `src/lib/python/config.ts`                                                               |
 | Header-injecting service worker                         | `static/coi-serviceworker.js`                                                            |
@@ -591,12 +593,12 @@ structures and gives exactly one entry per reference.
 
 ---
 
-## 12. Planned Refactor: Controls, Breakpoints and Layout
+## 12. Controls, Breakpoints and Layout
 
-**Status: specified, not built.** Agreed in full with the project owner; every
-decision below is settled, including the ones where the first proposal was
-rejected. Read this section before touching `PythonEnvironment.svelte`,
-`PythonControls.svelte`, or the worker's pause logic.
+**Status: built.** Every decision below was agreed in full with the project
+owner before implementation, including the ones where the first proposal was
+rejected. The prose is kept in the specifying voice; §12.6 is the delivered
+checklist and §12.7 records where the implementation differs.
 
 ### 12.1 Panel order and sizing
 
@@ -711,9 +713,18 @@ cheap option — those constructs are rare in the code these chapters ask for.
 toggled while the program is _paused_, and a paused worker is blocked inside
 `Atomics.wait`, so a `postMessage` would sit unread until the run ended. The
 breakpoint set therefore has to travel through **shared memory** like every
-other command (see §2), not as a message: a small `SharedArrayBuffer` region the
-tracer reads on each event. Sending it only with the `run` message would make
+other command (see §2), not as a message: a small `SharedArrayBuffer` region
+consulted on each event. Sending it only with the `run` message would make
 breakpoints added mid-pause silently do nothing.
+
+As built, the region is a **bitmap of one bit per line** (`MAX_BREAKPOINT_LINE`
+= 4096) in a third buffer on `SharedChannel`, and it is the JavaScript **host**
+that reads it, not the tracer: `tracer.py` now passes its line and event to
+`host.before_snapshot(line, event)` and the host answers `TRACE_PAUSE` or
+`TRACE_RUN`. Keeping the read on the JavaScript side means `Atomics` stays in
+one language, and the tracer keeps knowing nothing about how it is being
+driven. Writes replace the whole region rather than adding to it, so clearing a
+breakpoint mid-pause actually clears it.
 
 **Tracer installation.** Play from idle still installs no tracer, preserving the
 fast path. **To breakpoint** and **Step** install it. Play pressed while paused
@@ -763,16 +774,43 @@ staleness problem without throwing the information away.
 
 ### 12.6 Checklist
 
-- [ ] Editor min 10 / max 20 lines; wire up `PythonConfig.editorLines`
-- [ ] Reorder to editor / output / controls; fix console at ~10rem
-- [ ] Rebuild the control row: two rows, combined Play/Stop, drop Clear and Auto
-- [ ] Breakpoint gutter, toggling, and the non-blank/non-comment rule
-- [ ] Breakpoint persistence with the code; cleared by Reset code
-- [ ] Shared-memory breakpoint region the tracer reads per event
-- [ ] "To breakpoint" run mode; disabled when no breakpoints exist
-- [ ] Show/hide visualizer button, persisted; capped width when hidden
-- [ ] Final snapshot retained with per-ending banners
-- [ ] Synthesise the final snapshot from globals, and the error snapshot from
+- [x] Editor min 10 / max 20 lines; wire up `PythonConfig.editorLines`
+- [x] Reorder to editor / output / controls; fix console at ~10rem
+- [x] Rebuild the control row: two rows, combined Play/Stop, drop Clear and Auto
+- [x] Breakpoint gutter, toggling, and the non-blank/non-comment rule
+- [x] Breakpoint persistence with the code; cleared by Reset code
+- [x] Shared-memory breakpoint region the tracer reads per event
+- [x] "To breakpoint" run mode; disabled when no breakpoints exist
+- [x] Show/hide visualizer button, persisted; capped width when hidden
+- [x] Final snapshot retained with per-ending banners
+- [x] Synthesise the final snapshot from globals, and the error snapshot from
       the traceback, so both work without the tracer
-- [ ] Unit tests for the new pure logic; e2e for breakpoints, the button state
+- [x] Unit tests for the new pure logic; e2e for breakpoints, the button state
       machine, and the final-snapshot banners
+
+New files: `src/lib/python/breakpoints.ts` (which lines may carry one, and the
+toggle/clamp/persist arithmetic) and `src/lib/python/controls.ts` (the button
+state machine, so every `RunnerStatus` can be asserted without a browser).
+
+### 12.7 Deviations from this section, and why
+
+- **Reset code does not clear the console.** §12.1 says the console is cleared
+  at the start of a run "and not otherwise", and Reset code is not a run. It
+  does clear the snapshot and the error, though: both are pinned to line numbers
+  in a program that no longer exists.
+- **The command word `CMD_PAUSE` was removed rather than left unused.** It
+  existed only to interrupt auto-stepping, and Auto is gone. Nothing in the UI
+  could still send it, so keeping it would have been a false suggestion that
+  something does.
+- **The post-mortem snapshot rides along with the `done`/`error` message**
+  rather than arriving as its own `snapshot` message, which would have put the
+  runner into `paused` at exactly the moment the program had ended.
+- **An error snapshot caps its frames at `MAX_TRACEBACK_FRAMES`**, keeping the
+  global frame and the deepest few. A `RecursionError` otherwise arrives with
+  hundreds of near-identical frames, each serialized in full; the console
+  traceback already reports how many calls were omitted.
+- **The "Stopped" banner covers the cooperative stop only.** When the program is
+  wedged in a C-level call the worker is terminated and rebooted (§2), which
+  takes the runner back through `loading` to `ready` — there is no ending to
+  banner. The console still says `Stopped. Restarting Python…`, which is the
+  more informative message in that case anyway.

@@ -37,12 +37,24 @@
     snapshot: Snapshot | null;
     /** Shown when there is no snapshot yet. */
     placeholder?: string;
+    /**
+     * Says what happened when the program ended, above a snapshot that is now
+     * a final state rather than a live one. Wiping the panel instead would be
+     * honest about the frames being gone, but blanks it at exactly the moment a
+     * student wants to check how their variables ended up
+     * (`PythonInterpreterDesign.md` §12.5).
+     */
+    banner?: string | null;
+    /** `error` tints the banner red; anything else is neutral. */
+    bannerTone?: 'neutral' | 'error';
     class?: string;
   }
 
   let {
     snapshot = null,
     placeholder = 'Press Step to start walking through your program.',
+    banner = null,
+    bannerTone = 'neutral',
     class: className = ''
   }: Props = $props();
 
@@ -405,6 +417,9 @@
 {/snippet}
 
 <div class="visualizer {className}">
+  {#if banner}
+    <div class="banner" class:error={bannerTone === 'error'} role="status">{banner}</div>
+  {/if}
   {#if !snapshot}
     <p class="placeholder">{placeholder}</p>
   {:else}
@@ -517,6 +532,21 @@
     border-radius: 8px;
     padding: 0.75rem;
     font-size: 13px;
+  }
+
+  .banner {
+    margin-bottom: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 4px;
+    background: #e5e7eb;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .banner.error {
+    background: #fee2e2;
+    color: #991b1b;
   }
 
   .placeholder,

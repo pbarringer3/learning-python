@@ -60,6 +60,28 @@ describe('tracer.py structure', () => {
     expect(source).toMatch(/if frame\.f_code\.co_filename != USER_FILENAME:\s*\n\s*return None/);
   });
 
+  it('passes the line and event to the host, which owns the breakpoint set', () => {
+    // The breakpoint bitmap lives in shared memory on the JavaScript side,
+    // because a breakpoint toggled while the worker is blocked in
+    // `Atomics.wait` has no other way to reach it (§12.3). The tracer therefore
+    // hands over what the host needs to decide, rather than deciding itself.
+    expect(source).toContain('host.before_snapshot(frame.f_lineno, event)');
+  });
+
+  it('builds the post-mortem snapshots the final banner shows', () => {
+    // Both have to work with no tracer installed, so Play keeps its fast path:
+    // one from the globals `exec` left behind, one from the traceback's frames.
+    expect(source).toMatch(/^def _final_snapshot\(user_globals\):$/m);
+    expect(source).toMatch(/^def _error_snapshot\(exc\):$/m);
+    expect(source).toContain('exc.__traceback__');
+  });
+
+  it('stops tracing before serializing a failure, so the walk is not itself traced', () => {
+    // The last such handler is `run_user_code`'s; earlier ones guard `repr()`.
+    const failure = source.slice(source.lastIndexOf('    except BaseException as exc:'));
+    expect(failure.indexOf('sys.settrace(None)')).toBeLessThan(failure.indexOf('_error_snapshot'));
+  });
+
   it('memoizes heap entries before walking their contents, so cycles terminate', () => {
     const value = source.slice(source.indexOf('    def value(self, value):'));
     const memoize = value.indexOf('self.entries[key] = entry');

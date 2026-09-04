@@ -372,31 +372,42 @@ def _exception_message(exc):
         return ""
 
 
+def _bindings(namespace, names, heap):
+    """Serialize the named members of a namespace, skipping any that vanish."""
+    bindings = []
+    for name in names:
+        try:
+            member = namespace[name]
+        except KeyError:
+            continue
+        bindings.append({"name": name, "value": heap.value(member)})
+    return bindings
+
+
+def _frame_entry(user_frame, heap, line=None):
+    """One stack frame, as the visualizer's ``Frame`` shape.
+
+    Shared by live tracing and by the post-mortem snapshots, so a failure looks
+    the same whether it was stepped into or run straight past. ``line`` is
+    overridable because a traceback knows where a frame *was* when the
+    exception passed through it, which is not where ``f_lineno`` now points.
+    """
+    is_global = user_frame.f_code.co_name == "<module>"
+    namespace = user_frame.f_locals
+    names = _global_names(namespace) if is_global else _local_names(user_frame)
+    return {
+        "id": id(user_frame),
+        "name": "<module>" if is_global else user_frame.f_code.co_name,
+        "isGlobal": is_global,
+        "line": user_frame.f_lineno if line is None else line,
+        "locals": _bindings(namespace, names, heap),
+    }
+
+
 def _capture(frame, event, arg):
     """Build the complete snapshot for one trace event."""
     heap = Heap()
-    frames = []
-
-    for user_frame in _user_frames(frame):
-        is_global = user_frame.f_code.co_name == "<module>"
-        namespace = user_frame.f_locals
-        names = _global_names(namespace) if is_global else _local_names(user_frame)
-        bindings = []
-        for name in names:
-            try:
-                member = namespace[name]
-            except KeyError:
-                continue
-            bindings.append({"name": name, "value": heap.value(member)})
-        frames.append(
-            {
-                "id": id(user_frame),
-                "name": "<module>" if is_global else user_frame.f_code.co_name,
-                "isGlobal": is_global,
-                "line": user_frame.f_lineno,
-                "locals": bindings,
-            }
-        )
+    frames = [_frame_entry(user_frame, heap) for user_frame in _user_frames(frame)]
 
     if event == "return" and frames:
         frames[-1]["returnValue"] = heap.value(arg)
@@ -419,6 +430,60 @@ def _capture(frame, event, arg):
     return snapshot
 
 
+def _final_snapshot(user_globals):
+    """The state a completed program left behind.
+
+    Built from the globals ``exec`` filled in, which ``run_user_code`` still
+    holds after it returns -- so this works with no tracer installed, and Play
+    keeps its fast path (``PythonInterpreterDesign.md`` section 12.5).
+    """
+    heap = Heap()
+    frames = [
+        {
+            "id": id(user_globals),
+            "name": "<module>",
+            "isGlobal": True,
+            # Nothing is executing any more, so there is no line to highlight.
+            "line": 0,
+            "locals": _bindings(user_globals, _global_names(user_globals), heap),
+        }
+    ]
+    heap.drain()
+    return {"event": "final", "line": 0, "frames": frames, "heap": heap.entries}
+
+
+def _error_snapshot(exc):
+    """The frames as they stood when the program failed.
+
+    Reachable after the fact from ``exc.__traceback__``, so Run and Step show
+    the same view of a failure. Traceback order is outermost-first already,
+    which is the order the visualizer draws.
+    """
+    heap = Heap()
+    user_frames = []
+    traceback_obj = exc.__traceback__
+    while traceback_obj is not None:
+        if traceback_obj.tb_frame.f_code.co_filename == USER_FILENAME:
+            user_frames.append((traceback_obj.tb_frame, traceback_obj.tb_lineno))
+        traceback_obj = traceback_obj.tb_next
+
+    # A RecursionError arrives with hundreds of near-identical frames, each of
+    # which would be serialized in full. Keep the global frame and the deepest
+    # few; the console traceback already says how many were dropped.
+    if len(user_frames) > MAX_TRACEBACK_FRAMES:
+        user_frames = user_frames[:1] + user_frames[-(MAX_TRACEBACK_FRAMES - 1) :]
+
+    frames = [_frame_entry(frame, heap, line) for frame, line in user_frames]
+    heap.drain()
+    return {
+        "event": "final",
+        "line": frames[-1]["line"] if frames else 0,
+        "frames": frames,
+        "heap": heap.entries,
+        "exception": {"type": type(exc).__name__, "message": _exception_message(exc)},
+    }
+
+
 # ---------------------------------------------------------------------------
 # Tracing
 # ---------------------------------------------------------------------------
@@ -438,7 +503,11 @@ def _tracer(frame, event, arg):
         return _tracer
 
     if event in TRACED_EVENTS:
-        decision = host.before_snapshot()
+        # The line and event go to the host because the breakpoint set lives in
+        # shared memory on the JavaScript side -- it has to, so that a
+        # breakpoint toggled while this worker is blocked still arrives. See
+        # PythonInterpreterDesign.md section 12.3.
+        decision = host.before_snapshot(frame.f_lineno, event)
         if decision == TRACE_STOP:
             raise StopExecution()
         if decision == TRACE_PAUSE:
@@ -614,13 +683,24 @@ def run_user_code(source, recursion_limit, tracing):
     try:
         exec(code, user_globals)
     except StopExecution:
+        # Stop leaves whatever was last displayed on screen, so no snapshot.
         return json.dumps({"status": "stopped"})
     except SystemExit:
-        return json.dumps({"status": "done"})
+        return _done(user_globals)
     except BaseException as exc:
-        return json.dumps({"status": "error", "error": _runtime_error(exc)})
+        # Tracing off first: serializing the frames would otherwise trace itself.
+        sys.settrace(None)
+        return json.dumps(
+            {"status": "error", "error": _runtime_error(exc), "snapshot": _error_snapshot(exc)},
+            default=str,
+        )
     finally:
         sys.settrace(None)
         sys.stdout.flush()
 
-    return json.dumps({"status": "done"})
+    return _done(user_globals)
+
+
+def _done(user_globals):
+    sys.settrace(None)
+    return json.dumps({"status": "done", "snapshot": _final_snapshot(user_globals)}, default=str)

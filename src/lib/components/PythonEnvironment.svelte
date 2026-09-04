@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * Embeddable Python environment: editor, execution controls, output console,
+   * Embeddable Python environment: editor, output console, execution controls,
    * and the call stack visualizer.
    *
    * This is the Python counterpart to `KarelEnvironment` — the shared piece of
@@ -10,6 +10,10 @@
    * Everything runs in a worker, so the page stays responsive while a program
    * is paused mid-execution and `input()` can genuinely block rather than being
    * faked with a queue.
+   *
+   * Panel order is editor / output / controls, with the console fixed in
+   * height, so nothing under the pointer moves while a program is being
+   * stepped. See §12.1.
    */
   import { onDestroy, onMount } from 'svelte';
   import CodeEditor from '$lib/components/CodeEditor.svelte';
@@ -21,7 +25,19 @@
     isolationMessage,
     type IsolationState
   } from '$lib/python/coi';
-  import { PythonRunner, type OutputChunk, type RunnerStatus } from '$lib/python/runner';
+  import {
+    PythonRunner,
+    type FinishReason,
+    type OutputChunk,
+    type RunMode,
+    type RunnerStatus
+  } from '$lib/python/runner';
+  import {
+    BREAKPOINT_PREFIX,
+    clampBreakpoints,
+    parseBreakpoints,
+    serializeBreakpoints
+  } from '$lib/python/breakpoints';
   import type { PythonError } from '$lib/python/protocol';
   import type { Snapshot } from '$lib/python/snapshot';
   import type { PythonConfig } from '$lib/python/config';
@@ -33,28 +49,35 @@
 
   let { config, class: className = '' }: Props = $props();
 
-  // --- Code persistence (same key convention as KarelEnvironment) ---
+  // --- Persistence (same key convention as KarelEnvironment) ---
   const CODE_PREFIX = 'learning-python-code:';
+  /** Whether the student has the visualizer open, per exercise. */
+  const VISUALIZER_PREFIX = 'learning-python-visualizer:';
 
-  function loadSavedCode(key: string): string | null {
+  function readStored(key: string): string | null {
     if (typeof window === 'undefined') return null;
     try {
-      return localStorage.getItem(CODE_PREFIX + key);
+      return localStorage.getItem(key);
     } catch {
       return null;
     }
   }
 
-  function saveCode(key: string, value: string): void {
+  function writeStored(key: string, value: string): void {
     if (typeof window === 'undefined') return;
     try {
-      localStorage.setItem(CODE_PREFIX + key, value);
+      localStorage.setItem(key, value);
     } catch {
       // localStorage may be full or unavailable — silently degrade
     }
   }
 
+  /** Editor rows, per §12.1: a floor as well as a ceiling. */
+  const MIN_EDITOR_LINES = 10;
+  const DEFAULT_MAX_EDITOR_LINES = 20;
+
   let code = $state('');
+  let breakpoints = $state<number[]>([]);
   let status = $state<RunnerStatus>('loading');
   let chunks = $state<OutputChunk[]>([]);
   let snapshot = $state<Snapshot | null>(null);
@@ -62,23 +85,57 @@
   let inputPrompt = $state<string | null>(null);
   let isolation = $state<IsolationState | null>(null);
   let loadError = $state<string | null>(null);
-  let autoPlaying = $state(false);
-  let autoSpeed = $state(400);
+  /** How the last run ended, for the visualizer's banner. */
+  let finish = $state<FinishReason | null>(null);
+  /**
+   * The student's own choice, once they have made one. `null` means they have
+   * not, so `config.showVisualizer` still decides — it is the pedagogical
+   * default for a first arrival, not a setting re-imposed on every visit (§12.4).
+   */
+  let visualizerOverride = $state<boolean | null>(null);
 
   let runner: PythonRunner | null = null;
-  let autoTimer: ReturnType<typeof setTimeout> | null = null;
 
-  let showVisualizer = $derived(config.showVisualizer !== false);
+  let maxEditorLines = $derived(config.editorLines ?? DEFAULT_MAX_EDITOR_LINES);
+  let visualizerVisible = $derived(visualizerOverride ?? config.showVisualizer !== false);
   let busy = $derived(status === 'running' || status === 'paused' || status === 'awaiting-input');
-  let highlightedLine = $derived(snapshot?.line ?? error?.line ?? null);
+  // A finished program has no line executing; the snapshot reports line 0.
+  let highlightedLine = $derived(
+    (snapshot?.line || null) ?? (status === 'error' ? (error?.line ?? null) : null)
+  );
 
-  // Initialize code: saved work wins over the starter code.
+  /**
+   * What the visualizer says above a snapshot that is no longer live.
+   *
+   * The same final view appears however the program got there — stepping to the
+   * end, Play, or To breakpoint with nothing ahead — so the banner is what
+   * distinguishes them. See §12.5.
+   */
+  let banner = $derived.by(() => {
+    if (status === 'error') return 'Program stopped with an error';
+    if (status !== 'finished') return null;
+    return finish === 'stopped' ? 'Stopped' : 'Program complete';
+  });
+
+  // Initialize code and breakpoints: saved work wins over the starter code.
   $effect(() => {
-    if (config.persistenceKey) {
-      code = loadSavedCode(config.persistenceKey) ?? config.initialCode;
-    } else {
+    const key = config.persistenceKey;
+    if (!key) {
       code = config.initialCode;
+      return;
     }
+    // Held in a local and never read back off `code`: reading state this effect
+    // has just written would make it depend on itself, and every keystroke
+    // would re-run it and revert the editor to what was last saved.
+    const source = readStored(CODE_PREFIX + key) ?? config.initialCode;
+    code = source;
+    breakpoints = clampBreakpoints(
+      parseBreakpoints(readStored(BREAKPOINT_PREFIX + key)),
+      source.split('\n').length
+    );
+    // A visualizer the student closed stays closed across reloads.
+    const stored = readStored(VISUALIZER_PREFIX + key);
+    if (stored !== null) visualizerOverride = stored === 'true';
   });
 
   /**
@@ -110,17 +167,12 @@
         {
           onStatus: (next) => {
             status = next;
-            // Auto-stepping only makes sense while there is more to step to.
-            if (next === 'finished' || next === 'error' || next === 'failed') autoPlaying = false;
           },
           onOutput: appendOutput,
           onSnapshot: (next) => {
             snapshot = next;
           },
           onInputRequest: (prompt) => {
-            // A prompt means the program needs a person, so stop stepping on a
-            // timer and let them answer.
-            autoPlaying = false;
             inputPrompt = prompt;
           },
           onError: (next) => {
@@ -128,10 +180,14 @@
           },
           onLoadError: (message) => {
             loadError = message;
+          },
+          onFinish: (reason) => {
+            finish = reason;
           }
         },
         config.recursionLimit
       );
+      runner.setBreakpoints(breakpoints);
       runner.start();
     })();
 
@@ -141,45 +197,50 @@
   });
 
   onDestroy(() => {
-    if (autoTimer !== null) clearTimeout(autoTimer);
     runner?.dispose();
   });
 
-  // Auto-stepping: one timer per pause, rescheduled by the next pause.
+  // Breakpoints reach the worker through shared memory, so this is safe — and
+  // necessary — while the program is paused mid-run.
+  //
+  // `lines` is read into a local first: `runner?.setBreakpoints(breakpoints)`
+  // short-circuits before evaluating its argument while the runner is still
+  // booting, so the effect would register no dependency and never run again.
   $effect(() => {
-    if (autoTimer !== null) {
-      clearTimeout(autoTimer);
-      autoTimer = null;
-    }
-    if (!autoPlaying || status !== 'paused') return;
-    const delay = autoSpeed;
-    autoTimer = setTimeout(() => runner?.step(), delay);
-    return () => {
-      if (autoTimer !== null) clearTimeout(autoTimer);
-      autoTimer = null;
-    };
+    const lines = breakpoints;
+    runner?.setBreakpoints(lines);
   });
 
+  function persist(): void {
+    const key = config.persistenceKey;
+    if (!key) return;
+    writeStored(CODE_PREFIX + key, code);
+    writeStored(BREAKPOINT_PREFIX + key, serializeBreakpoints(breakpoints));
+  }
+
+  /**
+   * Everything a run replaces. Called only when a run starts — that is what
+   * makes a Clear button unnecessary, and keeps the console showing exactly one
+   * program's output (§12.1).
+   */
   function clearRunState(): void {
     chunks = [];
     snapshot = null;
     error = null;
     inputPrompt = null;
+    finish = null;
   }
 
-  function persist(): void {
-    if (config.persistenceKey) saveCode(config.persistenceKey, code);
-  }
-
-  function start(mode: 'run' | 'step'): void {
+  function start(mode: RunMode): void {
     persist();
     clearRunState();
     runner?.run(code, mode);
   }
 
-  function handleRun(): void {
-    autoPlaying = false;
-    start('run');
+  /** Play: run, or resume, ignoring breakpoints entirely. */
+  function handlePlay(): void {
+    if (status === 'paused') runner?.resume();
+    else start('run');
   }
 
   function handleStep(): void {
@@ -187,33 +248,34 @@
     else start('step');
   }
 
-  function handleContinue(): void {
-    autoPlaying = false;
-    runner?.resume();
-  }
-
-  function handleAutoToggle(): void {
-    if (autoPlaying) {
-      autoPlaying = false;
-      return;
-    }
-    autoPlaying = true;
-    if (status !== 'paused') start('step');
+  function handleToBreakpoint(): void {
+    if (status === 'paused') runner?.resumeToBreakpoint();
+    else start('breakpoint');
   }
 
   function handleStop(): void {
-    autoPlaying = false;
     runner?.stop();
   }
 
-  function handleClear(): void {
-    clearRunState();
+  function handleToggleVisualizer(): void {
+    const next = !visualizerVisible;
+    visualizerOverride = next;
+    if (config.persistenceKey) {
+      writeStored(VISUALIZER_PREFIX + config.persistenceKey, String(next));
+    }
   }
 
   function handleResetCode(): void {
     code = config.initialCode;
+    // The program those marks referred to is gone (§12.3).
+    breakpoints = [];
     persist();
-    clearRunState();
+    // The console is left alone — it is cleared by starting a run, not by this.
+    // The snapshot and error are not: both are pinned to line numbers in code
+    // that no longer exists.
+    snapshot = null;
+    error = null;
+    finish = null;
   }
 
   function handleInput(value: string): void {
@@ -245,36 +307,43 @@
       </div>
     {/if}
 
-    <div class="layout" class:with-visualizer={showVisualizer}>
+    <div class="layout" class:with-visualizer={visualizerVisible}>
       <div class="pane">
         <CodeEditor
           bind:value={code}
           {highlightedLine}
           isError={status === 'error'}
           readonly={busy}
+          minLines={MIN_EDITOR_LINES}
+          maxLines={maxEditorLines}
+          breakpointsEnabled={true}
+          {breakpoints}
+          onBreakpointsChange={(lines) => (breakpoints = lines)}
           class="editor"
         />
 
+        <PythonOutput {chunks} {error} {inputPrompt} onSubmitInput={handleInput} />
+
         <PythonControls
           {status}
-          {autoPlaying}
-          {autoSpeed}
-          onRun={handleRun}
-          onStep={handleStep}
-          onContinue={handleContinue}
-          onAutoToggle={handleAutoToggle}
+          hasBreakpoints={breakpoints.length > 0}
+          {visualizerVisible}
+          onPlay={handlePlay}
           onStop={handleStop}
-          onReset={handleClear}
+          onStep={handleStep}
+          onToBreakpoint={handleToBreakpoint}
+          onToggleVisualizer={handleToggleVisualizer}
           onResetCode={handleResetCode}
-          onSpeedChange={(speed) => (autoSpeed = speed)}
         />
-
-        <PythonOutput {chunks} {error} {inputPrompt} onSubmitInput={handleInput} />
       </div>
 
-      {#if showVisualizer}
+      {#if visualizerVisible}
         <div class="pane visualizer-pane">
-          <CallStackVisualizer {snapshot} />
+          <CallStackVisualizer
+            {snapshot}
+            {banner}
+            bannerTone={status === 'error' ? 'error' : 'neutral'}
+          />
         </div>
       {/if}
     </div>
@@ -300,6 +369,15 @@
     gap: 1rem;
     min-width: 0;
     flex: 1;
+  }
+
+  /*
+   * With the visualizer hidden the column has the whole page to spread across,
+   * but very long lines of Python are hard to scan — so it stops at a
+   * comfortable reading width and the rest stays whitespace (§12.4).
+   */
+  .layout:not(.with-visualizer) > .pane {
+    max-width: 56rem;
   }
 
   @media (min-width: 1024px) {
@@ -334,10 +412,6 @@
     .python-environment :global(.visualizer) {
       max-height: 70vh;
     }
-  }
-
-  .python-environment :global(.editor) {
-    min-height: 16rem;
   }
 
   .notice {

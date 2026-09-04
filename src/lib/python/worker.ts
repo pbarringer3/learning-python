@@ -17,17 +17,19 @@ import tracerSource from './tracer.py?raw';
 import {
   CMD_CONTINUE,
   CMD_NONE,
-  CMD_PAUSE,
   CMD_STOP,
+  CMD_TO_BREAKPOINT,
   CTL_COMMAND,
   TRACE_PAUSE,
   TRACE_RUN,
   TRACE_STOP,
   controlView,
+  hasBreakpoint,
   readInput,
   waitForCommand,
   type HostMessage,
   type PythonError,
+  type RunMode,
   type SharedChannel,
   type WorkerMessage
 } from './protocol';
@@ -53,19 +55,36 @@ interface TracerModule {
 
 /** What `run_user_code` reports back, as JSON. */
 type RunResult =
-  | { status: 'done' }
+  | { status: 'done'; snapshot?: unknown }
   | { status: 'stopped' }
-  | { status: 'error'; error: PythonError };
+  | { status: 'error'; error: PythonError; snapshot?: unknown };
 
 let channel: SharedChannel | null = null;
 let control: Int32Array | null = null;
 let tracer: TracerModule | null = null;
 
 /**
- * Whether the tracer should stop at every event. Cleared when the user presses
- * Continue, set again when they press Pause.
+ * What the tracer stops for.
+ *
+ *  - `each`     — every trace event (Step).
+ *  - `breakpoints` — only a `line` event on a marked line (To breakpoint).
+ *  - `none`     — nothing (Play, whether from idle or resumed from a pause).
+ *
+ * Set by the `run` message and then by whichever command releases each pause,
+ * so a student can switch between the three mid-program without restarting.
  */
-let pauseAtEachEvent = true;
+type PauseMode = 'each' | 'breakpoints' | 'none';
+
+let pauseMode: PauseMode = 'each';
+
+/** The pause mode a command asks for once it releases the worker. */
+function pauseModeFor(command: number): PauseMode {
+  if (command === CMD_CONTINUE) return 'none';
+  if (command === CMD_TO_BREAKPOINT) return 'breakpoints';
+  // CMD_STEP, and anything unrecognised: stop at the next event. A spurious
+  // pause is recoverable; silently running on is not.
+  return 'each';
+}
 
 function post(message: WorkerMessage): void {
   ctx.postMessage(message);
@@ -78,16 +97,23 @@ function post(message: WorkerMessage): void {
  * this thread. Keep them free of anything async.
  */
 const host = {
-  /** Called at every trace event, before the (expensive) snapshot is built. */
-  before_snapshot(): number {
+  /**
+   * Called at every trace event, before the (expensive) snapshot is built.
+   *
+   * The breakpoint set is consulted here rather than in Python because it lives
+   * in shared memory: a breakpoint added while this worker is blocked inside
+   * `Atomics.wait` has no other way to reach it (`PythonInterpreterDesign.md`
+   * §12.3). Only `line` events are matched — a breakpoint means "pause before
+   * this line runs", and the `call` and `return` events at the same line would
+   * otherwise stop three times over.
+   */
+  before_snapshot(line: number, event: string): number {
     if (!control) return TRACE_RUN;
-    const command = Atomics.load(control, CTL_COMMAND);
-    if (command === CMD_STOP) return TRACE_STOP;
-    if (command === CMD_PAUSE) {
-      pauseAtEachEvent = true;
-      return TRACE_PAUSE;
-    }
-    return pauseAtEachEvent ? TRACE_PAUSE : TRACE_RUN;
+    if (Atomics.load(control, CTL_COMMAND) === CMD_STOP) return TRACE_STOP;
+    if (pauseMode === 'each') return TRACE_PAUSE;
+    if (pauseMode !== 'breakpoints' || event !== 'line') return TRACE_RUN;
+    if (channel && hasBreakpoint(channel, line)) return TRACE_PAUSE;
+    return TRACE_RUN;
   },
 
   /** Publish a snapshot, then block until the UI issues the next command. */
@@ -99,7 +125,7 @@ const host = {
     Atomics.store(control, CTL_COMMAND, CMD_NONE);
     post({ type: 'snapshot', json });
     const command = waitForCommand(control);
-    pauseAtEachEvent = command !== CMD_CONTINUE;
+    pauseMode = pauseModeFor(command);
     return command;
   },
 
@@ -154,7 +180,7 @@ async function boot(indexUrl: string): Promise<void> {
 }
 
 /** Execute the user's source and report how it ended. */
-function run(code: string, mode: 'run' | 'step', recursionLimit: number): void {
+function run(code: string, mode: RunMode, recursionLimit: number): void {
   if (!tracer) {
     post({ type: 'load-error', message: 'Python runtime is not ready yet.' });
     return;
@@ -162,11 +188,16 @@ function run(code: string, mode: 'run' | 'step', recursionLimit: number): void {
 
   // A command left over from the previous run must not leak into this one.
   if (control) Atomics.store(control, CTL_COMMAND, CMD_NONE);
-  pauseAtEachEvent = mode === 'step';
+  pauseMode = mode === 'step' ? 'each' : mode === 'breakpoint' ? 'breakpoints' : 'none';
+
+  // Play from idle installs no tracer at all, which is the fast path. Both
+  // pausing modes need one; a Play issued later, from a pause, runs with the
+  // tracer already installed and simply stops pausing.
+  const tracing = mode !== 'run';
 
   let result: RunResult;
   try {
-    result = JSON.parse(tracer.run_user_code(code, recursionLimit, mode === 'step')) as RunResult;
+    result = JSON.parse(tracer.run_user_code(code, recursionLimit, tracing)) as RunResult;
   } catch (error) {
     // Only reachable if the tracer itself fails; user exceptions are caught in
     // Python and come back as a normal `error` status.
@@ -182,9 +213,14 @@ function run(code: string, mode: 'run' | 'step', recursionLimit: number): void {
     return;
   }
 
-  if (result.status === 'error') post({ type: 'error', error: result.error });
+  // The post-mortem snapshot rides along with the ending rather than as a
+  // separate `snapshot` message, which would put the runner into `paused`.
+  const snapshot =
+    result.status !== 'stopped' && result.snapshot ? JSON.stringify(result.snapshot) : undefined;
+
+  if (result.status === 'error') post({ type: 'error', error: result.error, snapshot });
   else if (result.status === 'stopped') post({ type: 'stopped' });
-  else post({ type: 'done' });
+  else post({ type: 'done', snapshot });
 }
 
 ctx.onmessage = async (event: MessageEvent<HostMessage>) => {

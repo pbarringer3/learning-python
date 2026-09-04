@@ -128,13 +128,23 @@ export interface SnapshotException {
   message: string;
 }
 
-/** Trace events the tracer pauses on. */
-export type SnapshotEvent = 'call' | 'line' | 'return' | 'exception';
+/**
+ * Trace events the tracer pauses on, plus `final`.
+ *
+ * `final` is not a trace event: it is the snapshot synthesised after the
+ * program has ended, from the surviving globals or from the frames hanging off
+ * the traceback. It exists so the last view stays on screen — with a banner
+ * saying what happened — instead of the panel blanking at exactly the moment a
+ * student wants to check how their variables ended up. See
+ * `PythonInterpreterDesign.md` §12.5.
+ */
+export type SnapshotEvent = 'call' | 'line' | 'return' | 'exception' | 'final';
 
 /** A complete picture of the program at one trace event. */
 export interface Snapshot {
   event: SnapshotEvent;
-  /** 1-based line in the user's source, for editor highlighting. */
+  /** 1-based line in the user's source, for editor highlighting. 0 when the
+   *  program has ended and no line is executing. */
   line: number;
   /** Outermost first: `frames[0]` is the global frame. */
   frames: Frame[];

@@ -16,15 +16,17 @@ import {
   CMD_CONTINUE,
   CMD_INPUT,
   CMD_NONE,
-  CMD_PAUSE,
   CMD_STEP,
   CMD_STOP,
+  CMD_TO_BREAKPOINT,
   CTL_COMMAND,
   controlView,
   createSharedChannel,
   sendCommand,
+  writeBreakpoints,
   writeInput,
   type PythonError,
+  type RunMode,
   type SharedChannel,
   type WorkerMessage
 } from './protocol';
@@ -54,6 +56,15 @@ export interface OutputChunk {
   text: string;
 }
 
+/**
+ * How a run ended.
+ *
+ * `finished` alone cannot say, and the visualizer's banner has to: a program
+ * that completed and one the student abandoned leave the same status but very
+ * different snapshots on screen (`PythonInterpreterDesign.md` §12.5).
+ */
+export type FinishReason = 'completed' | 'stopped';
+
 export interface PythonRunnerCallbacks {
   onStatus(status: RunnerStatus): void;
   onOutput(chunk: OutputChunk): void;
@@ -61,10 +72,10 @@ export interface PythonRunnerCallbacks {
   onInputRequest(prompt: string): void;
   onError(error: PythonError): void;
   onLoadError(message: string): void;
+  onFinish(reason: FinishReason): void;
 }
 
-/** How execution was started, which decides whether snapshots are produced. */
-export type RunMode = 'run' | 'step';
+export type { RunMode };
 
 export class PythonRunner {
   private worker: Worker | null = null;
@@ -155,19 +166,45 @@ export class PythonRunner {
 
       case 'error':
         this.clearStopTimer();
+        // The post-mortem snapshot arrives with the ending rather than as its
+        // own `snapshot` message, so the status lands on `error`, not `paused`.
+        if (message.snapshot) this.callbacks.onSnapshot(parseSnapshot(message.snapshot));
         this.callbacks.onError(message.error);
         this.setStatus('error');
         break;
 
       case 'done':
+        this.clearStopTimer();
+        if (message.snapshot) this.callbacks.onSnapshot(parseSnapshot(message.snapshot));
+        this.callbacks.onFinish('completed');
+        this.setStatus('finished');
+        break;
+
       case 'stopped':
         this.clearStopTimer();
+        // Stop leaves whatever was last displayed in place, by design.
+        this.callbacks.onFinish('stopped');
         this.setStatus('finished');
         break;
     }
   }
 
-  /** Execute `code`. `step` pauses at the first trace event; `run` doesn't pause. */
+  /**
+   * Replace the breakpoint set the worker consults.
+   *
+   * Safe to call at any time, including while the worker is blocked at a pause
+   * — that is the whole reason the set lives in shared memory rather than
+   * travelling with the `run` message. The buffer outlives a worker restart, so
+   * a forced reboot keeps the marks.
+   */
+  setBreakpoints(lines: number[]): void {
+    writeBreakpoints(this.channel, lines);
+  }
+
+  /**
+   * Execute `code`. `step` pauses at the first trace event, `breakpoint` at the
+   * first marked line, and `run` does not pause at all.
+   */
   run(code: string, mode: RunMode): void {
     if (!this.worker || this.status === 'loading' || this.status === 'failed') return;
     // Clear any command left from a previous run before the worker starts
@@ -189,17 +226,18 @@ export class PythonRunner {
     sendCommand(this.channel, CMD_STEP);
   }
 
-  /** Run to completion without pausing again. */
+  /** Run to the end without pausing again — Play, pressed while paused. */
   resume(): void {
     if (this.status !== 'paused') return;
     this.setStatus('running');
     sendCommand(this.channel, CMD_CONTINUE);
   }
 
-  /** Pause at the next trace event. Only meaningful while running. */
-  pause(): void {
-    if (this.status !== 'running') return;
-    sendCommand(this.channel, CMD_PAUSE);
+  /** Resume, stopping at the next breakpoint if one lies ahead. */
+  resumeToBreakpoint(): void {
+    if (this.status !== 'paused') return;
+    this.setStatus('running');
+    sendCommand(this.channel, CMD_TO_BREAKPOINT);
   }
 
   /** Answer the `input()` prompt currently blocking the program. */

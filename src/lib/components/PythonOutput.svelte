@@ -105,9 +105,15 @@
     color: #6b7280;
   }
 
+  /*
+   * Fixed, not elastic. With the controls sitting *below* the console, a
+   * program that prints while being stepped would otherwise push the buttons
+   * downward between clicks, moving Step out from under the pointer mid-session
+   * — and, because the visualizer is sized to this column, resize that too.
+   * About seven lines; it scrolls past that. See PythonInterpreterDesign.md §12.1.
+   */
   .output-log {
-    min-height: 6rem;
-    max-height: 16rem;
+    height: 10rem;
     overflow: auto;
     padding: 0.5rem 0.6rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

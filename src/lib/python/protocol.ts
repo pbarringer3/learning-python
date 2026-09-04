@@ -30,21 +30,41 @@ export const CMD_CONTINUE = 2;
 export const CMD_INPUT = 3;
 /** Unwind and abandon execution at the next trace event. */
 export const CMD_STOP = 4;
-/** Leave "continue" mode and pause at the next trace event. */
-export const CMD_PAUSE = 5;
+/** Run on, pausing only at the next line carrying a breakpoint. */
+export const CMD_TO_BREAKPOINT = 5;
 
 /** Size of the buffer carrying `input()` responses to the worker. */
 export const INPUT_BUFFER_BYTES = 64 * 1024;
+
+/**
+ * Highest line number that can carry a breakpoint.
+ *
+ * The region is a fixed-size bitmap, one bit per line, so it has to have an
+ * end. Lessons cap the editor at twenty lines and the playground is not much
+ * larger, so this is generous by three orders of magnitude.
+ */
+export const MAX_BREAKPOINT_LINE = 4096;
+
+/** Int32 words the breakpoint bitmap occupies. */
+export const BREAKPOINT_SLOTS = MAX_BREAKPOINT_LINE / 32;
 
 /** What the tracer should do at the current event. */
 export const TRACE_RUN = 0;
 export const TRACE_PAUSE = 1;
 export const TRACE_STOP = 2;
 
-/** The pair of shared buffers making up the main-thread-to-worker channel. */
+/**
+ * The shared buffers making up the main-thread-to-worker channel.
+ *
+ * `breakpoints` is here, rather than travelling as a `run` message, because it
+ * can change while the program is *paused* — and a paused worker is blocked
+ * inside `Atomics.wait`, so a `postMessage` would sit unread until the run
+ * ended. See `PythonInterpreterDesign.md` §12.3.
+ */
 export interface SharedChannel {
   control: SharedArrayBuffer;
   data: SharedArrayBuffer;
+  breakpoints: SharedArrayBuffer;
 }
 
 /** Result of writing an `input()` response into the data buffer. */
@@ -59,7 +79,8 @@ export interface WriteInputResult {
 export function createSharedChannel(): SharedChannel {
   return {
     control: new SharedArrayBuffer(CONTROL_SLOTS * 4),
-    data: new SharedArrayBuffer(INPUT_BUFFER_BYTES)
+    data: new SharedArrayBuffer(INPUT_BUFFER_BYTES),
+    breakpoints: new SharedArrayBuffer(BREAKPOINT_SLOTS * 4)
   };
 }
 
@@ -71,6 +92,40 @@ export function controlView(channel: SharedChannel): Int32Array {
 /** Uint8 view over the data buffer. */
 export function dataView(channel: SharedChannel): Uint8Array {
   return new Uint8Array(channel.data);
+}
+
+/** Int32 view over the breakpoint bitmap, for `Atomics` operations. */
+export function breakpointView(channel: SharedChannel): Int32Array {
+  return new Int32Array(channel.breakpoints);
+}
+
+/**
+ * Replace the breakpoint set with `lines`.
+ *
+ * A whole-region rewrite rather than an addition: clearing a breakpoint while
+ * the program is paused has to actually clear it, or the worker keeps stopping
+ * at a line the student has just un-marked. Lines outside the supported range
+ * are dropped rather than wrapping into a neighbouring word.
+ */
+export function writeBreakpoints(channel: SharedChannel, lines: number[]): void {
+  const words = new Int32Array(BREAKPOINT_SLOTS);
+  for (const line of lines) {
+    if (!Number.isInteger(line) || line < 1 || line > MAX_BREAKPOINT_LINE) continue;
+    const index = line - 1;
+    words[index >> 5] |= 1 << (index & 31);
+  }
+  const view = breakpointView(channel);
+  for (let slot = 0; slot < BREAKPOINT_SLOTS; slot++) {
+    Atomics.store(view, slot, words[slot]);
+  }
+}
+
+/** Whether `line` currently carries a breakpoint. Read on every trace event. */
+export function hasBreakpoint(channel: SharedChannel, line: number): boolean {
+  if (!Number.isInteger(line) || line < 1 || line > MAX_BREAKPOINT_LINE) return false;
+  const index = line - 1;
+  const word = Atomics.load(breakpointView(channel), index >> 5);
+  return (word & (1 << (index & 31))) !== 0;
 }
 
 const encoder = new TextEncoder();
@@ -136,14 +191,20 @@ export type WorkerMessage =
   | { type: 'stderr'; text: string }
   | { type: 'snapshot'; json: string }
   | { type: 'input'; prompt: string }
-  | { type: 'done' }
+  | { type: 'done'; snapshot?: string }
   | { type: 'stopped' }
-  | { type: 'error'; error: PythonError };
+  | { type: 'error'; error: PythonError; snapshot?: string };
+
+/**
+ * How execution was started, which decides whether the tracer is installed and
+ * what it pauses on. `run` installs none at all, which is the fast path.
+ */
+export type RunMode = 'run' | 'step' | 'breakpoint';
 
 /** A message sent from the main thread to the worker. */
 export type HostMessage =
   | { type: 'init'; channel: SharedChannel; indexUrl: string }
-  | { type: 'run'; code: string; mode: 'run' | 'step'; recursionLimit: number };
+  | { type: 'run'; code: string; mode: RunMode; recursionLimit: number };
 
 /** An uncaught exception raised by user code. */
 export interface PythonError {

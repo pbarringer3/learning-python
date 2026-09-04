@@ -1,148 +1,168 @@
 <script lang="ts">
   /**
-   * Execution controls. Which buttons make sense is entirely a function of the
-   * runner's status, so the enabling rules live here rather than being
-   * scattered through the environment.
+   * Execution controls: two rows, execution above and everything else below.
+   *
+   * ```
+   * ▶ Play / ■ Stop     ⇥ Step     ⏭ To breakpoint
+   * 👁                              ↺ Reset code
+   * ```
+   *
+   * Reset code sits last and apart because it is the only button that destroys
+   * work. Which buttons are live is a pure function of the runner's status, so
+   * those rules live in `controls.ts` where every state can be asserted without
+   * a browser. See `PythonInterpreterDesign.md` §12.2.
    */
+  import { canResetCode, canRunToBreakpoint, canStep, primaryControl } from '$lib/python/controls';
   import type { RunnerStatus } from '$lib/python/runner';
 
   interface Props {
     status: RunnerStatus;
-    /** True while auto-stepping on a timer. */
-    autoPlaying?: boolean;
-    /** Milliseconds between automatic steps. */
-    autoSpeed?: number;
-    onRun?: () => void;
-    onStep?: () => void;
-    onContinue?: () => void;
-    onAutoToggle?: () => void;
+    /** Disables "To breakpoint" when false, with a tooltip saying why. */
+    hasBreakpoints?: boolean;
+    /** Drives the eye icon and its label. */
+    visualizerVisible?: boolean;
+    onPlay?: () => void;
     onStop?: () => void;
-    onReset?: () => void;
+    onStep?: () => void;
+    onToBreakpoint?: () => void;
+    onToggleVisualizer?: () => void;
     onResetCode?: () => void;
-    onSpeedChange?: (speed: number) => void;
     class?: string;
   }
 
   let {
     status,
-    autoPlaying = false,
-    autoSpeed = 400,
-    onRun,
-    onStep,
-    onContinue,
-    onAutoToggle,
+    hasBreakpoints = false,
+    visualizerVisible = true,
+    onPlay,
     onStop,
-    onReset,
+    onStep,
+    onToBreakpoint,
+    onToggleVisualizer,
     onResetCode,
-    onSpeedChange,
     class: className = ''
   }: Props = $props();
 
-  let idle = $derived(status === 'ready' || status === 'finished' || status === 'error');
-  let paused = $derived(status === 'paused');
-  let busy = $derived(status === 'running' || status === 'awaiting-input');
-  let loading = $derived(status === 'loading');
-  let failed = $derived(status === 'failed');
+  let primary = $derived(primaryControl(status));
+  let stepEnabled = $derived(canStep(status));
+  let breakpointEnabled = $derived(canRunToBreakpoint(status, hasBreakpoints));
+  let resetEnabled = $derived(canResetCode(status));
 
-  // Starting fresh and continuing are the same button in two states: the
-  // program is either not running yet, or paused partway through.
-  let canStart = $derived(idle && !failed);
+  let visualizerLabel = $derived(visualizerVisible ? 'Hide call stack' : 'Show call stack');
 </script>
 
 <div class="python-controls {className}">
-  <div class="buttons">
-    <button
-      class="control-btn run"
-      onclick={onRun}
-      disabled={!canStart || loading}
-      title="Run the whole program without stopping"
-    >
-      ▶ Run
-    </button>
+  <div class="row">
+    {#if primary.mode === 'stop'}
+      <button
+        class="control-btn stop"
+        onclick={onStop}
+        disabled={!primary.enabled}
+        title="Abandon the running program"
+      >
+        ■ Stop
+      </button>
+    {:else}
+      <button
+        class="control-btn play"
+        onclick={onPlay}
+        disabled={!primary.enabled}
+        title="Run the program, ignoring breakpoints"
+      >
+        ▶ Play
+      </button>
+    {/if}
 
     <button
       class="control-btn step"
       onclick={onStep}
-      disabled={!(canStart || paused) || loading}
+      disabled={!stepEnabled}
       title="Execute one line, then pause"
     >
       ⇥ Step
     </button>
 
     <button
-      class="control-btn auto"
-      onclick={onAutoToggle}
-      disabled={!(canStart || paused) || loading}
-      title="Step automatically on a timer"
+      class="control-btn to-breakpoint"
+      onclick={onToBreakpoint}
+      disabled={!breakpointEnabled}
+      title={hasBreakpoints
+        ? 'Run on until the next breakpoint'
+        : 'Click a line number to set a breakpoint'}
     >
-      {autoPlaying ? '⏸ Pause' : '⏩ Auto'}
+      ⏭ To breakpoint
     </button>
+  </div>
 
+  <div class="row secondary">
+    <!--
+      An inline SVG rather than an emoji: this button has no text label to fall
+      back on, and emoji render inconsistently across platforms.
+    -->
     <button
-      class="control-btn continue"
-      onclick={onContinue}
-      disabled={!paused}
-      title="Stop pausing and run to the end"
+      class="control-btn icon"
+      onclick={onToggleVisualizer}
+      aria-label={visualizerLabel}
+      aria-pressed={visualizerVisible}
+      title={visualizerLabel}
     >
-      ⏭ Continue
-    </button>
-
-    <button
-      class="control-btn stop"
-      onclick={onStop}
-      disabled={!(busy || paused)}
-      title="Abandon the running program"
-    >
-      ■ Stop
-    </button>
-
-    <button class="control-btn reset" onclick={onReset} disabled={busy || paused || loading}>
-      ↺ Clear
+      {#if visualizerVisible}
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path
+            d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+          />
+          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+        </svg>
+      {:else}
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path
+            d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+          />
+          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M3.5 3.5 20.5 20.5" stroke="currentColor" stroke-width="1.7" />
+        </svg>
+      {/if}
     </button>
 
     {#if onResetCode}
       <button
         class="control-btn reset-code"
         onclick={onResetCode}
-        disabled={busy || paused}
+        disabled={!resetEnabled}
         title="Restore the original starting code"
       >
-        Reset code
+        ↺ Reset code
       </button>
     {/if}
-  </div>
-
-  <div class="speed-control">
-    <label for="python-speed">Auto speed</label>
-    <input
-      id="python-speed"
-      type="range"
-      min="60"
-      max="1200"
-      step="20"
-      value={1260 - autoSpeed}
-      oninput={(event) => onSpeedChange?.(1260 - Number(event.currentTarget.value))}
-      class="speed-slider"
-    />
-    <div class="speed-labels"><span>Slow</span><span>Fast</span></div>
   </div>
 </div>
 
 <style>
   .python-controls {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     background: #f5f5f5;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.5rem;
   }
 
-  .buttons {
+  .row {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
-    justify-content: center;
+    align-items: center;
+  }
+
+  /* Reset code is pushed to the far end, away from the buttons clicked most. */
+  .row.secondary .reset-code {
+    margin-left: auto;
   }
 
   .control-btn {
@@ -172,49 +192,25 @@
     cursor: not-allowed;
   }
 
-  .control-btn.run {
+  .control-btn.icon {
+    padding: 0.4rem 0.6rem;
+    color: #4b5563;
+  }
+
+  .control-btn.play {
     color: #22c55e;
   }
 
   .control-btn.step,
-  .control-btn.continue {
+  .control-btn.to-breakpoint {
     color: #3b82f6;
-  }
-
-  .control-btn.auto {
-    color: #f59e0b;
   }
 
   .control-btn.stop {
     color: #ef4444;
   }
 
-  .control-btn.reset,
   .control-btn.reset-code {
     color: #6b7280;
-  }
-
-  .speed-control {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    align-items: center;
-  }
-
-  .speed-control label {
-    font-size: 12px;
-    color: #6b7280;
-  }
-
-  .speed-slider {
-    width: 180px;
-  }
-
-  .speed-labels {
-    display: flex;
-    justify-content: space-between;
-    width: 180px;
-    font-size: 10px;
-    color: #9ca3af;
   }
 </style>

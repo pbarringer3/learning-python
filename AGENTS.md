@@ -11,6 +11,7 @@ All Python code runs client-side in the browser via Pyodide (Python compiled to 
 ### Curriculum Structure
 
 - **Chapter 1: Karel the Robot** — Students learn programming basics (functions, control flow) by writing Python to control a robot in a grid world. This is fully implemented.
+- **Chapter 2: Hello, Python!** — The bridge off Karel: `print()`, `input()`, informal variables and arithmetic, built on the `for` loop students already know. Authored (5 lessons, 15 exercises); exercises state an exact expected transcript rather than being auto-graded, because `PythonConfig` has no `tests` field yet — see `PROGRESS.md`.
 - **Later chapters** — Will cover standard Python topics: variables, strings, data types, functions with parameters, lists, dictionaries, loops, classes, recursion, data structures and algorithms, etc.
 - **Karel mixed in later** — Karel exercises appear in later chapters as practice for new concepts (e.g., using Karel to practice loops or functions with parameters).
 

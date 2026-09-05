@@ -1,0 +1,251 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+
+  const quotesConfig: PythonConfig = {
+    initialCode: `# Both kinds of quotes make a string. Pick whichever one
+# keeps you out of trouble.
+
+print("Karel the Robot")
+print('Karel the Robot')
+
+print("Karel's beeper bag")
+print('The sign said "Beepers Welcome"')
+`,
+    editorLines: 10,
+    showVisualizer: false
+  };
+
+  const commaVsPlusConfig: PythonConfig = {
+    initialCode: `# Two ways to put pieces on one line — and they are not the same.
+
+print("Karel", "found", "3", "beepers")
+print("Karel" + "found" + "3" + "beepers")
+print("Karel" + " found " + "3" + " beepers")
+`,
+    editorLines: 8,
+    showVisualizer: false
+  };
+
+  const bannerConfig: PythonConfig = {
+    initialCode: `# Multiplying a string repeats it. Useful for drawing lines
+# you would otherwise have to count out by hand.
+
+print("=" * 24)
+print("  KAREL'S DINER")
+print("=" * 24)
+print()
+print("Today's special:", "beepers")
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '2/2/exercise-1',
+    initialCode: `# The Sign
+# Print the three lines exactly as shown in the lesson.
+# One line contains an apostrophe. Another contains double
+# quotes. Choose your quote characters accordingly.
+
+`,
+    editorLines: 10,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '2/2/exercise-2',
+    initialCode: `# Two Ways
+# Three print statements, three lines of output.
+#   Line 1: commas only, no + anywhere
+#   Line 2: + only, no commas anywhere
+#   Line 3: + only
+
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '2/2/exercise-3',
+    initialCode: `# The Staircase
+# A header, five steps each one space further right than the
+# last, then a footer.
+#
+# The indentation has to come from the loop variable. Commas
+# will not do it here — you need exact control of the spaces.
+
+`,
+    editorLines: 13,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={2} lessonNumber={2}>
+
+## Text Is a Thing You Can Hold
+
+`print()` puts text on the screen. That much you saw last lesson. This lesson is about the text itself — because before Python can print something, you have to be able to *write it down*, and there are rules.
+
+A piece of text in Python is called a **string**, and you write one by wrapping it in quotes:
+
+```python
+print("Karel the Robot")
+```
+
+The quotes are not part of the text. They are the fence that tells Python where the text starts and stops. Without them, Python would try to read `Karel` as the name of something — and there is nothing called `Karel`, so the program would stop with an error.
+
+That distinction matters more than it looks:
+
+- `print("beepers")` prints the word **beepers**
+- `print(beepers)` looks for something *named* `beepers` and prints its value
+
+You have already seen the second form. Last lesson's `print("Step number", i)` printed the word "Step number" and then whatever number `i` was holding. Quotes are the difference between a word and a name.
+
+## Single or Double, and Why You Care
+
+Python accepts both `'single quotes'` and `"double quotes"`, and they mean exactly the same thing. Having two is not indecision — it is an escape hatch.
+
+The problem: a string ends at the first matching quote Python finds. So `'Karel's bag'` ends after `Karel`, and the rest is gibberish Python cannot parse. The fix is to fence the string with the *other* kind of quote.
+
+<PythonEnvironment config={quotesConfig} />
+
+The rule of thumb: **if your text contains an apostrophe, wrap it in double quotes. If it contains double quotes, wrap it in single quotes.** Some people always use double quotes and reach for singles only when they must; that is a fine habit and the one this curriculum follows.
+
+> **If you need both kinds inside one string**, there is a third trick called an escape character. It can wait — Chapter 5 is a whole chapter on strings and it belongs there.
+
+---
+
+## Commas and Plus Signs Do Different Jobs
+
+There are two ways to build a line out of pieces, and beginners mix them up constantly.
+
+**Commas** hand `print` several separate values, and `print` puts a space between each one as it prints them.
+
+**A plus sign** glues two strings into one longer string *before* `print` ever sees it. It adds nothing between them — not even a space. If you want a space, you have to put it there yourself.
+
+<PythonEnvironment config={commaVsPlusConfig} />
+
+Run that and look at the second line. `"Karel" + "found"` is `Karelfound`, because `+` glued them exactly as written. The third line fixes it by putting spaces inside the strings, where they show up as part of the text.
+
+So which should you use? **Commas, most of the time** — they are shorter and the spacing is usually what you want. Reach for `+` when you need a piece of text pressed right up against another with no gap, like punctuation:
+
+```python
+print("Hello, " + name + "!")
+```
+
+With commas that would come out as `Hello,  name !` with stray spaces around the exclamation mark. This is the one job `+` does that commas cannot.
+
+> **`+` joins text to text only.** Gluing a string to a number is an error, and a famously confusing one. Lesson 4 explains what is going on and how to get around it.
+
+---
+
+## Multiplying a String
+
+This looks like a typo and is not:
+
+```python
+print("=" * 24)
+```
+
+Multiplying a string by a number repeats it. `"=" * 24` is a string of twenty-four equals signs, and you did not have to count them out. It is the tidiest way to draw a divider.
+
+<PythonEnvironment config={bannerConfig} />
+
+Notice `print()` with empty parentheses on its own — that prints a blank line, which is how you get breathing room between blocks of output.
+
+> **Why does multiplication work on text at all?** Multiplying is supposed to be a numbers thing, and `+` joining two strings is odd for the same reason. You are seeing a real Python feature early, with the explanation deliberately held back: operators can be taught new tricks, and **Chapter 9** is where you learn how that works — and, if you like, teach `+` some tricks of your own. For now: it works, use it.
+
+## Comments Came With You
+
+`#` still means what it meant with Karel: everything after it on that line is for humans, and Python skips it. Every good habit you built writing Karel comments transfers directly.
+
+## When It Goes Wrong
+
+Two mistakes you will make this week, and what they look like:
+
+- **A missing quote** — Python reaches the end of the line still looking for the closing fence and reports a `SyntaxError`. It usually points at the right line.
+- **A missing parenthesis** — same idea, also a `SyntaxError`, and it sometimes blames the line *after* the real problem. If a syntax error makes no sense, check the line above it.
+
+Errors print into the Output panel with a **traceback**. They are not a scolding — they are the most specific help you are going to get. Read the last line first; that is the one that names the problem.
+
+---
+
+## Exercise 1: The Sign
+
+Print these three lines, exactly:
+
+```
+KAREL'S DINER
+Open 24 hours
+The sign says "Beepers Welcome"
+```
+
+Line one contains an apostrophe. Line three contains a pair of double quotes. Neither one is going to work if you reach for the wrong fence.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: Two Ways
+
+Three `print` statements producing these exact three lines:
+
+```
+Karel says hello
+Karel says hello
+Karelsayshello
+```
+
+The catch is in how you build each one:
+
+- **Line 1** must use commas and no `+` at all
+- **Line 2** must use `+` and no commas at all
+- **Line 3** must use `+` and no commas at all
+
+Lines 1 and 2 are identical output built two different ways. Line 3 shows you what `+` does when you *don't* mind the gap.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Staircase
+
+Print a header, five steps climbing to the right, and a footer:
+
+```
+Ascending
+step
+ step
+  step
+   step
+    step
+Arrived
+```
+
+Each step is the word `step` with one more leading space than the step above it. The first has none.
+
+Two things to work out before you type:
+
+- The number of spaces changes every time round the loop, so it has to come **from the loop variable**. You already know how to repeat a string a given number of times.
+- Commas will not work here. A comma always inserts exactly one space, and you need a different number on every line — so the spaces have to be part of the string you hand to `print`.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- A **string** is text in quotes; the quotes are the fence, not part of the text
+- `"beepers"` is a word, `beepers` is a name — the quotes are the whole difference
+- Single and double quotes are interchangeable, and having both lets you put one kind *inside* the other
+- **Commas** pass several values to `print` and put a space between them
+- **`+`** glues strings together with nothing between them — spaces are your responsibility
+- `"=" * 24` repeats a string, which is how you draw a line without counting
+- `print()` alone prints a blank line
+- `#` comments work exactly as they did with Karel
+
+Next lesson: your program stops talking and starts listening. `input()` asks the person at the keyboard a question and waits for the answer.
+
+</LessonShell>

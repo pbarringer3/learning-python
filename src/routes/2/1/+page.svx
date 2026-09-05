@@ -1,0 +1,221 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+
+  // First program: no visualizer — the point here is the Output console.
+  const helloConfig: PythonConfig = {
+    initialCode: `# Your first Python program.
+# Press the Play button and watch the Output panel.
+
+print("Hello, Python!")
+print("Karel is off duty.")
+`,
+    editorLines: 8,
+    showVisualizer: false
+  };
+
+  // The loop variable reveal — visualizer on, because watching i change IS the lesson.
+  const loopVariableConfig: PythonConfig = {
+    initialCode: `# Press Step over and over, and watch i on the right.
+
+for i in range(4):
+  print("Step number", i)
+
+print("Done.")
+`,
+    editorLines: 9,
+    showVisualizer: true
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '2/1/exercise-1',
+    initialCode: `# Roll Call
+# Print the header once, five numbered crew members, then the
+# footer once. Only the crew lines belong inside the loop.
+
+`,
+    editorLines: 12,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '2/1/exercise-2',
+    initialCode: `# Knock Knock Rounds
+# Three rounds. Each round prints its own header, then three
+# knocks, then a blank line.
+#
+# Hint: a loop inside a loop. The inner loop needs its own
+# name — reusing i would trample the outer loop's count.
+
+`,
+    editorLines: 14,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={2} lessonNumber={1}>
+
+## The Robot Is Gone
+
+Here is something that might not have occurred to you: for seven lessons, you have been writing **Python**. You just happened to be pointing it at a robot.
+
+Every line you wrote was real Python and nothing else. `def` is Python. `for i in range(4):` is Python. Indentation, comments, calling a function by writing its name with `()` after it — all Python, all exactly the same as what professionals write. Karel was the *audience*, not the language.
+
+This chapter takes the robot away. Nothing you learned goes with it.
+
+## What Carries Over, What Changes
+
+| | With Karel | From here on |
+| --- | --- | --- |
+| **Who is listening** | A robot in a grid | Python itself |
+| **How your program acts** | `move()`, `put_beeper()` | `print()` writes text to the Output panel |
+| **Where the state lives** | The world — beepers on the floor, Karel's position | Memory — names holding values |
+| **How you watch it** | The animated grid | The Output panel, and the call stack panel |
+| **The syntax** | `def`, `for`, `()`, indentation, `#` comments | Identical. Not similar — identical. |
+
+Only the middle two rows are new. That is the whole of what this chapter has to teach you, and the rest of it is arithmetic.
+
+## Karel's Memory Was the Floor
+
+Think back to the hardest exercises in Lesson 1.7 — the moneychanger, the scoreboard, finding the middle of a hall. What made them hard was not the walking. It was that **Karel had nowhere to write anything down**. A stack of seven beepers *was* the number seven, and the only way to read it was to take it apart one beeper at a time.
+
+That was a workaround, and you were told so at the time. Python does not need it. A Python program has a memory, and this chapter is where you start using it.
+
+## Your New World: The Output Panel
+
+Press **▶ Play** on the program below.
+
+<PythonEnvironment config={helloConfig} />
+
+Text appears in the **Output** panel. That is the whole trick — `print()` is how a program speaks, the way `move()` was how Karel acted.
+
+Take a moment with the controls, because you will use them all chapter:
+
+- **▶ Play** runs the program straight through. It turns into **■ Stop** while it runs, so a program that gets stuck can always be killed.
+- **⇥ Step** runs exactly one line and pauses. This is the Karel step button, and it is just as useful here.
+- **⏭ To breakpoint** runs until it reaches a line you have marked. **Click a line number** in the editor to mark one.
+- **The eye** shows and hides the call stack panel on the right.
+- **↺ Reset code** puts the original starting code back if you paint yourself into a corner.
+
+Notice `print` is a function called with parentheses, exactly like `move()`. What is different is that there is something *inside* the parentheses. That is the whole subject of the next lesson.
+
+---
+
+## We Owe You an Explanation About `i`
+
+In Lesson 1.5 you wrote this:
+
+```python
+for i in range(4):
+  move()
+```
+
+and you were told that `i` was "something the loop needs; we'll talk about it in more detail in a later chapter." This is that chapter.
+
+`i` is a **name**, and the loop puts a number in it — first 0, then 1, then 2, then 3, one per trip around. It was there the whole time you were commanding Karel. You never noticed because Karel had no use for a number: there was nothing a robot could *do* with one.
+
+Python can do something with it. Python can print it.
+
+Press **⇥ Step** repeatedly on the program below and watch the right-hand panel while you do.
+
+<PythonEnvironment config={loopVariableConfig} />
+
+Two things to notice.
+
+**`print` will take several things at once, separated by commas**, and puts a space between them when it prints. That is how `"Step number"` and `i` end up on the same line.
+
+**The count starts at zero.** `range(4)` produces 0, 1, 2, 3 — four numbers, starting at nothing. This looks wrong for about a week and then stops bothering you forever. Counting from zero is so deeply baked into programming that by Chapter 6 you will find it strange when something *doesn't*.
+
+## Indentation Still Draws the Box
+
+The rule has not changed since Karel: **indented lines belong to the loop, unindented lines do not.**
+
+In the program above, `print("Step number", i)` is indented, so it runs four times. `print("Done.")` is not, so it runs once, after the loop is finished. Two spaces per level, same as always.
+
+This is the single most common beginner mistake in Python, and you have a head start on it — you have been indenting correctly for seven lessons.
+
+---
+
+## What Is Missing (and When It Comes Back)
+
+You have noticed by now that some of your Karel toolkit is not in play yet. This is deliberate, not an oversight, and here is the schedule:
+
+- **`while` loops** need a question to ask, and Python has no `front_is_clear()` to ask it. The comparison operators (`>`, `<`, `==`) arrive in **Chapter 3**, and `while` comes back with them — more useful than it ever was for Karel, because now it can ask about anything, not just walls.
+- **`if` / `else` / `elif`** are waiting on exactly the same thing, and return in **Chapter 3** alongside them.
+- **Functions and decomposition** you can technically write today — `def` still works. But a Karel function could only ever *change the world*; nothing came back out of it. **Chapter 4** gives functions parameters and return values, and that is what makes decomposition genuinely powerful in Python rather than merely tidy.
+
+So this chapter is deliberately **straight-line**: printing, asking, calculating, and the `for` loop you already own. That is a smaller toolkit than you finished Chapter 1 with. The exercises below are still going to make you think.
+
+---
+
+## Exercise 1: Roll Call
+
+Print a crew roster: a header line, five numbered crew members, and a footer line.
+
+The header and footer must each appear **exactly once**. The crew lines come from a loop.
+
+Your program should print exactly this:
+
+```
+Crew check
+Crew member 0
+Crew member 1
+Crew member 2
+Crew member 3
+Crew member 4
+All aboard
+```
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: Knock Knock Rounds
+
+Three rounds of knocking. Each round prints its own header, then knocks three times, then leaves a blank line.
+
+This one needs **a loop inside a loop** — the outer loop counts rounds, the inner loop counts knocks. Two things will trip you up if you are not careful:
+
+- The inner loop needs **its own name**. If you write `for i` twice, the inner loop overwrites the outer loop's count and the round headers go wrong. `j` is the traditional second choice.
+- A `print()` with nothing inside the parentheses prints a blank line.
+
+Your program should print exactly this:
+
+```
+Round 0
+knock
+knock
+knock
+
+Round 1
+knock
+knock
+knock
+
+Round 2
+knock
+knock
+knock
+
+```
+
+<PythonEnvironment config={exercise2Config} />
+
+> **A note on that last blank line:** yes, there is a trailing blank line after the final round, and no, you cannot get rid of it yet. Leaving it off means treating one trip around the loop differently from the others — the fencepost problem, which you met over and over with Karel. There you solved it by lifting the odd step *outside* the loop, and that same trick will work here: print the first round on its own, then loop through the rest with the blank line coming *first*. What you are missing is a way to make the loop label those remaining rounds 1 and 2 instead of 0 and 1. That is one small piece of arithmetic, and it arrives in Lesson 4 — come back and finish this off when it does.
+
+---
+
+## What You Learned
+
+- Everything you wrote for Karel was already Python — the syntax does not change at all
+- `print()` writes text to the Output panel, the way `move()` acted on the world
+- A program's state now lives in **memory**, not on a floor covered in beepers
+- The loop variable `i` was always a name holding a number — 0, 1, 2, and so on
+- `print` takes several values separated by commas and puts spaces between them
+- `print()` with nothing inside prints a blank line
+- Indentation means what it always meant
+
+Next lesson: `print()` in earnest — quotes, string literals, and making output look exactly the way you want it.
+
+</LessonShell>

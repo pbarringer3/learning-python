@@ -1,0 +1,216 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+
+  // A bug you find by stepping, not by staring. Visualizer on.
+  const debugConfig: PythonConfig = {
+    initialCode: `# This is supposed to add up 1, 2, 3, 4 and 5, which is 15.
+# It prints 5.
+#
+# Click the line number next to the total line to set a
+# breakpoint, then use To breakpoint over and over and watch
+# total on the right. The bug becomes obvious.
+
+for i in range(5):
+  total = 0
+  total = total + (i + 1)
+
+print("Total:", total)
+`,
+    editorLines: 14,
+    showVisualizer: true
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '2/5/exercise-1',
+    initialCode: `# Mission Control, part 1: the crew manifest.
+#
+# Ask three questions, then print the mission card.
+# The rules above and below the card are 40 characters wide —
+# do not count them out by hand.
+
+`,
+    editorLines: 16,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '2/5/exercise-2',
+    initialCode: `# Mission Control, part 2: the fuel check.
+#
+# How long can the engine burn, how much fuel is wasted, and
+# what does that burn time look like in minutes and seconds?
+
+`,
+    editorLines: 16,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '2/5/exercise-3',
+    initialCode: `# Mission Control, part 3: the launch.
+#
+# Plan this one in comments before you write a line of code.
+# There are four jobs, and each is small on its own:
+#
+#   1. ask the two questions
+#   2. count down
+#   3. fly for five seconds, reporting altitude as you go
+#   4. report the final altitude and the average climb
+
+`,
+    editorLines: 22,
+    showVisualizer: true
+  };
+</script>
+
+<LessonShell chapterNumber={2} lessonNumber={5}>
+
+## Mission Control
+
+No new syntax in this lesson. You have the whole toolkit already:
+
+- **`print()`** — commas for spaced values, `+` for text pressed together, `*` to repeat, `print()` alone for a blank line
+- **`input()`** — stop, ask, and keep the answer under a name
+- **`int()` and `float()`** — turn what somebody typed into a number you can calculate with
+- **Seven operators**, including the `//` and `%` pair that splits a pile into whole units and a remainder
+- **`for i in range(n)`** — repeat a known number of times, with arithmetic on `i` to reshape what comes out
+- **The accumulator** — a name that carries a running total through a loop
+
+What changes here is the size of the job. Each exercise below is a complete program that asks questions, does real arithmetic and produces output somebody would actually want to read — and none of them can be typed straight out. The advice from the end of Chapter 1 has not expired: **say the plan in a sentence, break the sentence into parts, then write the parts one at a time.** With Karel those parts became functions. Here, until Chapter 4 gives functions the power to take values in and hand them back, they become comments — a skeleton you fill in.
+
+## The Toolkit You Are Still Missing
+
+You have felt the gaps by now, so here is exactly what is coming and when:
+
+- **Chapter 3** gives you comparison operators, and with them `if`, `else` and `while` come back — this time able to ask about anything, not just walls in front of a robot. Every "you cannot check that yet" note in this chapter is answered there.
+- **Chapter 4** gives functions parameters and return values, and decomposition stops being a comment skeleton and becomes real structure again.
+
+Everything you build today, you will be able to build better in three lessons' time. That is not a reason to wait.
+
+---
+
+## Example: Finding a Bug Without Guessing
+
+Before you start, one skill that matters more than any single piece of syntax.
+
+The program below is supposed to add up 1 through 5 and print 15. It prints 5. Do not stare at it trying to spot the mistake — **find it with the tools**. Click the line number beside `total = total + (i + 1)` to set a breakpoint, press **⏭ To breakpoint** repeatedly, and watch `total` in the panel on the right.
+
+<PythonEnvironment config={debugConfig} />
+
+The moment you see `total` go back to zero on every trip, the bug names itself: a line that should run **once, before the loop** is sitting **inside** it. One line moved and the program is correct.
+
+That is the entire debugging method, and it works on programs far larger than this one. When output is wrong, stop reasoning about what the code *should* do and go watch what it *does*.
+
+---
+
+## Exercise 1: The Crew Manifest
+
+Ask for a mission name, a commander and a crew size, then print the mission card.
+
+A sample run, where the person typed **Artemis**, **Ada Lovelace** and **4**:
+
+```
+Mission name:
+Commander:
+Crew size:
+========================================
+MISSION: Artemis
+========================================
+Commander: Ada Lovelace
+Crew aboard: 4
+Total souls: 5
+========================================
+```
+
+Details that matter:
+
+- The rules are **exactly 40 equals signs**, and there are three of them. You know how to make one without counting.
+- **Total souls** is the crew plus the commander, which means the crew size has to be a number, not text. Add 1 to a piece of text and you will get a `TypeError` for your trouble.
+- Remember a blank `print()` after each question, or the three prompts will run together into one line.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Fuel Check
+
+Ask how much fuel is aboard and how fast the engine burns it, then work out how long it can burn.
+
+A sample run, where the person typed **5000** and then **12**:
+
+```
+Fuel on board (litres):
+Burn rate (litres per second):
+Burn time: 416 seconds
+That is 6 m 56 s
+Unburnt fuel: 8 litres
+```
+
+Check it by hand before you trust the program: twelve litres a second into five thousand litres gives 416 whole seconds, with 8 litres left over that are never burnt. Then 416 seconds is 6 minutes and 56 seconds.
+
+You need `//` and `%` twice here, doing two genuinely different jobs — once to split the fuel into whole seconds plus a remainder, and once to split those seconds into minutes plus a remainder. Same pair of operators, same shape of question, two different piles.
+
+Try it with a burn rate that divides exactly, like **5000** and **10**, and make sure the unburnt figure comes out as `0` rather than something strange.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Launch
+
+The whole thing. Ask two questions, count down, fly, and file a report.
+
+The rocket climbs by a certain number of metres in its first second, and **doubles that climb every second after** — so a rocket that climbs 10 m in the first second climbs 20 in the second, 40 in the third, and so on. The flight is always **five seconds** long. Report the total altitude reached at the end of each second.
+
+A sample run, where the person typed **3** and then **10**:
+
+```
+Countdown from:
+Metres climbed in the first second:
+3
+2
+1
+LIFTOFF
+Second 1: 10 m
+Second 2: 30 m
+Second 3: 70 m
+Second 4: 150 m
+Second 5: 310 m
+Final altitude: 310 m
+Average climb: 62.0 m per second
+```
+
+Work through the numbers by hand first, because the two columns are easy to confuse. The **climb** for each second goes 10, 20, 40, 80, 160 — each one double the last. The **altitude** is everything climbed so far: 10, then 30, then 70, then 150, then 310.
+
+Three things will take some thought:
+
+- **The countdown.** Your loop counts upwards — 0, 1, 2 — and the countdown goes downwards — 3, 2, 1. You met the arithmetic that turns one into the other at the end of Lesson 4. There is no need for a second kind of loop.
+- **Two things change every second**, and they change differently. The climb doubles. The altitude grows by the climb. That is two accumulators side by side, updated in the right order — and if you update them in the wrong order, the first second will be wrong and everything after it will inherit the mistake. Keep the panel open and step through the first two seconds.
+- **The average** is the final altitude divided by 5, and `/` gives you a decimal, which is what you want here.
+
+When it works, run it again counting down from 10, and again with a first-second climb of 1. A program that only works on the numbers in the example is not finished.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## Congratulations
+
+You have finished Chapter 2, and with it your first real Python programs. Look at what changed in five lessons:
+
+- Your programs **talk** — `print()` with commas, plus signs, repetition and blank lines, arranged to look the way you meant
+- Your programs **listen** — `input()` stops and waits, and `=` keeps the answer
+- Your programs **calculate** — seven operators, precedence, and `int()` to turn typed text into numbers
+- Your programs **remember** — a name holding a running total is a thing Karel would have needed a floor full of beepers to manage
+
+That last one is the real graduation. In Lesson 1.7 you moved a stack of beepers east one at a time because it was the only way a robot could hold a number. In this chapter you wrote `total = total + i` and the machine simply remembered.
+
+## What Is Next
+
+**Chapter 3: Variables & Types** picks up every loose thread this chapter deliberately left hanging. What a variable actually is and how to name one well. Why whole numbers and decimals behave differently. What a string really is. And **booleans** — `True`, `False`, and the comparison operators — which are the missing piece that brings `if`, `else` and `while` back into your hands.
+
+Karel's sensors gave you `True` and `False` for free, and you built loops and branches on top of them without ever asking where the answers came from. Next chapter you find out — and then you can ask questions about anything at all.
+
+</LessonShell>

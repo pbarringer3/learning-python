@@ -6,11 +6,11 @@ This document tracks the overall implementation status of the Learning Python cu
 
 ## Project Status Overview
 
-| Chapter | Title                                                                                                                                                    | Status                                                       |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| 1       | Karel the Robot                                                                                                                                          | ✅ Complete — built + reviewed (see `CHAPTER_1_PROGRESS.md`) |
-| 2       | Hello, Python!                                                                                                                                           | 🚧 Not started — **next up**                                 |
-| 3+      | Variables & Types, Functions, Strings, Lists, Dictionaries, Graphics, Classes, Building a Game, Files & Exceptions, Recursion, Searching & Sorting, etc. | 📋 Planned — see `CURRICULUM_DESIGN.md`                      |
+| Chapter | Title                                                                                                                                                    | Status                                                             |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 1       | Karel the Robot                                                                                                                                          | ✅ Complete — built + reviewed (see `CHAPTER_1_PROGRESS.md`)       |
+| 2       | Hello, Python!                                                                                                                                           | ✅ Authored — 5 lessons, 15 exercises; completion tracking pending |
+| 3+      | Variables & Types, Functions, Strings, Lists, Dictionaries, Graphics, Classes, Building a Game, Files & Exceptions, Recursion, Searching & Sorting, etc. | 📋 Planned — see `CURRICULUM_DESIGN.md`                            |
 
 **Cross-cutting infrastructure status:**
 
@@ -30,15 +30,39 @@ This document tracks the overall implementation status of the Learning Python cu
 
 ## What's Next
 
-The environment refactor is done, so the Python environment is feature-complete for authoring against. Chapter 2 is the priority.
+Chapter 2 is authored — five lessons, fifteen exercises, live at `/2/1` through `/2/5`. What it does **not** have is completion tracking: `PythonEnvironment` never calls `progressStore.markExerciseCompleted`, because `PythonConfig` has no `tests` field. Chapter 2 lessons therefore persist code, breakpoints and visualizer state, but never turn ✅. That is the top of the list.
 
-1. **Chapter 2 lessons** — author the 5 lessons (`From Karel to Python`, `Your First Python Program`, `Getting Input`, `Expressions & Math`, capstone) as `.svx` files under `src/routes/2/`, plus the `Chapter` entry in `src/lib/curriculum/index.ts`. Embed `PythonEnvironment` with a `PythonConfig`; use `showVisualizer: false` where the visualizer would be noise on first arrival and `true` where watching state change is the lesson, and set `editorLines` where an exercise wants a taller or shorter editor than the 20-line default.
-2. **Revisit the deferred `allowedFeatures` / `tests` design** once a few lessons exist — by then the shape of "check this exercise" will be evident from real exercises instead of guessed at.
+1. **Per-exercise `tests` for `PythonEnvironment`** — the deferral recorded below, now designed against real exercises instead of guesses. Every Chapter 2 exercise was written to a **precise stdout contract** (the "sample run" transcript in each lesson is the spec), so the shape wanted is captured stdout compared against expected output, with queued answers standing in for `input()`. Note two wrinkles the transcripts already encode: `input()` writes its prompt to stdout with no trailing newline (`tracer.py` `_input`), and the typed answer is never echoed — which is why every lesson tells students to follow an `input()` with a bare `print()`. Once this exists, wire `markExerciseCompleted` the way `KarelEnvironment.svelte` does (search `allPassed`), and `exerciseCount` in the curriculum index starts meaning something for Chapter 2.
+2. **Revisit `allowedFeatures`** — less urgent than `tests`. Chapter 2 holds back `if`/`while`/comparisons on purpose and says so in the lesson text; an AST allowlist would enforce what the prose currently only asks for.
 3. **Deferred follow-on from §12.3:** compile the source in the idle worker on every edit (debounced) to get the exact executable-line set, so breakpoints that can never fire are drawn hollow — and, the real prize, **inline syntax errors** as a side effect. Worth doing as its own feature rather than as part of the refactor.
+4. **Chapter 3: Variables & Types** — seven lessons per `CURRICULUM_DESIGN.md`. This is the chapter Chapter 2 keeps promising: it delivers comparison operators and booleans, which is what brings `if`, `else` and `while` back. Chapter 2's closing sections make specific promises about what Chapter 3 covers; keep them.
 
 Follow the conventions from Chapter 1 throughout: 2-space indentation in student-facing code, `persistenceKey`-based persistence (`"<chapter>/<lesson>/<exercise>"`), TDD per `AGENTS.md`.
 
 `GraphicsEnvironment` remains follow-on work for Chapters 8–10.
+
+---
+
+## Chapter 2: Hello, Python! — ✅ Authored (completion tracking pending)
+
+Five lessons under `src/routes/2/`, plus the `helloPython` `Chapter` entry in `src/lib/curriculum/index.ts`.
+
+| Lesson | Title                     | Exercises | Teaches                                                                                                           |
+| ------ | ------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------- |
+| 2.1    | From Karel to Python      | 2         | What carries over; state lives in memory now; the loop variable `i` finally explained; the environment's controls |
+| 2.2    | Your First Python Program | 3         | String literals, quote choice, commas vs `+`, `"=" * 24`, blank `print()`                                         |
+| 2.3    | Getting Input             | 3         | `input()` blocks and hands text back; `=` keeps it; **everything `input()` returns is text**                      |
+| 2.4    | Expressions & Math        | 4         | Seven operators, `/` vs `//` vs `%`, precedence, `int()`/`float()`/`str()`, the accumulator, arithmetic on `i`    |
+| 2.5    | Putting It Together       | 3         | Mission Control — crew manifest, fuel check, launch sequence; plus finding a bug with breakpoints                 |
+
+**Pedagogical decisions worth not re-litigating:**
+
+- **`for i in range(n)` is in scope; `if` and `while` are not.** The `for` loop carries over from Lesson 1.5 unchanged, and arithmetic on `i` is what makes the exercises non-trivial. Branching needs comparison operators, which belong to Chapter 3.4 — so Chapter 2 is deliberately straight-line. Lesson 2.1 tells students this explicitly, with the schedule for when each tool returns, and 2.5 repeats it.
+- **Every exercise states an exact expected transcript** rather than being auto-graded. This is what makes the missing `tests` feature tolerable, and it is also the spec for building it.
+- **The blank `print()` after every `input()`** is taught as a habit in 2.3 with the real reason given (no echo in this environment, unlike a terminal). Exercise transcripts assume it.
+- **`str()` earns a subsection in 2.4** because two exercises need `"Day " + str(n) + ":"` — a number pressed against punctuation is the one job a comma cannot do. Flagged in-lesson as something f-strings fix in Chapter 5.
+
+All sixteen reference solutions (fifteen exercises plus one extra edge case) were executed against the stated transcripts and match.
 
 ---
 

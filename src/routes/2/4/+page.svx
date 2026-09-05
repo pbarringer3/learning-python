@@ -1,0 +1,370 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+
+  const operatorsConfig: PythonConfig = {
+    initialCode: `# The seven arithmetic operators, all on the same two numbers.
+
+print("7 + 2  =", 7 + 2)
+print("7 - 2  =", 7 - 2)
+print("7 * 2  =", 7 * 2)
+print("7 / 2  =", 7 / 2)
+print("7 // 2 =", 7 // 2)
+print("7 % 2  =", 7 % 2)
+print("7 ** 2 =", 7 ** 2)
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  const conversionConfig: PythonConfig = {
+    initialCode: `# Type a whole number when it asks.
+
+text = input("Pick a number: ")
+print()
+
+number = int(text)
+
+print("You typed the text", text)
+print("As a number it doubles to", number * 2)
+print("And squares to", number ** 2)
+`,
+    editorLines: 12,
+    showVisualizer: true
+  };
+
+  // Visualizer on: watching total climb is the entire point of the accumulator.
+  const accumulatorConfig: PythonConfig = {
+    initialCode: `# Step through this one and watch total on the right.
+
+total = 0
+
+for i in range(5):
+  total = total + i
+  print("Added", i, "- total is now", total)
+
+print()
+print("Final total:", total)
+`,
+    editorLines: 12,
+    showVisualizer: true
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '2/4/exercise-1',
+    initialCode: `# Rectangle Facts
+# Ask for a width and a height, then report the area and the
+# perimeter. Both answers arrive as text — convert them.
+
+`,
+    editorLines: 12,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '2/4/exercise-2',
+    initialCode: `# The Mission Clock
+# Turn a pile of seconds into hours, minutes and seconds.
+#
+# Hint: // tells you how many whole units fit.
+#       %  tells you what is left over afterwards.
+#       Do the big unit first, then work on the remainder.
+
+`,
+    editorLines: 14,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '2/4/exercise-3',
+    initialCode: `# The Odd Ones
+# Print the first n odd numbers, then their total.
+#
+# The loop hands you 0, 1, 2, 3... and you need 1, 3, 5, 7...
+# Work out the arithmetic that turns one into the other.
+
+`,
+    editorLines: 14,
+    showVisualizer: false
+  };
+
+  const exercise4Config: PythonConfig = {
+    persistenceKey: '2/4/exercise-4',
+    initialCode: `# The Doubling Pond
+# Lily pads double every day. Report the count at the end of
+# each day, then how many pads the pond gained overall.
+#
+# Careful: the count changes every day. If you want to compare
+# against where you started, you need to have kept it.
+
+`,
+    editorLines: 16,
+    showVisualizer: true
+  };
+</script>
+
+<LessonShell chapterNumber={2} lessonNumber={4}>
+
+## Finally, Some Arithmetic
+
+Karel could not add. Not because addition is hard, but because Karel had nowhere to put the answer — a robot with a bag of beepers and a floor is not a calculator. This is the lesson where that limitation goes away for good.
+
+## The Seven Operators
+
+<PythonEnvironment config={operatorsConfig} />
+
+| Operator | Name | `7` and `2` give |
+| --- | --- | --- |
+| `+` | add | `9` |
+| `-` | subtract | `5` |
+| `*` | multiply | `14` |
+| `/` | divide | `3.5` |
+| `//` | whole-number divide | `3` |
+| `%` | remainder | `1` |
+| `**` | power | `49` |
+
+The first three hold no surprises. The other four are worth a closer look.
+
+### `/` always gives you a decimal
+
+`10 / 2` is `5.0`, not `5`. Even when the division comes out exact, `/` hands back a number with a decimal point on it. That is not a rounding error — it is Python being consistent, so that `/` behaves the same way every time instead of sometimes giving whole numbers and sometimes not.
+
+Whole numbers and decimal numbers really are two different kinds of thing in Python, and **Chapter 3** gives them their proper names and rules. For now, notice the `.0` and do not be alarmed by it.
+
+### `//` and `%` are a matched pair
+
+These two answer the two halves of the same question, the one every child learns before they learn fractions: **how many whole ones fit, and what is left over?**
+
+- `17 // 5` is `3` — three whole fives fit into seventeen
+- `17 % 5` is `2` — and two are left over
+
+You will reach for this pair constantly, and almost always together: seconds into minutes and seconds, pennies into pounds and pence, a pile of anything into boxes plus a remainder. Exercise 2 is exactly this problem, twice over.
+
+> `%` is called **modulo**. It is worth remembering the name, because it turns up in conversation far more often than it turns up in arithmetic class.
+
+### `**` is a power, not a caret
+
+`7 ** 2` is seven squared. Two stars, no spaces between them.
+
+---
+
+## Precedence: The Old Rules Still Apply
+
+Python does arithmetic in the order you were taught in school:
+
+| Order | Operators |
+| --- | --- |
+| 1st | `**` |
+| 2nd | `*` `/` `//` `%` |
+| 3rd | `+` `-` |
+
+So `2 + 3 * 4` is `14`, not `20`. Operators on the same rung run left to right.
+
+**Parentheses beat everything**, exactly as they always did: `(2 + 3) * 4` is `20`. Use them freely. Nobody has ever complained that an expression had too many parentheses, and plenty of programs have been wrong because it had too few.
+
+---
+
+## Turning Text Into Numbers
+
+Last lesson ended on a cliffhanger: `input()` hands back text, so `"12" + "12"` came out as `"1212"`. Here is the fix.
+
+**`int()` takes text that looks like a whole number and gives you the actual number.**
+
+<PythonEnvironment config={conversionConfig} />
+
+Look at the panel on the right. `text` and `number` are both there, and they are not the same thing — one is in quotes and one is not. That is the whole distinction.
+
+Most programs skip the middle step and wrap one call around the other:
+
+```python
+age = int(input("How old are you? "))
+```
+
+Read that from the inside out: `input` asks the question and hands back text, `int` turns the text into a number, `=` stores the number. It is dense the first few times you read it, and then it becomes the most ordinary line in Python.
+
+**`float()` does the same job for numbers with a decimal point** — `float("3.5")` gives you `3.5`. Use `int()` for counting things and `float()` for measuring them.
+
+Two sharp edges worth knowing about now:
+
+- **`int()` on a decimal chops, it does not round.** `int(7.9)` is `7`. If you want proper rounding, `round(7.9)` gives `8`, and `round(3.14159, 2)` gives `3.14`. (`round` is a stopgap for making output presentable. Chapter 5 has real formatting tools.)
+- **`int("hello")` is an error**, and so is `int("")` if somebody just presses Enter. Your program will stop with a `ValueError`. Guarding against that needs an `if`, which arrives in Chapter 3 — until then, type sensible answers into your own programs.
+
+### Why `"5" + 5` fails
+
+Now that both kinds of thing are in play, you will eventually write this by accident:
+
+```python
+print("Beepers: " + 5)
+```
+
+and get a `TypeError`. Python is refusing to guess. Should `"5" + 5` be the text `"55"` or the number `10`? Both are defensible, so Python declines to choose and asks you to be explicit.
+
+The two ways out, both of which you already have:
+
+- **Use a comma:** `print("Beepers:", 5)` — commas never glue anything, so nothing needs converting
+- **Convert on purpose:** `str(5)` turns the number into text, and then `+` is happy
+
+The comma is usually the right answer.
+
+### When the comma will not do: `str()`
+
+There is one job the comma cannot do, and you are about to need it twice.
+
+A comma always brings a space with it. So when a **number** has to sit tight against punctuation — a label like `Day 3:` or `Second 1:` — the comma gets in the way, and `+` refuses to glue text to a number. `str()` is the way out: it turns a number into text, and text is something `+` will happily join.
+
+```python
+day = 3
+print("Day " + str(day) + ":", "sunny")
+```
+
+That prints `Day 3: sunny`. Read the pieces: `"Day "` has a deliberate trailing space, `str(day)` is the number as text, `":"` closes the label with nothing between it and the number, and then the comma before `"sunny"` supplies the one space you *do* want.
+
+It is fussy, and you are right to think so. **Chapter 5** introduces f-strings, which make this whole business read like an English sentence. Until then, `str()` and `+` are how a number gets a label.
+
+---
+
+## The Accumulator
+
+Here is a pattern rather than a feature, and it is one of the most useful in all of programming.
+
+You cannot add up a list of numbers in one go. What you can do is keep a running total, and nudge it once per trip around a loop.
+
+<PythonEnvironment config={accumulatorConfig} />
+
+The line doing the work is this one:
+
+```python
+total = total + i
+```
+
+which looks like nonsense as a piece of algebra and is not algebra. Read it **right to left**, the way you read every `=` in Python: *take what `total` is holding now, add `i` to it, and put the answer back into `total`.* The old value is used and then replaced.
+
+Step through it with the panel open. Watching `total` climb 0, 1, 3, 6, 10 while `i` counts 0, 1, 2, 3, 4 explains this better than any paragraph can.
+
+> **A shorthand you will see everywhere:** `total += i` means exactly the same thing as `total = total + i`. Use whichever reads better to you; this curriculum writes the long form while the idea is still new.
+
+## Doing Arithmetic On the Loop Variable
+
+`range(5)` gives you 0, 1, 2, 3, 4 and nothing else. That looks limiting until you notice you can do arithmetic on the way out:
+
+| You write | You get |
+| --- | --- |
+| `print(i)` | 0, 1, 2, 3, 4 |
+| `print(i + 1)` | 1, 2, 3, 4, 5 |
+| `print(i * 10)` | 0, 10, 20, 30, 40 |
+| `print(100 - i)` | 100, 99, 98, 97, 96 |
+
+That last row is worth staring at. **A loop that counts up can print a sequence that counts down** — the loop still marches forwards, and the arithmetic turns it round on the way out. Remember that one; the capstone asks for it.
+
+It is also the piece you were missing back in Lesson 1. The knock-knock rounds ended with a blank line you could not get rid of, and the fix — first round outside the loop, the rest inside with the blank line leading — needed the loop to label its rounds 1 and 2 rather than 0 and 1. `i + 1` was all it ever wanted. Go back and finish it.
+
+---
+
+## Exercise 1: Rectangle Facts
+
+Ask for a width and a height, then report the area and the perimeter.
+
+A sample run, where the person typed **7** and then **3**:
+
+```
+Width:
+Height:
+Area: 21
+Perimeter: 20
+```
+
+Both answers arrive as text. Convert them before you do anything arithmetic with them, or you will find yourself looking at `777` instead of `21`.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Mission Clock
+
+Ask for a number of seconds and break it into hours, minutes and seconds.
+
+A sample run, where the person typed **3725**:
+
+```
+Total seconds:
+3725 seconds is 1 h 2 m 5 s
+```
+
+Check it by hand first: 3725 seconds is one hour (3600), leaving 125 seconds, which is two minutes (120), leaving 5.
+
+That check *is* the algorithm. Take out the whole hours with `//`, find what is left with `%`, then do the very same thing to the leftovers with minutes. Do the big unit first — go the other way round and the numbers will not come out.
+
+Test it on `59`, on `60`, and on `86399` before you call it done.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Odd Ones
+
+Ask how many odd numbers to print, print them one per line, then print their total.
+
+A sample run, where the person typed **5**:
+
+```
+How many odd numbers?
+1
+3
+5
+7
+9
+Their total is 25
+```
+
+Two pieces to fit together. The loop counts 0, 1, 2, 3, 4 and you need 1, 3, 5, 7, 9 — some arithmetic on `i` gets you from one to the other, and it is not `i + 1`. The total wants an accumulator.
+
+> **When it works, run it again with 6. Then 10. Then 20.** The total is always the number you typed, multiplied by itself. That is not a fluke of this program — it is a genuine theorem, older than Python by about two thousand three hundred years, and you have just demonstrated it with a `for` loop.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## Exercise 4: The Doubling Pond
+
+A pond starts with some number of lily pads, and the pads double every day. Ask for the starting count and the number of days, then report the pond's population at the end of each day, and finally how many pads it gained overall.
+
+A sample run, where the person typed **3** and then **4**:
+
+```
+Starting pads:
+Days to simulate:
+Day 0: 3
+Day 1: 6
+Day 2: 12
+Day 3: 24
+Day 4: 48
+Growth: 45 more pads than we started with
+```
+
+Day 0 is the pond before anything happens, and it is printed before the loop begins. Each trip round the loop is one day: double the count, then report it.
+
+The day numbers have a colon pressed right against them, which is the one job a comma cannot do — `str()` is what you want there.
+
+The sting is in the last line. Your running count gets overwritten every single day, so by the time you want to compare against the starting number, **the starting number is gone** — unless you thought to keep a second name holding it. Open the panel on the right and watch what happens to your names; the bug is much easier to see than to explain.
+
+<PythonEnvironment config={exercise4Config} />
+
+---
+
+## What You Learned
+
+- Seven operators: `+`, `-`, `*`, `/`, `//`, `%`, `**`
+- `/` always produces a decimal, even when it divides exactly
+- `//` and `%` are a pair: how many whole ones fit, and what is left over
+- Precedence follows the rules you already know, and parentheses beat everything
+- `int()` and `float()` turn typed text into numbers; `int(input(...))` does both at once
+- `int()` chops decimals off, `round()` rounds them
+- `"5" + 5` is a `TypeError` — Python refuses to guess what you meant
+- `str()` turns a number into text, which is how a number gets a label pressed against it
+- The **accumulator**: a name that carries a running total through a loop
+- Arithmetic on `i` reshapes what a loop prints — including counting downwards
+
+Next lesson is the capstone. No new syntax — you have everything now. What is left is to build something with it.
+
+</LessonShell>

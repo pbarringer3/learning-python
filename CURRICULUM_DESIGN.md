@@ -172,7 +172,9 @@ to Karel's beeper bag as a motivating analogy._
 ### Chapter 4: Functions & Parameters
 
 _Formally defines parameters and return values. Students already know how to define zero-parameter
-functions from Karel, and have been calling functions with arguments since Chapter 2._
+functions from Karel, and have been calling functions with arguments since Chapter 2. Karel taught
+functions as **named actions** — no arguments, no return value, communicating only by changing the
+shared world. This chapter opens the data path in both directions._
 
 **Lessons:**
 
@@ -180,12 +182,24 @@ functions from Karel, and have been calling functions with arguments since Chapt
    parameters: `print("hello")`, `input("Name: ")`, `range(5)`. Now we look under the hood.
    Connecting to Karel functions which had no parameters.
 2. **Return Values** — `return`, using function output, contrast between `return` and `print()`.
-3. **Scope** — Local vs. global variables, why this matters, common beginner mistakes.
-4. **Default Parameters & Keyword Arguments** — `def greet(name, greeting="Hello"):`.
-5. **Docstrings & Good Design** — Documenting functions, single responsibility principle,
-   choosing good names.
-6. **Putting It Together** _(capstone)_ — A multi-function program with clear decomposition.
-   Students design the function structure before writing code.
+   The genuinely new idea: a Karel function could only change the world, and nothing ever came back.
+3. **Functions Are Values** — `def` binds a name to an object, exactly as `=` does. `f` versus
+   `f()` — the distinction beginners trip on for months. Passing a function to another function:
+   `sorted(words, key=len)`, `max(students, key=get_grade)`. Placed here deliberately: right after
+   `return`, so `f` and `f()` have a real contrast to bite on, and before **Scope**, so the
+   visualizer's heap panel is already where students look when a name points at an object (the
+   tracer serializes functions as heap objects, so a function looks like any other value on screen).
+   `lambda` is a footnote at most — everything a beginner needs can be written with a named `def`.
+4. **Scope** — Local vs. global variables, why this matters, common beginner mistakes.
+5. **Default Parameters & Keyword Arguments** — `def greet(name, greeting="Hello"):`. Partly API
+   literacy: it is what makes `print(..., end="")` and `sep=` readable rather than magic.
+6. **Docstrings & Good Design** — Documenting functions, single responsibility principle,
+   choosing good names. Builds directly on Karel: Lesson 1.5 already had students writing
+   `# Pre:` / `# Post:` contracts in comments; here that habit becomes a docstring.
+7. **Putting It Together** _(capstone)_ — A multi-function program with clear decomposition.
+   Students design the function structure before writing code. Decomposition is not new — what is
+   new is the axis: Karel decomposed **by action**, because side-effect-only functions can do
+   nothing else; here students decompose **by data flow**, composing functions that hand back values.
 
 ---
 
@@ -221,7 +235,8 @@ collection iteration, building toward the iterables lesson._
 4. **Iterating Over Lists** — `for item in list:`, `enumerate()`. Second encounter with
    collection iteration.
 5. **List Methods & Patterns** — `sort()`, `reverse()`, `in` operator, common patterns
-   (accumulator, filter, search).
+   (accumulator, filter, search). Sorting by a rule other than the default uses `key=`, which
+   relies on **Chapter 4.3, Functions Are Values**.
 6. **Nested Lists** — 2D lists, iterating over rows and columns. Motivating example: a grid
    (connects back to Karel's world).
 7. **Putting It Together** _(capstone)_ — A program that manages a collection of data: a
@@ -244,7 +259,9 @@ and dictionaries as examples of the same concept._
 4. **Iterables** _(formal unification)_ — _"You've iterated over strings, lists, and
    dictionaries. Here's what they all have in common."_ The iterable protocol. `in` operator.
    `enumerate()`. A brief look at generators as a preview.
-5. **Dictionary Patterns** — Frequency counting, grouping, lookup tables.
+5. **Dictionary Patterns** — Frequency counting, grouping, lookup tables. A dict of functions
+   (`"add"` → `add_numbers`) dispatches a menu without a long `if`/`elif` chain — an application
+   of **Chapter 4.3, Functions Are Values**.
 6. **Putting It Together** _(capstone)_ — A richer data program: word frequency analyzer,
    contact book, inventory system, etc.
 
@@ -267,7 +284,10 @@ this curriculum). Students draw shapes, use color, and animate objects._
 1. **Drawing Shapes** — The coordinate system, basic shapes, color, fill vs. stroke.
 2. **Using Variables with Graphics** — Position, size, and color as variables. State is visible.
 3. **Animation Loop** — The draw loop concept, moving objects, frame rate.
-4. **Handling Input** — Mouse and keyboard events, interactive sketches.
+4. **Handling Input** — Mouse and keyboard events, interactive sketches. Event handling means
+   **registering a callback** — handing the library a function it calls later. This depends on
+   **Chapter 4.3, Functions Are Values**; without it the central mechanic of this lesson reads as
+   library magic rather than a language feature.
 5. **Using Functions with Graphics** — Decomposing a drawing into functions. Connects Chapter 4.
 6. **Putting It Together** _(capstone)_ — An animated, interactive sketch or simple toy.
 
@@ -366,6 +386,85 @@ _Binary trees, tree traversal (recursive), binary search trees._
 ### Chapter 17: Graphs
 
 _Graph representation, BFS, DFS. Real-world applications._
+
+---
+
+## Deferred & Advanced Topics Register
+
+This curriculum is for absolute beginners, and a lot is left out on purpose. This section is where
+those topics are parked so they are not lost — each one with the place it would most naturally live
+if and when it gets written.
+
+Entries are one of two kinds, and the difference matters:
+
+- **Gap** — the core curriculum probably _needs_ this, and the omission looks like an oversight
+  rather than a decision. Each gap names the chapter that must be settled before it is authored.
+- **Deferred** — correctly out of scope for a beginner's Part 1. Listed with its eventual home.
+
+### Gaps in the Core — decide before the named chapter is built
+
+| Topic                      | Decide before | Why it is a gap                                                                                                                                                                                                                                                                                                                        |
+| -------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tuples**                 | Chapter 6     | Nothing in the plan introduces them, but Chapter 7.3 iterates `.items()`, which yields tuples, and `return x, y` in Chapter 4.2 is the natural way to hand back two values. Candidate homes: a lesson in Chapter 6 after 6.1, or folded into 7.3.                                                                                      |
+| **Modules & `import`**     | Chapter 8     | No lesson introduces `import` at all, yet Chapter 8 (graphics) and the Chapter 10 game will almost certainly need `random`, and numeric work wants `math`. Candidate homes: a short lesson in Chapter 3, or the opening of Chapter 8.                                                                                                  |
+| **Comprehensions**         | Chapter 6     | `[word.upper() for word in words]` is unavoidable in real Python — students meet it the first time they read anyone else's code. Candidate home: a lesson late in Chapter 6, with the dict form echoed in 7.5. Defensible to defer to an intermediate module if Part 1 should stay lean, but it should be a decision, not an accident. |
+| **Multiple return values** | Chapter 4     | `return x, y` is the obvious question a student asks during 4.2, and answering it honestly requires tuples. Tie this decision to the tuples decision above.                                                                                                                                                                            |
+
+### Functions & Callables
+
+| Topic                                     | Earliest natural home                                     | Why it is parked                                                                                                                                                                      |
+| ----------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lambda`                                  | Footnote in 4.3; fuller treatment alongside `key=` in 6.5 | A named `def` says everything a beginner needs, and `key=lambda s: s[1]` reads as line noise before then.                                                                             |
+| `*args` / `**kwargs`                      | Intermediate module, after Chapter 7                      | Needs keyword arguments (4.5) _and_ tuples and dicts to be meaningful. Shows up naturally in `super().__init__(...)` at 9.6, which is the earliest place it can be waved at honestly. |
+| Closures, functions returning functions   | Intermediate module                                       | Needs functions-as-values (4.3) and scope (4.4) both solid. The Call Stack Visualizer would make this unusually teachable when the time comes.                                        |
+| Decorators                                | Intermediate module, after Chapter 9                      | Needs closures. The motivating uses (`@property`, `@staticmethod`) are themselves OOP topics.                                                                                         |
+| `map` / `filter` / `reduce`               | Wherever comprehensions land                              | Mostly idiom and history once comprehensions are known; not worth its own slot before them.                                                                                           |
+| Generators & `yield`                      | Part 2, or an intermediate module                         | Already previewed in 7.4. Full treatment (lazy sequences, memory, infinite streams) needs a reason to care that beginners do not yet have.                                            |
+| Mutable default arguments (`def f(x=[])`) | Aside in Chapter 6, or intermediate                       | A famous trap, but it needs both default arguments (4.5) and list mutability (6.2) to be legible rather than scary.                                                                   |
+
+### Objects & Types
+
+| Topic                                                                           | Earliest natural home                   | Why it is parked                                                                                                                                                     |
+| ------------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Iterator protocol (`__iter__`, `__next__`)                                      | Extension of 9.5                        | Chapter 7.4 unifies iterables as a _concept_; implementing one needs classes. Pairs naturally with operator overloading.                                             |
+| Further dunders (`__len__`, `__getitem__`, `__repr__` vs `__str__`, `__hash__`) | Extension of 9.5                        | 9.5 already teaches the idea with `__add__`, `__str__`, `__eq__`; the rest is more of the same and can wait.                                                         |
+| `@property`, `@staticmethod`, `@classmethod`, class vs. instance variables      | "OOP, Deeper" module                    | All need decorator syntax to be readable.                                                                                                                            |
+| `dataclasses`                                                                   | "OOP, Deeper" module                    | A convenience whose value only shows once students have written the boilerplate by hand.                                                                             |
+| Abstract base classes, multiple inheritance, MRO                                | "OOP, Deeper" module                    | Design concerns for programs larger than anything in Part 1.                                                                                                         |
+| Custom exception classes                                                        | Aside in 11.4, or "OOP, Deeper"         | Needs classes (Chapter 9) plus `raise` (11.4).                                                                                                                       |
+| Writing context managers (`__enter__` / `__exit__`)                             | Follow-on to Chapter 11                 | 11.1 _uses_ `with`; authoring one needs classes.                                                                                                                     |
+| Type hints                                                                      | Intermediate module                     | Conceptually a sibling of docstrings (4.6), but they earn their keep only on real data structures and larger programs.                                               |
+| `is` vs. `==`, `copy` vs. `deepcopy`                                            | Aside in 6.6, or intermediate           | Chapter 6 makes aliasing visible in the heap panel, which is the right moment — but nested-list copying is a sharp edge best met once 2D lists exist.                |
+| Sets                                                                            | Chapter 7 (beside dicts), or Chapter 13 | Genuinely useful and genuinely small; parked rather than gapped because nothing in the plan currently depends on them. Membership testing also motivates Chapter 14. |
+
+### Practical Python & Toolchain
+
+| Topic                                                                                    | Earliest natural home                                 | Why it is parked                                                                                                                                                                                                                                         |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Running Python locally — install, REPL, editor, `.py` files, `if __name__ == "__main__"` | A short module after Chapter 10, or beside Chapter 11 | The whole curriculum runs in the browser via Pyodide, which is what makes it zero-setup. But design principle 4 (transferable skills) eventually demands students escape the sandbox, and this is the single most important deferred topic on this page. |
+| `pip` and virtual environments                                                           | Same module as above                                  | Meaningless until there is a local Python to install into.                                                                                                                                                                                               |
+| Testing — `assert`, `pytest`                                                             | After Chapter 11, or opening Part 2                   | Pairs naturally with exceptions, and Part 2's algorithms are the first code worth testing rather than eyeballing.                                                                                                                                        |
+| Debugging tools (`pdb`, IDE debuggers)                                                   | Same module as local Python                           | The Call Stack Visualizer is the pedagogical version of this and covers Part 1; real tooling belongs with the real toolchain.                                                                                                                            |
+| Version control (`git`)                                                                  | Optional module                                       | Orthogonal to Python, but the other half of "works outside this curriculum."                                                                                                                                                                             |
+| Regular expressions                                                                      | Follow-on to Chapter 5, or the web-scraping module    | Powerful and notoriously opaque; needs string fluency first.                                                                                                                                                                                             |
+| Concurrency, `async`/`await`                                                             | Far-future extension                                  | Nothing in Parts 1 or 2 motivates it.                                                                                                                                                                                                                    |
+
+### Part 2 Extensions
+
+| Topic                                  | Earliest natural home | Why it is parked                                                   |
+| -------------------------------------- | --------------------- | ------------------------------------------------------------------ |
+| Heaps & priority queues                | After Chapter 15      | A natural fourth data structure after stacks and queues.           |
+| Hash table internals                   | After Chapter 14      | Explains _why_ dict lookup is O(1) — satisfying once Big-O exists. |
+| Tries, union-find                      | After Chapter 17      | Specialized structures; good competitive-programming material.     |
+| Dynamic programming, greedy algorithms | After Chapter 17      | The natural sequel to recursion plus complexity analysis.          |
+
+### Implementation Note
+
+**Chapter 11 (Files) runs against Pyodide's virtual filesystem, not a real one.** Files written by a
+student's program do not persist to their machine, and there is no file to open unless the lesson
+puts one there. This does not block the chapter, but the lessons have to be authored knowing it —
+and it is a further argument for the local-Python module above, since real file I/O on real files is
+exactly the thing the browser cannot offer.
 
 ---
 

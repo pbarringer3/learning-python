@@ -121,10 +121,102 @@ const karel: Chapter = {
 };
 
 /**
+ * Chapter 2: Hello, Python!
+ */
+const helloPython: Chapter = {
+  id: 'hello-python',
+  title: 'Hello, Python!',
+  number: 2,
+  tagline: 'Write real Python — no robot required',
+  description:
+    "Karel is off duty. You'll write Python that talks directly to you: printing text, asking questions and doing arithmetic. Everything you learned commanding Karel — loops, indentation, calling functions — comes with you; what's new is that your program finally has a memory instead of a floor full of beepers.",
+  accentColor: 'indigo',
+  lessons: [
+    {
+      id: 'from-karel-to-python',
+      title: 'From Karel to Python',
+      description:
+        "What carries over from Karel, what changes, and where your program's state lives now that the grid is gone.",
+      number: 1,
+      hasExercises: true,
+      exerciseCount: 2
+    },
+    {
+      id: 'first-program',
+      title: 'Your First Python Program',
+      description:
+        'print(), string literals, and getting output to look exactly the way you want it.',
+      number: 2,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'getting-input',
+      title: 'Getting Input',
+      description:
+        'input() stops the program and waits for you. Keep what it hands back in a name and the program can use it.',
+      number: 3,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'expressions-and-math',
+      title: 'Expressions & Math',
+      description:
+        'Arithmetic, operator precedence, whole-number division and remainders, and turning typed text into numbers with int().',
+      number: 4,
+      hasExercises: true,
+      exerciseCount: 4
+    },
+    {
+      id: 'mission-control',
+      title: 'Putting It Together',
+      description:
+        'Build Mission Control: a complete interactive program that takes input, does the maths and runs a launch sequence.',
+      number: 5,
+      hasExercises: true,
+      exerciseCount: 3
+    }
+  ],
+  topics: [
+    {
+      name: 'Output',
+      description: 'Show text with print()',
+      lessonId: 'first-program',
+      icon: '🖨️'
+    },
+    {
+      name: 'Input',
+      description: 'Ask a question and wait for an answer',
+      lessonId: 'getting-input',
+      icon: '💬'
+    },
+    {
+      name: 'Names & Values',
+      description: 'Keep a value in memory instead of on the floor',
+      lessonId: 'getting-input',
+      icon: '🏷️'
+    },
+    {
+      name: 'Arithmetic',
+      description: 'Operators, precedence, division and remainders',
+      lessonId: 'expressions-and-math',
+      icon: '➗'
+    },
+    {
+      name: 'Mission Control',
+      description: 'A complete interactive program of your own',
+      lessonId: 'mission-control',
+      icon: '🚀'
+    }
+  ]
+};
+
+/**
  * All chapters in curriculum order.
  * Add new chapters here as they're developed.
  */
-export const chapters: Chapter[] = [karel];
+export const chapters: Chapter[] = [karel, helloPython];
 
 /**
  * Look up a chapter by its string ID (e.g. "karel").

@@ -1,0 +1,230 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+
+  // Visualizer on: the point is watching a name appear in the frame and hold
+  // what the person typed.
+  const greetingConfig: PythonConfig = {
+    initialCode: `# Press Play. The program stops at the input line and waits
+# for you — type an answer in the box below the output.
+
+name = input("What is your name? ")
+print()
+
+print("Hello,", name)
+print("Welcome to Python.")
+`,
+    editorLines: 10,
+    showVisualizer: true
+  };
+
+  const alwaysTextConfig: PythonConfig = {
+    initialCode: `# Type a number when this one asks. Any number.
+
+age = input("How old are you? ")
+print()
+
+print("You said:", age)
+print("Twice that is:", age + age)
+`,
+    editorLines: 10,
+    showVisualizer: true
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '2/3/exercise-1',
+    initialCode: `# Say My Name
+# Ask two questions, then print two lines about the answers.
+# Follow each input() with a print() to keep the log tidy.
+
+`,
+    editorLines: 12,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '2/3/exercise-2',
+    initialCode: `# The Mad Lib
+# Collect four answers, then tell the story.
+# Watch the punctuation — a comma from print always brings a
+# space with it, and some of these need none.
+
+`,
+    editorLines: 16,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '2/3/exercise-3',
+    initialCode: `# Live Roll Call
+# Ask for three names, one at a time, logging each one as it
+# arrives. Watch the panel on the right as you go.
+
+`,
+    editorLines: 13,
+    showVisualizer: true
+  };
+</script>
+
+<LessonShell chapterNumber={2} lessonNumber={3}>
+
+## A Program That Listens
+
+Everything you have written so far knows its whole story before it starts. Run it twice, get the same output twice. That is a fine way to write a banner and a poor way to write anything a person would want to use.
+
+`input()` changes that. It stops the program dead, waits for a human being to type something, and then hands over whatever they typed.
+
+## A Function That Gives Something Back
+
+You have met a function that hands something back before. `front_is_clear()` did — Karel asked, and an answer came back, and you fed that answer straight into a `while` loop:
+
+```python
+while front_is_clear():
+  move()
+```
+
+What you never did was **keep** the answer. It was used the instant it arrived and then thrown away.
+
+`input()` gives you something worth keeping, so you need somewhere to put it:
+
+```python
+name = input("What is your name? ")
+```
+
+Read the `=` sign right to left. The `input()` on the right runs first, and whatever comes back gets stored under the name on the left. From that point on, writing `name` anywhere means the thing the person typed.
+
+> **That line created a variable**, and variables are properly Chapter 3's subject — naming rules, what is really happening in memory, how the same name can hold different things over time. You do not need any of that yet. For this chapter, one sentence carries you: **`=` puts the value on the right into the name on the left.**
+
+Press **▶ Play**, and answer the question in the box at the bottom of the Output panel. Then try **⇥ Step** instead, and watch `name` appear in the right-hand panel the moment you answer.
+
+<PythonEnvironment config={greetingConfig} />
+
+That panel is the thing Karel never had. The value is not on a floor somewhere — it is in memory, with a name on it, and you can see it.
+
+> **What the buttons do while a program is waiting:** the program is genuinely stopped, not pretending. Nothing else happens until you answer. If you would rather abandon it, **■ Stop** works while it waits.
+
+## Why the Blank print()
+
+Look at the example again and notice the `print()` sitting just after the `input()` line. It is not decoration.
+
+The prompt you pass to `input()` gets written into the output log **without a line break**, because in a normal terminal the words you type land right there after it and push the line along. This environment gives you a proper text box to type in instead, so nothing gets echoed into the log — and without that blank `print()` your next line of output would begin right after the question mark.
+
+**Follow every `input()` with a `print()`** and your output stays readable. This matters most when you ask two questions in a row: without the blank lines, both prompts pile onto one line and the output looks like a ransom note.
+
+---
+
+## Everything input() Hands Back Is Text
+
+This is the one fact about `input()` that catches everybody, so meet it now, on purpose.
+
+Run this and type a number — a real one, like `12`.
+
+<PythonEnvironment config={alwaysTextConfig} />
+
+Twice twelve is `1212`.
+
+Nothing is broken. `input()` **always** hands back text, never a number. You typed the characters `1` and `2`, so `age` is holding the two-character string `"12"` — and you already know what `+` does to two strings. It glues them. `"12" + "12"` is `"1212"`, exactly as advertised in the last lesson.
+
+The value looks like a number, prints like a number, and is not a number. Watch it in the panel on the right and you will see it sitting there in quotes.
+
+Two things follow, and the next lesson delivers both:
+
+- To do arithmetic on something a person typed, you must **convert it to a number first**. That is `int()`, and it is the first thing Lesson 4 does.
+- The reason `+` behaves so differently on text than on numbers is a genuine Python feature, not a quirk. Chapter 3 names it (types), and Chapter 9 shows you how it works underneath.
+
+## Names Can Be Reused
+
+Assigning to a name that already exists replaces what was in it. The old value is simply gone:
+
+```python
+answer = input("First question: ")
+print()
+answer = input("Second question: ")
+print()
+```
+
+There is only ever one `answer`, holding whatever came in most recently. That is not a mistake — it is often exactly what you want, especially inside a loop, which is where Exercise 3 takes you.
+
+---
+
+## Exercise 1: Say My Name
+
+Ask two questions and report back.
+
+A sample run, where the person typed **Ada** and then **cheese**:
+
+```
+What is your name?
+What is your favourite food?
+Nice to meet you, Ada!
+Ada likes cheese.
+```
+
+Match the prompts and the two output lines exactly. Note the `!` pressed hard against the name with no space before it — a comma cannot do that. And remember a blank `print()` after each question.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Mad Lib
+
+Collect four answers and build a story out of them.
+
+Ask for, in this order: **a plural noun**, **a verb**, **a place**, and **an adjective**. Then print a three-line story that uses all four.
+
+A sample run, where the person typed **beepers**, **juggle**, **Cleveland** and **damp**:
+
+```
+Give me a plural noun:
+Give me a verb:
+Give me a place:
+Give me an adjective:
+The beepers of Cleveland have one talent: they juggle.
+Every damp morning, they juggle again.
+Cleveland has never been the same.
+```
+
+Getting the punctuation right is the actual work here. A colon and a full stop have to land tight against the word before them, and a comma from `print` always drags a space along with it. You will need both commas and `+`, and you will need to think about which is which.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: Live Roll Call
+
+Ask for three crew names, one at a time, and log each one the moment it arrives.
+
+A sample run, where the person typed **Ada**, **Grace** and **Alan**:
+
+```
+Crew member name:
+Logged crew member 0 as Ada
+Crew member name:
+Logged crew member 1 as Grace
+Crew member name:
+Logged crew member 2 as Alan
+All three aboard.
+```
+
+Everything except the last line comes from a single loop that runs three times. The `input()` goes **inside** it.
+
+Keep the call stack panel open for this one. There is only ever one name in memory — each trip round the loop overwrites the last one — and watching that happen is worth more than reading about it.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- `input()` stops the program and waits for a person to type an answer
+- `=` stores what comes back under a name, so the program can use it later
+- Karel's sensors handed answers back too — you just never kept one
+- The prompt does not end with a line break, so follow each `input()` with a `print()`
+- **`input()` always hands back text**, even when the text looks like a number
+- `"12" + "12"` is `"1212"`, and that is `+` doing exactly what it promised
+- Assigning to a name again replaces what was in it
+
+Next lesson: arithmetic. You will turn typed text into real numbers with `int()`, meet the operators for whole-number division and remainders, and finally get `12 + 12` to be `24`.
+
+</LessonShell>

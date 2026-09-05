@@ -2,6 +2,7 @@
   import LessonShell from '$lib/components/LessonShell.svelte';
   import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
   import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
 
   // A bug you find by stepping, not by staring. Visualizer on.
   const debugConfig: PythonConfig = {
@@ -24,6 +25,7 @@ print("Total:", total)
 
   const exercise1Config: PythonConfig = {
     persistenceKey: '2/5/exercise-1',
+    tests: testsFor('2/5/exercise-1'),
     initialCode: `# Mission Control, part 1: the crew manifest.
 #
 # Ask three questions, then print the mission card.
@@ -37,6 +39,7 @@ print("Total:", total)
 
   const exercise2Config: PythonConfig = {
     persistenceKey: '2/5/exercise-2',
+    tests: testsFor('2/5/exercise-2'),
     initialCode: `# Mission Control, part 2: the fuel check.
 #
 # How long can the engine burn, how much fuel is wasted, and
@@ -49,6 +52,7 @@ print("Total:", total)
 
   const exercise3Config: PythonConfig = {
     persistenceKey: '2/5/exercise-3',
+    tests: testsFor('2/5/exercise-3'),
     initialCode: `# Mission Control, part 3: the launch.
 #
 # Plan this one in comments before you write a line of code.

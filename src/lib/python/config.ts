@@ -1,17 +1,17 @@
 /**
  * Configuration for an embedded Python environment.
  *
- * `PythonConfig` is the Python-side counterpart to `KarelConfig`. It is
- * deliberately small: v1 runs unrestricted Python with no exercise tests. The
- * shape is designed so that the two deferred pieces —
+ * `PythonConfig` is the Python-side counterpart to `KarelConfig`, and just as
+ * deliberately small. `tests` is the stdout-comparison validation described in
+ * `PythonInterpreterDesign.md` §13; one deferred piece remains —
  *
  *   - `allowedFeatures`, an opt-in AST allowlist so a lesson can forbid syntax
  *     it has not taught yet (Karel's `validate_karel_code` is the precedent),
- *   - `tests`, per-exercise validation of captured stdout / final state,
  *
- * can be added as new optional fields rather than as a redesign. See
- * `PROGRESS.md` for why they are not built yet.
+ * — and it can be added as another optional field rather than as a redesign.
+ * See `PROGRESS.md` for why it is not built yet.
  */
+import type { PythonTests } from './exercise-tests';
 
 /** Pyodide release used by both the Karel runtime and the visualizer worker. */
 export const PYODIDE_VERSION = '0.29.3';
@@ -54,4 +54,10 @@ export interface PythonConfig {
   editorLines?: number;
   /** Recursion limit override; see `DEFAULT_RECURSION_LIMIT`. */
   recursionLimit?: number;
+  /**
+   * Per-exercise validation: run the student's code once per case and compare
+   * captured stdout. Omit for the playground and for worked examples, which
+   * must not grow a "Run tests" button with nothing behind it.
+   */
+  tests?: PythonTests;
 }

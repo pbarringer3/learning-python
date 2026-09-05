@@ -2,6 +2,7 @@
   import LessonShell from '$lib/components/LessonShell.svelte';
   import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
   import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
 
   // First program: no visualizer — the point here is the Output console.
   const helloConfig: PythonConfig = {
@@ -30,6 +31,7 @@ print("Done.")
 
   const exercise1Config: PythonConfig = {
     persistenceKey: '2/1/exercise-1',
+    tests: testsFor('2/1/exercise-1'),
     initialCode: `# Roll Call
 # Print the header once, five numbered crew members, then the
 # footer once. Only the crew lines belong inside the loop.
@@ -41,6 +43,7 @@ print("Done.")
 
   const exercise2Config: PythonConfig = {
     persistenceKey: '2/1/exercise-2',
+    tests: testsFor('2/1/exercise-2'),
     initialCode: `# Knock Knock Rounds
 # Three rounds. Each round prints its own header, then three
 # knocks, then a blank line.

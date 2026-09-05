@@ -58,3 +58,15 @@ export function canRunToBreakpoint(status: RunnerStatus, hasBreakpoints: boolean
 export function canResetCode(status: RunnerStatus): boolean {
   return isIdle(status);
 }
+
+/**
+ * "Run tests" appears only for an exercise that has them, and only when idle.
+ *
+ * Idle only, for two different reasons: running the tests from a pause would
+ * abandon the student's debugging session, and running them while a program is
+ * still going is meaningless — the tests run the program themselves, once per
+ * case (§13.5).
+ */
+export function canRunTests(status: RunnerStatus, hasTests: boolean): boolean {
+  return hasTests && isIdle(status);
+}

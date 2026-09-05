@@ -2,6 +2,7 @@
   import LessonShell from '$lib/components/LessonShell.svelte';
   import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
   import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
 
   const quotesConfig: PythonConfig = {
     initialCode: `# Both kinds of quotes make a string. Pick whichever one
@@ -44,6 +45,7 @@ print("Today's special:", "beepers")
 
   const exercise1Config: PythonConfig = {
     persistenceKey: '2/2/exercise-1',
+    tests: testsFor('2/2/exercise-1'),
     initialCode: `# The Sign
 # Print the three lines exactly as shown in the lesson.
 # One line contains an apostrophe. Another contains double
@@ -56,6 +58,7 @@ print("Today's special:", "beepers")
 
   const exercise2Config: PythonConfig = {
     persistenceKey: '2/2/exercise-2',
+    tests: testsFor('2/2/exercise-2'),
     initialCode: `# Two Ways
 # Three print statements, three lines of output.
 #   Line 1: commas only, no + anywhere
@@ -69,6 +72,7 @@ print("Today's special:", "beepers")
 
   const exercise3Config: PythonConfig = {
     persistenceKey: '2/2/exercise-3',
+    tests: testsFor('2/2/exercise-3'),
     initialCode: `# The Staircase
 # A header, five steps each one space further right than the
 # last, then a footer.

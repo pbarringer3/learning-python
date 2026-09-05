@@ -7,7 +7,7 @@
  * The table these encode is PythonInterpreterDesign.md §12.2.
  */
 import { describe, it, expect } from 'vitest';
-import { canResetCode, canRunToBreakpoint, canStep, primaryControl } from './controls';
+import { canResetCode, canRunTests, canRunToBreakpoint, canStep, primaryControl } from './controls';
 import type { RunnerStatus } from './runner';
 
 const ALL: RunnerStatus[] = [
@@ -106,6 +106,37 @@ describe('canResetCode', () => {
       'failed'
     ] as RunnerStatus[]) {
       expect(canResetCode(status)).toBe(false);
+    }
+  });
+});
+
+describe('canRunTests', () => {
+  it('is enabled only when idle, and only with tests to run', () => {
+    for (const status of ['ready', 'finished', 'error'] as RunnerStatus[]) {
+      expect(canRunTests(status, true)).toBe(true);
+    }
+  });
+
+  // A pause is not idle here: running the tests would abandon the debugging
+  // session the student is in the middle of, and running them mid-run is
+  // meaningless — see §13.5.
+  it('is disabled while paused, running, awaiting input, loading, or failed', () => {
+    for (const status of [
+      'paused',
+      'running',
+      'awaiting-input',
+      'loading',
+      'failed'
+    ] as RunnerStatus[]) {
+      expect(canRunTests(status, true)).toBe(false);
+    }
+  });
+
+  // The playground and the worked examples in lessons have no tests, and must
+  // not grow a button that does nothing.
+  it('is disabled everywhere when the exercise has no tests', () => {
+    for (const status of ALL) {
+      expect(canRunTests(status, false)).toBe(false);
     }
   });
 });

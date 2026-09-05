@@ -160,8 +160,12 @@ export class PythonRunner {
         break;
 
       case 'input':
-        this.callbacks.onInputRequest(message.prompt);
+        // Status first, then the callback. The worker is already blocked, so
+        // this *is* the awaiting-input state — and a listener that answers
+        // synchronously (the test harness does, from its queue) would otherwise
+        // be turned away by `sendInput`'s status guard and hang the program.
         this.setStatus('awaiting-input');
+        this.callbacks.onInputRequest(message.prompt);
         break;
 
       case 'error':
@@ -285,6 +289,15 @@ export class PythonRunner {
   /** Whether a Stop request would currently be cooperative rather than a kill. */
   get canStopCooperatively(): boolean {
     return this.isBlocked;
+  }
+
+  /**
+   * The current state, for callers that have to wait on it rather than react to
+   * it — the test harness runs its cases one at a time, and a case that had to
+   * be killed takes the worker back through `loading` before the next can start.
+   */
+  get currentStatus(): RunnerStatus {
+    return this.status;
   }
 
   dispose(): void {

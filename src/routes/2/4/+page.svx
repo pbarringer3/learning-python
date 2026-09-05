@@ -2,6 +2,7 @@
   import LessonShell from '$lib/components/LessonShell.svelte';
   import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
   import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
 
   const operatorsConfig: PythonConfig = {
     initialCode: `# The seven arithmetic operators, all on the same two numbers.
@@ -53,6 +54,7 @@ print("Final total:", total)
 
   const exercise1Config: PythonConfig = {
     persistenceKey: '2/4/exercise-1',
+    tests: testsFor('2/4/exercise-1'),
     initialCode: `# Rectangle Facts
 # Ask for a width and a height, then report the area and the
 # perimeter. Both answers arrive as text — convert them.
@@ -64,6 +66,7 @@ print("Final total:", total)
 
   const exercise2Config: PythonConfig = {
     persistenceKey: '2/4/exercise-2',
+    tests: testsFor('2/4/exercise-2'),
     initialCode: `# The Mission Clock
 # Turn a pile of seconds into hours, minutes and seconds.
 #
@@ -78,6 +81,7 @@ print("Final total:", total)
 
   const exercise3Config: PythonConfig = {
     persistenceKey: '2/4/exercise-3',
+    tests: testsFor('2/4/exercise-3'),
     initialCode: `# The Odd Ones
 # Print the first n odd numbers, then their total.
 #
@@ -91,6 +95,7 @@ print("Final total:", total)
 
   const exercise4Config: PythonConfig = {
     persistenceKey: '2/4/exercise-4',
+    tests: testsFor('2/4/exercise-4'),
     initialCode: `# The Doubling Pond
 # Lily pads double every day. Report the count at the end of
 # each day, then how many pads the pond gained overall.

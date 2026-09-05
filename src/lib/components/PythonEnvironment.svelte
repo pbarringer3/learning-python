@@ -20,6 +20,14 @@
   import PythonControls from '$lib/components/PythonControls.svelte';
   import PythonOutput from '$lib/components/PythonOutput.svelte';
   import CallStackVisualizer from '$lib/components/CallStackVisualizer.svelte';
+  import PythonTestResults from '$lib/components/PythonTestResults.svelte';
+  import { progressStore } from '$lib/curriculum/progress';
+  import { getLessonByNumber } from '$lib/curriculum/index';
+  import {
+    PythonTestHarness,
+    type PythonTestResult,
+    type TestHost
+  } from '$lib/python/exercise-tests';
   import {
     ensureCrossOriginIsolated,
     isolationMessage,
@@ -93,12 +101,36 @@
    * default for a first arrival, not a setting re-imposed on every visit (§12.4).
    */
   let visualizerOverride = $state<boolean | null>(null);
+  /** `null` until the tests have been run once in this session. */
+  let testResults = $state<PythonTestResult[] | null>(null);
+  let runningTests = $state(false);
+  /** Survives a reload: the tick is read back from the progress store. */
+  let exerciseCompleted = $state(false);
+
+  // Live, so the banner appears the moment the last case passes and disappears
+  // on Reset code — the same subscription `KarelEnvironment` uses.
+  progressStore.subscribe((progress) => {
+    const parts = exerciseParts();
+    if (!parts) return;
+    exerciseCompleted =
+      progress.lessons[parts.lessonKey]?.exerciseResults?.[parts.exerciseId]?.completed ?? false;
+  });
 
   let runner: PythonRunner | null = null;
+  /**
+   * Non-null exactly while the tests are running. Its presence is what diverts
+   * the runner's callbacks away from the console: a test run must not leave the
+   * student staring at the output of case three as though they had run their
+   * own program (§13.4).
+   */
+  let harness: PythonTestHarness | null = null;
 
   let maxEditorLines = $derived(config.editorLines ?? DEFAULT_MAX_EDITOR_LINES);
   let visualizerVisible = $derived(visualizerOverride ?? config.showVisualizer !== false);
-  let busy = $derived(status === 'running' || status === 'paused' || status === 'awaiting-input');
+  let busy = $derived(
+    status === 'running' || status === 'paused' || status === 'awaiting-input' || runningTests
+  );
+  let hasTests = $derived((config.tests?.cases.length ?? 0) > 0);
   // A finished program has no line executing; the snapshot reports line 0.
   let highlightedLine = $derived(
     (snapshot?.line || null) ?? (status === 'error' ? (error?.line ?? null) : null)
@@ -168,21 +200,29 @@
           onStatus: (next) => {
             status = next;
           },
-          onOutput: appendOutput,
+          onOutput: (chunk) => {
+            if (harness) harness.handleOutput(chunk.text);
+            else appendOutput(chunk);
+          },
           onSnapshot: (next) => {
             snapshot = next;
           },
           onInputRequest: (prompt) => {
-            inputPrompt = prompt;
+            // The harness answers from its queue; only a student-run program
+            // opens the input box.
+            if (harness) harness.handleInputRequest();
+            else inputPrompt = prompt;
           },
           onError: (next) => {
-            error = next;
+            if (harness) harness.handleError(describeError(next));
+            else error = next;
           },
           onLoadError: (message) => {
             loadError = message;
           },
           onFinish: (reason) => {
-            finish = reason;
+            if (harness) harness.handleFinish();
+            else finish = reason;
           }
         },
         config.recursionLimit
@@ -267,6 +307,10 @@
 
   function handleResetCode(): void {
     code = config.initialCode;
+    // The tests were passed by a program that no longer exists.
+    testResults = null;
+    const parts = exerciseParts();
+    if (parts) progressStore.clearExerciseCompleted(parts.lessonKey, parts.exerciseId);
     // The program those marks referred to is gone (§12.3).
     breakpoints = [];
     persist();
@@ -278,6 +322,82 @@
     finish = null;
   }
 
+  /** What a failing case says the program stopped with. */
+  function describeError(failure: PythonError): string {
+    const where = failure.line === null ? '' : ` (line ${failure.line})`;
+    return `${failure.type}: ${failure.message}${where}`;
+  }
+
+  /** `"2/4/exercise-1"` split the way `progressStore` wants it. */
+  function exerciseParts(): { lessonKey: string; exerciseId: string } | null {
+    const key = config.persistenceKey;
+    if (!key) return null;
+    const lastSlash = key.lastIndexOf('/');
+    if (lastSlash < 1) return null;
+    return {
+      lessonKey: key.substring(0, lastSlash),
+      exerciseId: key.substring(lastSlash + 1)
+    };
+  }
+
+  /** Block until the worker can accept a program again. */
+  function waitUntilReady(): Promise<void> {
+    return new Promise((resolve) => {
+      const poll = (): void => {
+        const current = runner?.currentStatus;
+        // `failed` resolves too: `run()` is a no-op there, and the case times
+        // out with a message, which beats waiting for a boot that never comes.
+        if (!current || current !== 'loading') resolve();
+        else setTimeout(poll, 50);
+      };
+      poll();
+    });
+  }
+
+  /**
+   * Run every case against the student's code, then mark the exercise complete
+   * if they all passed — the Python counterpart to `KarelEnvironment`'s
+   * `allPassed` (§13.6).
+   */
+  async function handleRunTests(): Promise<void> {
+    const tests = config.tests;
+    if (!tests || !runner || runningTests) return;
+
+    persist();
+    // The console is cleared rather than filled: a test run is not the
+    // student's own run, and the results panel is where its output belongs.
+    clearRunState();
+    runningTests = true;
+    testResults = null;
+
+    const host: TestHost = {
+      waitUntilReady,
+      run: (source) => runner?.run(source, 'run'),
+      sendInput: (text) => runner?.sendInput(text),
+      stop: () => runner?.stop()
+    };
+
+    harness = new PythonTestHarness(host);
+    try {
+      testResults = await harness.run(code, tests.cases);
+    } finally {
+      harness = null;
+      runningTests = false;
+    }
+
+    const parts = exerciseParts();
+    const allPassed = testResults.length > 0 && testResults.every((result) => result.passed);
+    if (allPassed && parts) {
+      const [chapter, lesson] = parts.lessonKey.split('/');
+      const found = getLessonByNumber(Number(chapter), Number(lesson));
+      progressStore.markExerciseCompleted(
+        parts.lessonKey,
+        parts.exerciseId,
+        found?.lesson.exerciseCount
+      );
+    }
+  }
+
   function handleInput(value: string): void {
     inputPrompt = null;
     appendOutput({ stream: 'stdout', text: value + '\n' });
@@ -286,6 +406,25 @@
 </script>
 
 <div class="python-environment {className}">
+  {#if exerciseCompleted}
+    <div class="completed-banner">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+      <span>Exercise completed</span>
+    </div>
+  {/if}
+
   {#if isolation && isolation.status === 'unsupported'}
     {@const message = isolationMessage(isolation.reason)}
     <div class="notice error">
@@ -324,6 +463,8 @@
 
         <PythonOutput {chunks} {error} {inputPrompt} onSubmitInput={handleInput} />
 
+        <PythonTestResults results={testResults} running={runningTests} />
+
         <PythonControls
           {status}
           hasBreakpoints={breakpoints.length > 0}
@@ -332,6 +473,9 @@
           onStop={handleStop}
           onStep={handleStep}
           onToBreakpoint={handleToBreakpoint}
+          {hasTests}
+          {runningTests}
+          onRunTests={handleRunTests}
           onToggleVisualizer={handleToggleVisualizer}
           onResetCode={handleResetCode}
         />
@@ -355,6 +499,19 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .completed-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #ecfdf5;
+    border: 1px solid #6ee7b7;
+    border-radius: 0.5rem;
+    color: #065f46;
+    font-weight: 600;
+    font-size: 14px;
   }
 
   .layout {

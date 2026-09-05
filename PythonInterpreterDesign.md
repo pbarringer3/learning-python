@@ -814,3 +814,192 @@ state machine, so every `RunnerStatus` can be asserted without a browser).
   takes the runner back through `loading` to `ready` — there is no ending to
   banner. The console still says `Stopped. Restarting Python…`, which is the
   more informative message in that case anyway.
+
+---
+
+## 13. Per-Exercise Tests
+
+The one thing an exercise could not do was tell a student they were done.
+`KarelEnvironment` marks an exercise complete when its `KarelTests` pass;
+`PythonEnvironment` had no equivalent, `PythonConfig` had no `tests` field, and
+so every Chapter 2 exercise persisted code and breakpoints but never turned ✅.
+
+**Built.** All fifteen Chapter 2 exercises are now auto-graded, and passing them
+all marks the lesson complete. This section records what was built and why.
+
+### 13.1 The observable is stdout
+
+Karel validates the **world**: `validate(world)` inspects beepers and position
+after the program ends. A Python exercise has no world. What it has is what it
+printed, so a Python test is a comparison of **captured stdout** against
+expected output, with a queue of answers standing in for the person at the
+keyboard.
+
+That shape was already written down. `src/lib/curriculum/exercise-fixtures.ts`
+holds, for all fifteen authored exercises: a verified solution, the answers fed
+to `input()`, and the exact stdout that comes back — captured from a real run,
+not transcribed. The feature was built against those fixtures, and they are now
+wired into the lessons through `testsFor(key)`, so the transcript a lesson
+prints, the contract its prose states, and the output the button checks are all
+one array of strings. Two tests keep that join honest: `exercise-fixtures.test.ts`
+fails if a lesson's sample run and its fixture stop agreeing, or if an exercise
+gains a fixture without wiring it up; and the "every authored exercise is
+solvable by its fixture" block in `tests/python.test.ts` **executes** all fifteen
+solutions in a real browser and requires each to pass its own tests.
+
+The config shape:
+
+```ts
+interface PythonTests {
+  cases: {
+    name: string; // shown in the results panel
+    answers?: string[]; // queued for input(), in order
+    expected: string[]; // exact stdout, one string per line
+  }[];
+}
+```
+
+One exercise can carry several cases — 2/5/exercise-2 has a second, a burn rate
+that divides exactly so the remainder is `0`, which the lesson describes in prose
+but does not print as a transcript. That fixture is marked `inLesson: false` and
+carries a `caseName` so a student can tell which case failed.
+
+_Declined:_ a `validateCode` hook like Karel's. Chapter 2 has exercises that
+constrain _how_ the answer is built — 2/2/exercise-2 asks for one line with
+commas and one with `+` — but stdout cannot see the difference. That is properly
+an `allowedFeatures` job (§13.7), not a test one.
+
+### 13.2 How strict the prompt is — decided
+
+This was flagged as the decision to make first, because it could force lesson
+edits. **It did not: the lessons had already answered it.** 2/3 Exercise 1 says,
+in as many words, "Match the prompts and the two output lines exactly", and every
+exercise prints its prompts in its sample run. So option 1 of the three
+considered — **compare full stdout, normalising trailing whitespace per line** —
+is what the lessons already promise, and no lesson prose changed.
+
+The three comparison rules, all invisible on screen and therefore all stated to
+the student under a failing run:
+
+1. **Spaces at the end of a line do not count.** `input()` writes its prompt with
+   no trailing newline (`tracer.py` `_input`), so `"Width: "` really does emit
+   that final space, and no lesson transcript can show it. Making it matter would
+   fail a correct program over a character nobody can see.
+2. **Blank lines do count.** The visible half of the same coin: the bare
+   `print()` the lessons teach after every `input()` is what puts the prompt on a
+   line of its own, and several exercises end on a deliberate blank line. The
+   final newline terminates the last line rather than starting a new one, so
+   exactly one is dropped — which is what lets a program that ends on `print()`
+   keep its trailing blank line.
+3. **Prompt wording counts**, word for word, per the lessons above. Wording like
+   `Enter width:` for `Width:` fails, which is the accepted cost; the failure
+   names the line and shows both versions, so it is a two-second fix rather than
+   a mystery.
+
+The panel's footnote states rules 1 and 2 whenever a run fails on output.
+
+### 13.3 Feeding the answers
+
+No new plumbing was needed. The harness shifts answers off a queue in
+`onInputRequest` and replies through `sendInput`. Two failure modes get real
+messages rather than a hang:
+
+- **The queue runs dry** — the program asked more questions than the case
+  supplies. Reported as "asked N times, and this run answers M", and the program
+  is stopped rather than left blocked.
+- **Answers are left over** — the program asked fewer questions than expected.
+  Checked _before_ the output diff, because "you only asked once" explains a
+  short transcript far better than a diff of it does.
+
+**One real bug surfaced here.** `PythonRunner.handle` used to invoke
+`onInputRequest` and _then_ set the status to `awaiting-input`. A listener that
+answers synchronously — which the harness does, from its queue — was turned away
+by `sendInput`'s status guard, and the program hung until the case timed out.
+The status is now set first. The interactive path is unaffected: a human answers
+long after both have happened.
+
+### 13.4 How a test run executes
+
+**`mode: 'run'`** — the untraced fast path. Tests care about output, not frames,
+and the tracer costs a great deal of time it has no reason to spend here. All
+fifteen exercises run in about five seconds per lesson.
+
+Cases run **sequentially**; the worker holds one program at a time. The three
+points left open were settled as:
+
+- **The console.** Test output is routed away from it entirely — the presence of
+  a harness is what diverts the runner's callbacks — and the console is cleared
+  when a test run starts. A test run is not the student's own run, and its output
+  belongs in the results panel, not somewhere it can be mistaken for one.
+- **Runaway programs.** A per-case timeout of `TEST_CASE_TIMEOUT_MS` (5 s)
+  reuses the existing stop path and reports "still running after 5 seconds, so it
+  was stopped. Look for a loop that never ends."
+- **A worker reboot** takes the runner back through `loading`, so the harness
+  waits for it to leave that state before starting the next case.
+
+### 13.5 The button and the results
+
+**Run tests** appears only when `config.tests` exists, so the playground and the
+worked examples in lessons do not grow a dead button. It sits in the second row,
+before Reset code; the first row of execution controls (§12.2) is unchanged.
+`controls.ts` gained one function, so the table stays assertable without a
+browser:
+
+```ts
+export function canRunTests(status: RunnerStatus, hasTests: boolean): boolean {
+  return hasTests && isIdle(status);
+}
+```
+
+Idle only. Running tests from a pause would abandon the student's debugging
+session, and running them mid-run is meaningless.
+
+Results appear under the console: one row per case, pass or fail, with the
+answers that case typed. A failure shows the **first differing line** — expected
+above actual — rather than dumping both transcripts, because Chapter 2's longest
+expected output is thirteen lines and a student asked to spot the difference by
+eye will not. An empty line is named (`(a blank line)`) rather than printed,
+since there is nothing to see.
+
+### 13.6 Marking the exercise complete
+
+Once all cases pass, `progressStore.markExerciseCompleted(lessonKey, exerciseId,
+exerciseCount)`, splitting `persistenceKey` at its last `/` and reading
+`exerciseCount` from the curriculum entry — the same wiring `KarelEnvironment`
+uses. `Reset code` calls `clearExerciseCompleted`, again as Karel does.
+
+`PythonEnvironment` also grew Karel's persistent **"Exercise completed"** banner,
+driven by a `progressStore` subscription, so the tick is there on the next visit
+without re-running anything. `exerciseCount` was already declared for every
+Chapter 2 lesson and already pinned to the number of authored exercises by
+`lesson-exercises.test.ts`; it started meaning something the day this landed.
+
+### 13.7 What this is not
+
+**`allowedFeatures` is still a separate job.** Chapter 2 withholds `if`, `while`
+and comparison operators on purpose, and says so in the lesson text — but nothing
+enforces it, and a student who has seen Python elsewhere can solve Chapter 2
+exercises with tools Chapter 3 has not handed out yet. That is an AST allowlist
+generalising Karel's `validate_karel_code`, and it remains lower priority than
+tests were: it constrains, where tests inform.
+
+### 13.8 Where the code lives
+
+| Concern                               | File                                          |
+| ------------------------------------- | --------------------------------------------- |
+| Types, output comparison, the harness | `src/lib/python/exercise-tests.ts`            |
+| Harness behaviour under a fake worker | `src/lib/python/exercise-tests.test.ts`       |
+| `tests?: PythonTests` on the config   | `src/lib/python/config.ts`                    |
+| `canRunTests`                         | `src/lib/python/controls.ts`                  |
+| Fixtures, and `testsFor(key)`         | `src/lib/curriculum/exercise-fixtures.ts`     |
+| Run tests button                      | `src/lib/components/PythonControls.svelte`    |
+| Results panel                         | `src/lib/components/PythonTestResults.svelte` |
+| Wiring, routing, completion           | `src/lib/components/PythonEnvironment.svelte` |
+| Real-interpreter coverage             | `tests/python.test.ts`                        |
+
+The harness talks to `PythonRunner` through a four-method `TestHost`
+(`waitUntilReady` / `run` / `sendInput` / `stop`) and receives events through
+`handleOutput` / `handleInputRequest` / `handleError` / `handleFinish`. That is
+what lets every branch a real interpreter would take minutes to reach — a dry
+answer queue, leftover answers, a program that raises, one that never ends — be
+asserted under Vitest against a scripted fake.

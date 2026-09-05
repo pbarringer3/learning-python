@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { exerciseFixtures } from '../src/lib/curriculum/exercise-fixtures';
 
 /**
  * End-to-end tests for the Python environment and call stack visualizer.
@@ -724,5 +725,183 @@ test.describe('stopping', () => {
     // The runtime is still warm — no restart message, and Play works again.
     await expect(button(page, 'Play')).toBeEnabled({ timeout: 20_000 });
     await expect(page.locator('.output-log')).not.toContainText('Restarting Python');
+  });
+});
+
+test.describe('exercise tests', () => {
+  /** Open a lesson with each named exercise's editor already seeded. */
+  async function openLesson(page: Page, path: string, seed: Record<string, string>): Promise<void> {
+    await page.addInitScript((entries: Record<string, string>) => {
+      try {
+        for (const [key, code] of Object.entries(entries)) {
+          localStorage.setItem(`learning-python-code:${key}`, code);
+        }
+      } catch {
+        // about:blank and similar documents have no usable storage.
+      }
+    }, seed);
+    await page.goto(path);
+    await expect(page.locator('.notice-title', { hasText: 'Loading Python' })).toHaveCount(0, {
+      timeout: 150_000
+    });
+  }
+
+  /**
+   * The nth *exercise* on a lesson page, counting from zero.
+   *
+   * A lesson also embeds worked examples, and they come first — so rather than
+   * counting every environment, this picks out the ones that have a Run tests
+   * button, which is exactly the exercises, in document order.
+   */
+  const exerciseEnv = (page: Page, index: number): Locator =>
+    page
+      .locator('.python-environment')
+      .filter({ has: page.locator('.python-controls button', { hasText: 'Run tests' }) })
+      .nth(index);
+
+  const runTests = (env: Locator): Locator =>
+    env.locator('.python-controls button', { hasText: 'Run tests' });
+
+  const SOLUTION_2_1_1 = `print("Crew check")
+for i in range(5):
+  print("Crew member", i)
+print("All aboard")
+`;
+
+  const SOLUTION_2_5_2 = `fuel = int(input("Fuel on board (litres): "))
+print()
+rate = int(input("Burn rate (litres per second): "))
+print()
+seconds = fuel // rate
+unburnt = fuel % rate
+minutes = seconds // 60
+rest = seconds % 60
+print("Burn time:", seconds, "seconds")
+print("That is", minutes, "m", rest, "s")
+print("Unburnt fuel:", unburnt, "litres")
+`;
+
+  test('a correct solution passes and marks the exercise complete', async ({ page }) => {
+    await openLesson(page, '/2/1', { '2/1/exercise-1': SOLUTION_2_1_1 });
+    const env = exerciseEnv(page, 0);
+
+    await expect(env.locator('.completed-banner')).toHaveCount(0);
+    await runTests(env).click();
+
+    await expect(env.locator('.python-test-results .header.passed')).toBeVisible({
+      timeout: 60_000
+    });
+    // The tick is the point of the whole feature: `markExerciseCompleted`.
+    await expect(env.locator('.completed-banner')).toBeVisible();
+  });
+
+  test('the tick survives a reload, because it is in the progress store', async ({ page }) => {
+    await openLesson(page, '/2/1', { '2/1/exercise-1': SOLUTION_2_1_1 });
+    await runTests(exerciseEnv(page, 0)).click();
+    await expect(exerciseEnv(page, 0).locator('.completed-banner')).toBeVisible({
+      timeout: 60_000
+    });
+
+    await page.reload();
+    await expect(page.locator('.notice-title', { hasText: 'Loading Python' })).toHaveCount(0, {
+      timeout: 150_000
+    });
+    await expect(exerciseEnv(page, 0).locator('.completed-banner')).toBeVisible();
+  });
+
+  test('a wrong answer fails, naming the first line that differs', async ({ page }) => {
+    // "All abroad" for "All aboard": correct everywhere but the last line.
+    await openLesson(page, '/2/1', {
+      '2/1/exercise-1': SOLUTION_2_1_1.replace('All aboard', 'All abroad')
+    });
+    const env = exerciseEnv(page, 0);
+    await runTests(env).click();
+
+    const results = env.locator('.python-test-results');
+    await expect(results.locator('.header.failed')).toBeVisible({ timeout: 60_000 });
+    await expect(results.locator('.message')).toContainText('Line 7');
+    await expect(results.locator('.diff .expected')).toHaveText('All aboard');
+    await expect(results.locator('.diff .actual')).toHaveText('All abroad');
+    await expect(env.locator('.completed-banner')).toHaveCount(0);
+  });
+
+  test('answers input() from the queue, and runs every case', async ({ page }) => {
+    // 2/5/exercise-2 is the only exercise with a second case the lesson does
+    // not print, so it also proves both cases run rather than just the first.
+    await openLesson(page, '/2/5', { '2/5/exercise-2': SOLUTION_2_5_2 });
+    const env = exerciseEnv(page, 1);
+    await runTests(env).click();
+
+    const results = env.locator('.python-test-results');
+    await expect(results.locator('.header.passed')).toBeVisible({ timeout: 90_000 });
+    await expect(results.locator('.case')).toHaveCount(2);
+    // Answering from the queue means the student is never asked.
+    await expect(env.locator('.input-row')).toHaveCount(0);
+  });
+
+  test('leaves the console alone, so test output is not mistaken for a run', async ({ page }) => {
+    await openLesson(page, '/2/1', { '2/1/exercise-1': SOLUTION_2_1_1 });
+    const env = exerciseEnv(page, 0);
+    await runTests(env).click();
+    await expect(env.locator('.python-test-results .header.passed')).toBeVisible({
+      timeout: 60_000
+    });
+
+    await expect(env.locator('.output-log')).not.toContainText('All aboard');
+  });
+
+  test('Reset code takes the tick away again', async ({ page }) => {
+    await openLesson(page, '/2/1', { '2/1/exercise-1': SOLUTION_2_1_1 });
+    const env = exerciseEnv(page, 0);
+    await runTests(env).click();
+    await expect(env.locator('.completed-banner')).toBeVisible({ timeout: 60_000 });
+
+    await env.locator('.python-controls button', { hasText: 'Reset code' }).click();
+    await expect(env.locator('.completed-banner')).toHaveCount(0);
+    await expect(env.locator('.python-test-results')).toHaveCount(0);
+  });
+
+  test('the playground has no Run tests button, having no tests', async ({ page }) => {
+    await openPlayground(page, 'print("hello")');
+    await expect(page.locator('.python-controls button', { hasText: 'Run tests' })).toHaveCount(0);
+  });
+
+  /**
+   * Every fixture, executed.
+   *
+   * `exercise-fixtures.ts` claims a verified solution and the exact stdout it
+   * produces for each authored exercise, and `exercise-fixtures.test.ts` can
+   * only check that claim against the lesson prose — running Python needs a
+   * browser. This is where the claim is actually tested, and it cuts both ways:
+   * a fixture whose expected output is wrong makes the exercise unpassable, and
+   * a harness that compares wrongly shows up here first.
+   */
+  test.describe('every authored exercise is solvable by its fixture', () => {
+    const byLesson = new Map<string, { key: string; solution: string }[]>();
+    for (const fixture of exerciseFixtures) {
+      const lesson = fixture.key.split('/').slice(0, 2).join('/');
+      const exercises = byLesson.get(lesson) ?? [];
+      // One exercise can have several fixtures; they share a solution.
+      if (!exercises.some((entry) => entry.key === fixture.key)) {
+        exercises.push({ key: fixture.key, solution: fixture.solution });
+      }
+      byLesson.set(lesson, exercises);
+    }
+
+    for (const [lesson, exercises] of byLesson) {
+      test(`lesson ${lesson}`, async ({ page }) => {
+        const seed = Object.fromEntries(exercises.map((entry) => [entry.key, entry.solution]));
+        await openLesson(page, `/${lesson}`, seed);
+
+        for (const [index, exercise] of exercises.entries()) {
+          const env = exerciseEnv(page, index);
+          await runTests(env).click();
+          await expect(
+            env.locator('.python-test-results .header.passed'),
+            `${exercise.key}: its verified solution does not pass its own tests`
+          ).toBeVisible({ timeout: 90_000 });
+        }
+      });
+    }
   });
 });

@@ -4,7 +4,7 @@
    *
    * ```
    * ▶ Play / ■ Stop     ⇥ Step     ⏭ To breakpoint
-   * 👁                              ↺ Reset code
+   * 👁     ✓ Run tests               ↺ Reset code
    * ```
    *
    * Reset code sits last and apart because it is the only button that destroys
@@ -12,7 +12,13 @@
    * those rules live in `controls.ts` where every state can be asserted without
    * a browser. See `PythonInterpreterDesign.md` §12.2.
    */
-  import { canResetCode, canRunToBreakpoint, canStep, primaryControl } from '$lib/python/controls';
+  import {
+    canResetCode,
+    canRunTests,
+    canRunToBreakpoint,
+    canStep,
+    primaryControl
+  } from '$lib/python/controls';
   import type { RunnerStatus } from '$lib/python/runner';
 
   interface Props {
@@ -21,10 +27,15 @@
     hasBreakpoints?: boolean;
     /** Drives the eye icon and its label. */
     visualizerVisible?: boolean;
+    /** Whether this exercise has tests. No tests, no button (§13.5). */
+    hasTests?: boolean;
+    /** True while the tests are running, so the button can say so. */
+    runningTests?: boolean;
     onPlay?: () => void;
     onStop?: () => void;
     onStep?: () => void;
     onToBreakpoint?: () => void;
+    onRunTests?: () => void;
     onToggleVisualizer?: () => void;
     onResetCode?: () => void;
     class?: string;
@@ -34,10 +45,13 @@
     status,
     hasBreakpoints = false,
     visualizerVisible = true,
+    hasTests = false,
+    runningTests = false,
     onPlay,
     onStop,
     onStep,
     onToBreakpoint,
+    onRunTests,
     onToggleVisualizer,
     onResetCode,
     class: className = ''
@@ -47,6 +61,7 @@
   let stepEnabled = $derived(canStep(status));
   let breakpointEnabled = $derived(canRunToBreakpoint(status, hasBreakpoints));
   let resetEnabled = $derived(canResetCode(status));
+  let testsEnabled = $derived(canRunTests(status, hasTests) && !runningTests);
 
   let visualizerLabel = $derived(visualizerVisible ? 'Hide call stack' : 'Show call stack');
 </script>
@@ -130,6 +145,17 @@
       {/if}
     </button>
 
+    {#if hasTests}
+      <button
+        class="control-btn run-tests"
+        onclick={onRunTests}
+        disabled={!testsEnabled}
+        title="Run your program against this exercise's expected output"
+      >
+        {runningTests ? 'Testing…' : '✓ Run tests'}
+      </button>
+    {/if}
+
     {#if onResetCode}
       <button
         class="control-btn reset-code"
@@ -208,6 +234,10 @@
 
   .control-btn.stop {
     color: #ef4444;
+  }
+
+  .control-btn.run-tests {
+    color: #16a34a;
   }
 
   .control-btn.reset-code {

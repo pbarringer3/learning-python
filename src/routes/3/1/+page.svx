@@ -1,0 +1,281 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
+
+  // Visualizer on: the whole lesson is about what the right-hand panel shows.
+  const labelConfig: PythonConfig = {
+    initialCode: `# Step through this one line at a time and watch the
+# right-hand panel. Do not just press Play.
+
+crew = 3
+ship = "Odyssey"
+crew = 7
+`,
+    editorLines: 8,
+    showVisualizer: true
+  };
+
+  const rightSideConfig: PythonConfig = {
+    initialCode: `# The line that looks like nonsense in mathematics.
+# Step it, and watch the value change under the name.
+
+score = 10
+score = score + 5
+score = score + 5
+print("Final score:", score)
+`,
+    editorLines: 9,
+    showVisualizer: true
+  };
+
+  const twoNamesConfig: PythonConfig = {
+    initialCode: `# Does changing one name change the other? Step and see.
+
+beepers = 4
+spare = beepers
+beepers = 99
+
+print("beepers is", beepers)
+print("spare is", spare)
+`,
+    editorLines: 11,
+    showVisualizer: true
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '3/1/exercise-1',
+    tests: testsFor('3/1/exercise-1'),
+    initialCode: `# The Beeper Bag
+# One variable, changed four times, reported at every step.
+# Remember: input() hands back text, so int() it first.
+
+`,
+    editorLines: 14,
+    showVisualizer: true
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '3/1/exercise-2',
+    tests: testsFor('3/1/exercise-2'),
+    initialCode: `# The Swap
+# Ask for two crates, report them, exchange them, report again.
+# You will need a third name. Work out why before you write it.
+
+`,
+    editorLines: 16,
+    showVisualizer: true
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '3/1/exercise-3',
+    tests: testsFor('3/1/exercise-3'),
+    initialCode: `# The Cargo Hold
+# Four crates go in. Track the space left, and report at the end
+# how much of the original capacity got used.
+
+`,
+    editorLines: 16,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={3} lessonNumber={1}>
+
+## The Thing You Have Been Using on Trust
+
+Chapter 2 handed you one sentence and asked you to take it on faith:
+
+> `=` puts the value on the right into the name on the left.
+
+That sentence is true, and you got a whole chapter of work out of it. It is also about a third of the story. This lesson tells the rest — what a variable actually is, what you are allowed to call one, and what happens when two names get involved with the same value.
+
+## Karel's Beeper Bag
+
+Karel carried a bag of beepers. `put_beeper()` took one out, `pick_beeper()` put one in, and the number in the bag went up and down all through the program.
+
+That bag was a variable in everything but name. It was **one place**, it **held a value**, and the value **changed over time** while the program ran.
+
+What Karel could not do was look inside it. There was no way to ask "how many beepers am I carrying?", no way to print it, no way to have a second bag. You had a variable you could nudge and never inspect.
+
+Python gives you as many bags as you want, you get to name them, and you can see inside every one of them at any moment:
+
+```python
+beepers = 4
+```
+
+That is a bag called `beepers` with four things in it.
+
+## A Name Is a Label, Not a Box
+
+Here is the mental model worth carrying for the rest of the curriculum.
+
+A value — the number `3`, the text `"Odyssey"` — exists somewhere in the computer's memory. A variable is a **label stuck onto that value**. `=` is the act of sticking the label on.
+
+The reason this matters more than the "box" picture you may have met elsewhere: a label can be peeled off and moved. When you assign to a name a second time, nothing about the old value changes — your label simply moves to a different value.
+
+Step through this and watch the right-hand panel:
+
+<PythonEnvironment config={labelConfig} />
+
+Three things to notice as you step:
+
+- A name does not exist before the line that creates it. `ship` is simply absent, and then it is there.
+- Both names live in the same frame, side by side. That frame is your program's memory.
+- On the last line, `crew` does not become "3 and 7". The label moves. The `3` is gone from your program entirely.
+
+## The Right Side Always Runs First
+
+Read every assignment right to left. Python works out the whole right-hand side first, and only then puts the name on the answer.
+
+Once you believe that, a line that looks like a mathematical impossibility becomes obvious:
+
+```python
+score = score + 5
+```
+
+As mathematics that is nonsense — no number equals itself plus five. As Python it is perfectly ordinary: work out `score + 5` using whatever `score` holds right now, then move the label `score` onto the result.
+
+<PythonEnvironment config={rightSideConfig} />
+
+**`=` is not equality.** It is an instruction: *do the thing on the right, then name the result this*. The operator that asks whether two things are equal is `==`, and it arrives in Lesson 3.4.
+
+This pattern — a name that keeps being reassigned to a version of itself — is called an **accumulator**, and you already used one in Chapter 2 to track altitude. Now it has a name and a reason.
+
+> **A name must exist before you can use it.** Writing `score = score + 5` when there is no `score` yet gives you `NameError: name 'score' is not defined`. Every accumulator needs a starting line — usually `total = 0` — before the loop that builds it up.
+
+## What You Are Allowed to Call Things
+
+There are rules Python enforces, and rules only other humans enforce. Both matter.
+
+**Python's rules.** A name may use letters, digits and underscores, and nothing else. It may not begin with a digit. It may not be one of Python's own keywords such as `for`, `while`, `if` or `def`. Names are case-sensitive, so `crew` and `Crew` are two different variables — which is a genuinely nasty source of bugs, because the program runs perfectly and quietly uses the wrong one.
+
+```python
+crew_count = 5     # fine
+crewCount = 5      # legal, but not how Python is written
+crew count = 5     # SyntaxError - no spaces allowed
+2nd_crew = 5       # SyntaxError - cannot start with a digit
+for = 5            # SyntaxError - "for" is a keyword
+```
+
+**The rules humans enforce.** Python will run any legal name. Other people — including you, in a fortnight — have to read it.
+
+- **`snake_case`**: lower case, words joined by underscores. `crew_count`, `fuel_remaining`, `total_distance`. This is not a preference; it is what Python code looks like everywhere.
+- **Say what it holds.** `n` and `x` and `temp` tell the reader nothing. `crew_count` tells them everything. The exception is a loop counter, where `i` is so universal that spelling it out would be odd.
+- **Nouns for things.** A variable holds a value, so it should be named like a thing, not an action: `total`, not `add_up`.
+
+> **Do not name a variable `print`.** It is legal, and it is a trap: `print = 5` moves the label `print` off the printing function and onto the number `5`, and every `print(...)` after that fails with `TypeError: 'int' object is not callable`. The same applies to `input`, `int`, `str` and `range`. Nothing warns you.
+
+## One Value, Two Names
+
+What happens when you assign one variable to another?
+
+```python
+spare = beepers
+```
+
+The right side runs first, as always: `beepers` is looked at, and whatever value comes back gets the label `spare` stuck on it too. Now there are two labels on one value.
+
+The question everybody asks next is whether the two names are now tied together. Change one, and does the other follow? Run this and find out:
+
+<PythonEnvironment config={twoNamesConfig} />
+
+`beepers` is `99` and `spare` is still `4`. Assigning to `beepers` moved that one label; `spare` never moved, so it still names the value it was stuck on.
+
+That is the answer for numbers and text, which is everything you have met so far, and it is the answer you should carry into the rest of this chapter. It stops being the whole answer in Chapter 6, when a value turns up that can be **changed from underneath a label** rather than replaced. The visualizer's arrows exist for exactly that day. For now: reassigning a name affects that name and nothing else.
+
+The practical use of this arrives in Exercise 2. Swapping two variables is impossible without a third one, and finding that out for yourself is worth more than being told.
+
+---
+
+## Exercise 1: The Beeper Bag
+
+Karel's bag, out in the open where you can see it.
+
+Ask how many beepers are in the bag. Then put one down, put another down, pick up three — reporting the contents after every single move.
+
+A sample run, where the person typed **5**:
+
+```
+Beepers in the bag:
+Karel starts with 5
+Put one down. The bag holds 4
+Put one down. The bag holds 3
+Picked up three. The bag holds 6
+Karel ends the day with 6 beepers
+```
+
+One variable does all the work here — the same name, reassigned four times. `input()` hands back text, so wrap it in `int()` before doing arithmetic on it, exactly as in Lesson 2.4.
+
+Keep the panel open and watch the number change under the name as you step.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Swap
+
+Two crates are in the wrong bays. Exchange them.
+
+Ask what is in the left crate, then the right. Report both, swap them, and report both again.
+
+A sample run, where the person typed **bolts** and then **rations**:
+
+```
+Left crate:
+Right crate:
+Before: left holds bolts and right holds rations
+After: left holds rations and right holds bolts
+```
+
+Try the obvious thing first — `left = right` followed by `right = left` — and read the output carefully before you fix it. Both crates end up holding rations, and the reason is in this lesson: the first line moves the `left` label onto the rations, and by the time the second line looks at `left`, the bolts have no label on them at all. Nothing remembers where they went.
+
+You need somewhere to put the bolts before you overwrite them. Call it `spare`.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Cargo Hold
+
+Load four identical crates into a hold and keep track of the room left.
+
+Ask for the hold's capacity in kilograms and the weight of one crate. Then load four crates, one per trip round a loop, reporting the space left after each. Finish with a summary of how much of the original capacity got used.
+
+A sample run, where the person typed **500** and then **90**:
+
+```
+Hold capacity in kilograms:
+Crate weight in kilograms:
+Loaded crate 1, space left: 410 kg
+Loaded crate 2, space left: 320 kg
+Loaded crate 3, space left: 230 kg
+Loaded crate 4, space left: 140 kg
+Four crates aboard.
+Used 360 of 500 kg
+```
+
+The last line is the point of the exercise. It needs the capacity you started with — so the variable you subtract from during the loop cannot be `capacity` itself, or the original figure is gone by the time you want to print it. Start the loop from a second name, and let `capacity` sit untouched.
+
+`str()` gets the crate number pressed against the comma, just as in Chapter 2.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- A variable is a **label stuck on a value**, not a box that contains one
+- Karel's beeper bag was a variable you could change but never look at
+- `=` is an instruction, not a statement of equality — the right side runs first, then the name goes on the answer
+- `score = score + 5` is ordinary, and the pattern is called an **accumulator**
+- A name has to exist before you can use it, or you get a `NameError`
+- Legal names use letters, digits and underscores, never start with a digit, and are case-sensitive
+- Real Python uses `snake_case` and names that say what they hold
+- Naming a variable `print` breaks printing, silently and permanently
+- `spare = beepers` puts a second label on one value; reassigning one label does not move the other
+
+Next lesson: the values themselves. Whole numbers and decimals are genuinely different kinds of thing, they behave differently when you divide them, and Python will tell you which is which if you ask it with `type()`.
+
+</LessonShell>

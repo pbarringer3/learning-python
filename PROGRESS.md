@@ -6,11 +6,12 @@ This document tracks the overall implementation status of the Learning Python cu
 
 ## Project Status Overview
 
-| Chapter | Title                                                                                                                                                    | Status                                                       |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| 1       | Karel the Robot                                                                                                                                          | ✅ Complete — built + reviewed (see `CHAPTER_1_PROGRESS.md`) |
-| 2       | Hello, Python!                                                                                                                                           | ✅ Complete — 5 lessons, 15 exercises, all auto-graded       |
-| 3+      | Variables & Types, Functions, Strings, Lists, Dictionaries, Graphics, Classes, Building a Game, Files & Exceptions, Recursion, Searching & Sorting, etc. | 📋 Planned — see `CURRICULUM_DESIGN.md`                      |
+| Chapter | Title                                                                                                                                 | Status                                                       |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 1       | Karel the Robot                                                                                                                       | ✅ Complete — built + reviewed (see `CHAPTER_1_PROGRESS.md`) |
+| 2       | Hello, Python!                                                                                                                        | ✅ Complete — 5 lessons, 15 exercises, all auto-graded       |
+| 3       | Variables & Types                                                                                                                     | ✅ Complete — 8 lessons, 24 exercises, all auto-graded       |
+| 4+      | Functions, Strings, Lists, Dictionaries, Graphics, Classes, Building a Game, Files & Exceptions, Recursion, Searching & Sorting, etc. | 📋 Planned — see `CURRICULUM_DESIGN.md`                      |
 
 **Cross-cutting infrastructure status:**
 
@@ -30,15 +31,56 @@ This document tracks the overall implementation status of the Learning Python cu
 
 ## What's Next
 
-Chapter 2 is done: five lessons and fifteen exercises live at `/2/1` through `/2/5`, every one of them auto-graded. Pressing **Run tests** runs the student's program once per case, answering `input()` from a queue, and compares captured stdout against the transcript the lesson prints; passing every case marks the exercise ✅ and, when the last one falls, the lesson. The next chapter is the next job.
+Chapters 2 and 3 are both done. Chapter 3 runs to eight lessons and twenty-four exercises at `/3/1` through `/3/8`, every one auto-graded, and it closes the control-flow debt Chapter 2 kept promising: `if`, `elif`, `else`, `while` and — new to the curriculum — `break`. The next chapter is the next job.
 
-1. **Chapter 3: Variables & Types** — seven lessons per `CURRICULUM_DESIGN.md`. This is the chapter Chapter 2 keeps promising: it delivers comparison operators and booleans, which is what brings `if`, `else` and `while` back. Chapter 2's closing sections make specific promises about what Chapter 3 covers; keep them. Author each exercise's fixture in `exercise-fixtures.ts` alongside its lesson prose and wire it with `tests: testsFor('<key>')` — `exercise-fixtures.test.ts` fails if an exercise is authored without one, or wired without one.
+1. **Chapter 4: Functions & Parameters** — see `CURRICULUM_DESIGN.md`. Chapter 3's closing section promises students that Chapter 4 gives functions parameters and return values, and that the built-ins they have been calling all along are ordinary functions they could write themselves. Keep both promises. Author each exercise's fixture in `exercise-fixtures.ts` alongside its lesson prose and wire it with `tests: testsFor('<key>')` — `exercise-fixtures.test.ts` fails if an exercise is authored without one, or wired without one. Author each exercise's fixture in `exercise-fixtures.ts` alongside its lesson prose and wire it with `tests: testsFor('<key>')` — `exercise-fixtures.test.ts` fails if an exercise is authored without one, or wired without one.
 2. **Revisit `allowedFeatures`** — the last deferred piece. Chapter 2 holds back `if`/`while`/comparisons on purpose and says so in the lesson text; an AST allowlist would enforce what the prose currently only asks for. Chapter 3 hands those tools back, so the case for it weakens as the curriculum advances — decide before Chapter 3 lands whether it is worth building at all.
 3. **Deferred follow-on from §12.3:** compile the source in the idle worker on every edit (debounced) to get the exact executable-line set, so breakpoints that can never fire are drawn hollow — and, the real prize, **inline syntax errors** as a side effect. Worth doing as its own feature rather than as part of the refactor.
 
 Follow the conventions from Chapter 1 throughout: 2-space indentation in student-facing code, `persistenceKey`-based persistence (`"<chapter>/<lesson>/<exercise>"`), TDD per `AGENTS.md`.
 
 `GraphicsEnvironment` remains follow-on work for Chapters 8–10.
+
+---
+
+## Chapter 3: Variables & Types — ✅ Complete
+
+Lessons live under `src/routes/3/`, with the `variablesAndTypes` `Chapter` entry in `src/lib/curriculum/index.ts`.
+
+| Lesson | Title                | Exercises | Teaches                                                                                                                                                                           | Status      |
+| ------ | -------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 3.1    | Variables            | 3         | A name is a label on a value, not a box; the right side runs first; `NameError`; naming rules and `snake_case`; two names, one value                                              | ✅ Authored |
+| 3.2    | Integers & Floats    | 3         | `int` vs `float`; `type()`; why `/` always gives a float; float imprecision and counting in whole numbers; unlimited ints                                                         | ✅ Authored |
+| 3.3    | Strings              | 3         | `str` as a sequence; `len()`; index positions from nought; negative indexes; `IndexError`; immutability; `+` and `*` explained                                                    | ✅ Authored |
+| 3.4    | Booleans & Decisions | 3         | `bool` as a type; the six comparison operators; `=` vs `==`; string/float/text-vs-number comparison traps; `not` earning its keep; conditions stored in names; `if`/`elif`/`else` | ✅ Authored |
+| 3.5    | Loops That Ask       | 3         | `while` with real conditions; zero-trip loops; the loop-and-a-half; `while True:` + `break`; the 1.4 infinite-loop warning revisited; `continue` in passing; validation loops     | ✅ Authored |
+| 3.6    | Type Conversion      | 3         | Conversion builds a new value; `int()` chopping vs `round()`; `ValueError` and what an `if` can and cannot guard; `str()` never fails; truthiness and `if name:`                  | ✅ Authored |
+| 3.7    | Constants & Style    | 3         | Magic numbers; `UPPER_CASE` constants Python does not enforce; PEP 8 basics; comments that say why                                                                                | ✅ Authored |
+| 3.8    | Putting It Together  | 3         | Capstone — crew register, ration calculator, voyage log; sentinel-before-conversion; tracking best-so-far; guarding the empty case                                                | ✅ Authored |
+
+**Control flow comes back in Chapter 3, across two lessons — 3.4 and 3.5 — and the chapter runs to eight.**
+
+Chapter 2 promises, in 2.1, 2.4 and twice in 2.5, that Chapter 3 brings `if`, `else` and `while` back. The original seven-lesson plan had no lesson for them: it gave the comparison and logical operators a home (3.4 Booleans) but never spent them, and Chapter 4 is Functions. Inserting a chapter was rejected as too expensive — Chapter 2's prose names Chapters 4, 5 and 9 by number — so Chapter 3 grew instead.
+
+**Why it is two lessons and not one.** The control flow itself is a **reintroduction, not new teaching**: 1.4 taught `while` and the sensors, 1.6 taught `if`, `else`, `elif` and `and`/`or`/`not`, including combining conditions to recognise situations. Students have written all of that. What is genuinely new is narrow — that `True` and `False` are **values** of a type you can hold and print (Karel's sensors returned them; you never kept one), and the six comparison operators that make booleans out of ordinary data. On its own that folds into one lesson. Adding `break` is what tips it over, so the two halves split cleanly:
+
+- **3.4 Booleans & Decisions** — `True`/`False` as values, the six comparison operators, `==` vs `=`, `and`/`or`/`not`, `if`/`elif`/`else`.
+- **3.5 Loops That Ask** — `while` with real conditions, `while True:` with `break`, the loop-and-a-half, input validation.
+
+**`break` lives in 3.5, and this is where it enters the curriculum at all** — Chapter 1 never mentions it and nothing anywhere promises it, so there is no debt to pay, only a placement. It goes here because its canonical motivation is the loop-and-a-half (a sentinel loop that must ask before it can test, so without `break` the `input()` line has to be written twice), and that construction needs exactly `while`, `True`, `if` and `==` — all of them Chapter 3 material and none of them available earlier. It also pays off 3.4's headline idea: `while True:` only stops reading as a magic incantation once you know `True` is an ordinary value.
+
+> **3.5 must revisit Lesson 1.4's infinite-loop warning explicitly.** 1.4 teaches infinite loops as a bug and closes with "does the loop body make progress toward the condition becoming false?" — a test `while True:` fails by design. Say so out loud: the loop is correct precisely because something inside it can escape. Leaving that unsaid contradicts Chapter 1 without acknowledging it.
+
+**`continue` gets one short paragraph in 3.5 and no exercise.** Students meet it in other people's code and should know the name, but every use of it can be written as an `if`, so it does not earn practice time the way `break` does.
+
+Numbering after the split: 3.6 Type Conversion, 3.7 Constants & Style, 3.8 Putting It Together. Cross-references already written into 3.1 and 3.2 point at 3.3 (strings) and 3.4 (`==`), both of which are unmoved by the split.
+
+**Decisions already made:**
+
+- **The label model, not the box model.** 3.1 teaches a variable as a label stuck on a value, because that is the model that still works in Chapter 6 when a value can be mutated from underneath a name. The lesson says so explicitly and points at the visualizer's arrows as the thing that will make it visible.
+- **Chapter 2's `int()`/`str()` habits carry over unchanged.** 3.1's exercises still wrap `input()` in `int()` and still put a blank `print()` after every prompt, so the transcripts stay consistent with Chapter 2's.
+- **3.2 spends its budget on types, not arithmetic.** Chapter 2.4 already taught `+ - * / // % **`, precedence, `int()`, `float()`, `str()` and `round()`. 3.2 therefore re-covers none of it as arithmetic; it re-covers `/` and `//` as a question about **which type comes back**, and pays off the `.0` that 2.4 explicitly deferred to this chapter.
+- **Float imprecision is taught with the real transcript, not a summary.** 3.2's Exercise 2 makes students copy `0.30000000000000004` and `0.7999999999999999` out of a ten-step running total, because the non-monotonic pattern (wrong at step 3, right at step 4, wrong at step 8) is the thing that makes "each value is just the nearest float" believable.
 
 ---
 

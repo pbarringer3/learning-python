@@ -213,10 +213,152 @@ const helloPython: Chapter = {
 };
 
 /**
+ * Chapter 3: Variables & Types
+ *
+ * In flight. Lessons are added here as they are authored — the curriculum data
+ * and the `.svx` files have to stay in step, because `lesson-exercises.test.ts`
+ * requires a lesson file for every lesson declared. See `PROGRESS.md` for the
+ * planned shape of the rest of the chapter.
+ */
+const variablesAndTypes: Chapter = {
+  id: 'variables-and-types',
+  title: 'Variables & Types',
+  number: 3,
+  tagline: 'Name your values, and know what they are',
+  description:
+    'Chapter 2 let you use variables on trust. This chapter tells you what they really are, what kinds of value Python keeps in them, and how to move between those kinds. It ends by handing back the two tools Karel taught you and Python has been withholding: `if` and `while`, this time able to ask a question about anything at all.',
+  accentColor: 'amber',
+  lessons: [
+    {
+      id: 'variables',
+      title: 'Variables',
+      description:
+        'What a name really is, what you are allowed to call one, and what happens when two names land on the same value.',
+      number: 1,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'integers-and-floats',
+      title: 'Integers & Floats',
+      description:
+        'Why 10 / 2 is 5.0, what type() tells you, and why 0.1 + 0.2 is not 0.3 in any language.',
+      number: 2,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'strings',
+      title: 'Strings',
+      description:
+        'Text is a type with parts: len(), index positions counted from nought, and why a string can never be edited in place.',
+      number: 3,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'booleans-and-decisions',
+      title: 'Booleans & Decisions',
+      description:
+        'True and False are values you can hold. Build them with the comparison operators, and if/elif/else comes home.',
+      number: 4,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'loops-that-ask',
+      title: 'Loops That Ask',
+      description:
+        'while with real conditions, the loop-and-a-half, and break — the deliberate infinite loop and the way out of it.',
+      number: 5,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'type-conversion',
+      title: 'Type Conversion',
+      description:
+        'int(), float(), str() and bool() — what each one builds, which ones fail, and what counts as True.',
+      number: 6,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'constants-and-style',
+      title: 'Constants & Style',
+      description:
+        'No new syntax — named constants, PEP 8, and the comment habits that make a program worth coming back to.',
+      number: 7,
+      hasExercises: true,
+      exerciseCount: 3
+    },
+    {
+      id: 'chapter-3-capstone',
+      title: 'Putting It Together',
+      description:
+        'Three programs that need the whole chapter: a crew register, a ration calculator and a voyage log.',
+      number: 8,
+      hasExercises: true,
+      exerciseCount: 3
+    }
+  ],
+  topics: [
+    {
+      name: 'Variables',
+      description: 'A label stuck on a value, not a box',
+      lessonId: 'variables',
+      icon: '🏷️'
+    },
+    {
+      name: 'Number Types',
+      description: 'Counting with int, measuring with float',
+      lessonId: 'integers-and-floats',
+      icon: '🔢'
+    },
+    {
+      name: 'Strings',
+      description: 'Text as a sequence you can measure and index',
+      lessonId: 'strings',
+      icon: '🔤'
+    },
+    {
+      name: 'Booleans',
+      description: 'True, False, and the operators that make them',
+      lessonId: 'booleans-and-decisions',
+      icon: '⚖️'
+    },
+    {
+      name: 'Loops That Ask',
+      description: 'while, while True and break',
+      lessonId: 'loops-that-ask',
+      icon: '🔁'
+    },
+    {
+      name: 'Conversion',
+      description: 'Moving a value from one type to another',
+      lessonId: 'type-conversion',
+      icon: '🔄'
+    },
+    {
+      name: 'Style',
+      description: 'Constants, PEP 8 and comments worth reading',
+      lessonId: 'constants-and-style',
+      icon: '✨'
+    },
+    {
+      name: 'The Voyage Log',
+      description: 'A capstone that needs the whole chapter',
+      lessonId: 'chapter-3-capstone',
+      icon: '🧭'
+    }
+  ]
+};
+
+/**
  * All chapters in curriculum order.
  * Add new chapters here as they're developed.
  */
-export const chapters: Chapter[] = [karel, helloPython];
+export const chapters: Chapter[] = [karel, helloPython, variablesAndTypes];
 
 /**
  * Look up a chapter by its string ID (e.g. "karel").

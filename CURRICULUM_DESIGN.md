@@ -82,8 +82,9 @@ at `/python/playground`.
 **Built** — see `PythonInterpreterDesign.md` for the architecture and `PROGRESS.md` for status.
 Programs execute in a Web Worker and genuinely pause between steps, so `input()` blocks for a real
 answer rather than being faked with a queue, and a runaway loop is killable. Per-exercise test cases
-are not built yet; that is a deliberate deferral recorded in `PROGRESS.md`, to be designed against
-real lessons.
+are built too: **Run tests** runs the student's program once per case with queued `input()` answers
+and compares captured stdout against the transcript the lesson prints, then marks the exercise
+complete. See `PythonInterpreterDesign.md` §13.
 
 ### Graphics Environment (Chapters 8–10)
 
@@ -159,13 +160,23 @@ to Karel's beeper bag as a motivating analogy._
    Explicit connection: _"Karel's beeper bag is like a variable."_
 2. **Integers & Floats** — Numeric types, integer division (`//`), modulo (`%`), `type()`.
 3. **Strings** — String literals, `+` concatenation, `len()`, basic string operations.
-4. **Booleans** — `True`/`False`, comparison operators, logical operators (`and`, `or`, `not`).
-   Connects to Karel's sensor functions which returned booleans.
-5. **Type Conversion** — `int()`, `float()`, `str()`, `bool()`, common gotchas.
-6. **Constants & Style** — Naming conventions (`UPPER_CASE`), PEP 8 basics, writing readable
+4. **Booleans & Decisions** — `True`/`False` as values you can store and print, comparison
+   operators, logical operators (`and`, `or`, `not`), and the return of `if` / `elif` / `else`.
+   Connects to Karel's sensor functions, which returned booleans nobody ever kept.
+5. **Loops That Ask** — `while` with real conditions, `while True:` with `break`, the
+   loop-and-a-half, and validating what a person typed. Revisits Lesson 1.4's warning that an
+   infinite loop is a bug, and explains the one case where it is not.
+6. **Type Conversion** — `int()`, `float()`, `str()`, `bool()`, common gotchas.
+7. **Constants & Style** — Naming conventions (`UPPER_CASE`), PEP 8 basics, writing readable
    code. Comments (brief — already familiar from Karel).
-7. **Putting It Together** _(capstone)_ — A program that takes several inputs, performs
+8. **Putting It Together** _(capstone)_ — A program that takes several inputs, performs
    meaningful computation, and presents results clearly.
+
+_Lessons 4 and 5 are where the control flow Chapter 2 kept promising actually returns. The
+syntax is a **reintroduction** — Chapters 1.4 and 1.6 taught all of it — so what these lessons
+genuinely teach is the comparison operators, and the fact that a condition is just an expression
+with a value. `break` enters the curriculum here for the first time. See `PROGRESS.md` for the
+full reasoning and for why this chapter runs to eight lessons rather than seven._
 
 ---
 

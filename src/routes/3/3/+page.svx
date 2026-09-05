@@ -1,0 +1,284 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
+
+  const lengthConfig: PythonConfig = {
+    initialCode: `# A number is one thing. A string is made of parts.
+
+print(type("Karel"))
+print(len("Karel"))
+print(len("a b c"))
+print(len(""))
+`,
+    editorLines: 9,
+    showVisualizer: false
+  };
+
+  const indexConfig: PythonConfig = {
+    initialCode: `# Counting starts at nought. Step through and check
+# each answer against the letter you expected.
+
+word = "Karel"
+
+print(word[0])
+print(word[1])
+print(word[4])
+print(word[-1])
+print(word[-2])
+`,
+    editorLines: 13,
+    showVisualizer: true
+  };
+
+  // Deliberately ends in an error. The banner underneath is the lesson.
+  const indexErrorConfig: PythonConfig = {
+    initialCode: `# This one crashes on purpose. Read the error it gives you.
+
+word = "Karel"
+
+print("Length is", len(word))
+print("Last letter is", word[len(word) - 1])
+print("And now the mistake:")
+print(word[5])
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  // Also crashes on purpose.
+  const immutableConfig: PythonConfig = {
+    initialCode: `# Try to change one letter of a string. Python will not have it.
+
+word = "karel"
+word[0] = "K"
+print(word)
+`,
+    editorLines: 8,
+    showVisualizer: false
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '3/3/exercise-1',
+    tests: testsFor('3/3/exercise-1'),
+    initialCode: `# Measuring Up
+# Ask for a word, then report its length and its ends.
+# Print the last letter twice, once each way.
+
+`,
+    editorLines: 14,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '3/3/exercise-2',
+    tests: testsFor('3/3/exercise-2'),
+    initialCode: `# The Acronym
+# Three words in, one acronym out.
+
+`,
+    editorLines: 18,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '3/3/exercise-3',
+    tests: testsFor('3/3/exercise-3'),
+    initialCode: `# Vertical
+# Print the word down the page, each letter labelled with the
+# position it lives at.
+
+`,
+    editorLines: 14,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={3} lessonNumber={3}>
+
+## The Type You Met First
+
+You have been using strings since your very first `print()`. Lesson 3.2 gave you the vocabulary for what they are: text is a type, called `str`, and it sits alongside `int` and `float` as one of the kinds of value Python deals in.
+
+This lesson is about what makes `str` different from the other two — and it is one thing, from which everything else follows.
+
+> Chapter 5 is a whole chapter on strings: formatting, escape characters, and the toolkit of methods that do the real work. This lesson is not that. This lesson is strings **as a type**, because that is what you need before Lesson 3.4 can compare them and Chapter 6 can generalise them.
+
+## A String Has Parts
+
+The number `4` is one thing. There is no "inside" of it, nothing to count, no first half.
+
+The string `"Karel"` is not like that. It is **five characters in a row**, and that changes what you can ask about it.
+
+The first question is how many, and `len()` answers it:
+
+<PythonEnvironment config={lengthConfig} />
+
+Three things worth noticing in that output:
+
+- `len("a b c")` is `5`, not `3`. Spaces are characters. They take up room and they count.
+- `len("")` is `0`. The empty string is a perfectly ordinary string that happens to contain nothing — you will meet it again in Lesson 3.5, where it is what `input()` hands back when somebody just presses Enter.
+- `len()` works on the value, not the name. `len(word)` and `len("Karel")` are the same question.
+
+## Reaching In: Index Positions
+
+Because a string has parts, you can ask for one of them. Square brackets do that, and the number inside is the **index** — the position you want:
+
+```python
+word = "Karel"
+print(word[0])
+```
+
+That prints `K`, and if you expected `a`, you have just met the single most important convention in programming: **counting starts at nought.**
+
+```
+ K   a   r   e   l
+ 0   1   2   3   4
+```
+
+The first character is at index `0`, and the last is at index `4` — one less than the length. This is not Python being awkward; nearly every language does it, and Chapter 6 will show you why it makes list arithmetic come out clean.
+
+<PythonEnvironment config={indexConfig} />
+
+**Negative indexes count from the other end.** `word[-1]` is the last character, `word[-2]` the one before it. This is a genuine convenience: `word[-1]` says "the last one" directly, where the alternative is to work it out.
+
+```python
+word[len(word) - 1]   # the last character, the long way
+word[-1]              # the last character
+```
+
+Both are correct and you should be able to read both. The long way matters because it is the version that survives when you meet a structure that has no negative indexing, and because working out `len(word) - 1` for yourself is what makes the off-by-one arithmetic stick.
+
+### Asking for a Character That Isn't There
+
+`"Karel"` has five characters, at positions `0` to `4`. So what does `word[5]` do?
+
+<PythonEnvironment config={indexErrorConfig} />
+
+`IndexError: string index out of range`. The program stops.
+
+Get used to reading that message, because it is one you will cause many times, and it nearly always means the same thing: you used the **length** where you needed the **last index**. The length is `5`; the last index is `4`. Off by one, every time.
+
+## Strings Cannot Be Changed
+
+Here is the fact that catches people, and it is a type fact, which is why it belongs in this chapter rather than in Chapter 5.
+
+<PythonEnvironment config={immutableConfig} />
+
+`TypeError: 'str' object does not support item assignment`. You may **look at** any character of a string. You may not **replace** one.
+
+Strings are **immutable** — a word meaning "cannot be changed after it is made". Every operation that looks like it changes a string in fact builds a brand new one:
+
+```python
+word = "karel"
+word = "K" + word[1] + word[2] + word[3] + word[4]
+```
+
+That second line does not edit anything. It works out a whole new five-character string on the right, and then — exactly as Lesson 3.1 described — moves the label `word` onto it. The original `"karel"` is untouched; it simply has nothing pointing at it any more.
+
+Lesson 3.1 promised that "reassigning a name affects that name and nothing else" would stop being the whole story in Chapter 6. Strings are not the exception. They are the reason the rule has held so far: when a value cannot be changed from underneath a label, the only way to change what a name means is to move the label, and moving one label never disturbs another. Chapter 6 introduces a type that **can** be changed in place, and that is where the second half of the story arrives.
+
+## `+` and `*`, Explained at Last
+
+Chapter 2 taught you two operations on strings and asked you to accept them as facts. Now they have a reason.
+
+- **`+` joins two strings** into a new one. `"beep" + "er"` is `"beeper"`.
+- **`*` repeats a string.** `"=" * 24` is a line of twenty-four equals signs, which is how you drew a banner in Lesson 2.2.
+
+Chapter 2 also warned you that `"5" + 5` fails. Now you can say exactly why: `+` between two `str` values means join, and between two `int` values means add, and Python will not guess which one you meant when you hand it one of each. It refuses, with `TypeError`, rather than inventing an answer.
+
+That an operator can mean different things to different types is a real Python feature with a real name — operator overloading — and Chapter 9 shows you how to give your own types the same trick.
+
+---
+
+## Exercise 1: Measuring Up
+
+Take a word apart at both ends.
+
+Ask for a word, then report the word itself, how many letters it has, its first letter, and its last letter — the last one printed **twice**, once worked out the long way and once with a negative index.
+
+A sample run, where the person typed **beeper**:
+
+```
+Give me a word:
+The word: beeper
+Letters: 6
+First letter: b
+Last letter: r
+Also the last letter: r
+```
+
+Both ways of naming the last letter have to appear in your code. They print the same character, which is the point: you are checking your own arithmetic against Python's shorthand.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Acronym
+
+Build a short name out of long ones.
+
+Ask for three words, then take the first letter of each, join them into an acronym, and report what you started with and what you ended up with.
+
+A sample run, where the person typed **portable**, **network** and **graphics**:
+
+```
+First word:
+Second word:
+Third word:
+Words: portable network graphics
+Acronym: png
+Kept 3 letters out of 23
+```
+
+The last line compares the two: three letters kept, out of the three words' lengths added together.
+
+Build the acronym with `+` between three indexed characters, and store it in its own variable — you need its length on that last line.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: Vertical
+
+Print a word down the page, one letter per line, each one labelled with the position it lives at.
+
+A sample run, where the person typed **Karel**:
+
+```
+Word to spell out:
+0: K
+1: a
+2: r
+3: e
+4: l
+Letters: 5
+```
+
+`for i in range(len(word))` is the shape you want, and it is worth pausing on. `len(word)` is `5`, so `range(5)` counts `0, 1, 2, 3, 4` — which is exactly the set of valid indexes, with no arithmetic needed from you. That is the payoff for counting from nought, and it is why the convention is worth the initial confusion.
+
+The label and the letter need a colon pressed tight between them, so `str()` and `+` are doing the work rather than a comma — the same job as in Lesson 2.4.
+
+There is a second test case with a one-letter word. It passes automatically if you used `range(len(word))` and fails if you assumed the word was five letters long.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- Text is a type, `str`, alongside `int` and `float`
+- A string is a **sequence of characters** — it has parts, where a number does not
+- `len()` gives the number of characters; spaces count, and `len("")` is `0`
+- **Index positions start at nought**, so the last index is `len(word) - 1`
+- Negative indexes count from the end, and `word[-1]` is the last character
+- Asking for a position that does not exist gives `IndexError`, and the cause is nearly always length-versus-last-index
+- **Strings are immutable.** You can read any character and replace none of them
+- Every operation that looks like it changes a string builds a new one and moves the label
+- `+` joins strings, `*` repeats them, and `"5" + 5` fails because Python will not guess which meaning you wanted
+- `for i in range(len(word))` visits every valid index exactly once
+
+Next lesson: `True` and `False`. Karel's sensors handed them back and you never kept one — now they become values you can store, print and build for yourself out of the comparison operators. And with them, `if` and `else` come home.
+
+</LessonShell>

@@ -1,0 +1,200 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '3/8/exercise-1',
+    tests: testsFor('3/8/exercise-1'),
+    initialCode: `# The Crew Register
+#
+# Plan:
+#   - a counter and a string of initials, both starting empty
+#   - loop forever, asking for a name
+#   - the sentinel 'done' ends the loop
+#   - an empty name is a complaint, not a crew member
+#   - anything else: count it, keep its first letter, log it
+#   - afterwards, report the count and the initials
+
+`,
+    editorLines: 24,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '3/8/exercise-2',
+    tests: testsFor('3/8/exercise-2'),
+    initialCode: `# The Ration Calculator
+#
+# Plan:
+#   - two constants at the top: meals per day, rations per crate
+#   - ask for crew size and days at sea
+#   - meals needed is a multiplication
+#   - crates is that divided by the crate size, rounded UP
+#   - report, then say what the last crate looks like
+
+`,
+    editorLines: 26,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '3/8/exercise-3',
+    tests: testsFor('3/8/exercise-3'),
+    initialCode: `# The Voyage Log
+#
+# Plan:
+#   - one constant: what counts as a good day
+#   - four things to track: day number, total, best, best day
+#   - loop until 'done', reading one distance per day
+#   - a distance is text until you convert it - and 'done'
+#     must be caught BEFORE the conversion
+#   - each day: count it, add it, check it against the best
+#   - afterwards: totals, but only if there were any days
+
+`,
+    editorLines: 32,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={3} lessonNumber={8}>
+
+## Everything, At Once
+
+Seven lessons ago you could print things, ask questions and do arithmetic in a straight line. Since then you have picked up variables, two kinds of number, strings you can take apart, booleans, decisions, loops that run an unknown number of times, conversions and constants.
+
+This lesson has no new material. It has three programs, each bigger than anything you have written, and each one needs most of the chapter to build.
+
+## How to Approach These
+
+The advice at the end of Chapter 1 has not expired, and Chapter 2's version of it still stands: **say the plan in a sentence, break the sentence into parts, then write the parts one at a time.**
+
+What is new is how much there is to hold in your head at once, so here are three habits worth using deliberately on these:
+
+**Start each program with its plan as comments.** Each exercise below opens with one already written into the editor. Fill in the code underneath each line and delete the ones you no longer need. It looks slow. It is faster.
+
+**Build up, and run constantly.** Write the loop that asks for input and prints what it got. Run it. Then add the counting. Run it. Then add the decisions. A program that has worked at every step is far easier to fix than one that has never run at all.
+
+**Reach for the visualizer and breakpoints when something is wrong.** Exercise 3 tracks four values that change together, and if the wrong one comes out at the end, stepping through one day of the loop with the panel open will tell you which line lied to you. That is what the panel is for.
+
+> **One trap is worth naming before you meet it.** When a loop reads a number *and* accepts a sentinel word, the answer arrives as text and has to be tested **before** it is converted. `int("done")` is a `ValueError` and it stops the program dead. Check for the sentinel first, convert second. Exercise 3 is built so that getting this backwards fails immediately.
+
+---
+
+## Exercise 1: The Crew Register
+
+Collect a crew, refusing blanks.
+
+Keep asking for crew member names until somebody types `done`. Count each one, log it with its number, and build up a string of everybody's initials as you go. If a name comes back empty — somebody pressed Enter without typing — complain and ask again rather than registering it. At the end, report the count and the initials.
+
+A sample run, where the person typed **Ada**, then **pressed Enter**, then **Grace**, then **done**:
+
+```
+Crew member (or 'done'):
+Registered 1: Ada
+Crew member (or 'done'):
+A name cannot be empty. Try again.
+Crew member (or 'done'):
+Registered 2: Grace
+Crew member (or 'done'):
+Crew registered: 2
+Initials: AG
+```
+
+Three ideas meet here. The sentinel loop is Lesson 3.5. The empty check is Lesson 3.6 — `if name == "":`, or the shorter `if name:` for the other branch. And the initials come from Lesson 3.3: `name[0]` is the first character, and `initials = initials + name[0]` grows the string one letter at a time.
+
+That last line is an accumulator, exactly like a running total, except that it accumulates text. Start it at `""` — the empty string is to strings what `0` is to numbers.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Ration Calculator
+
+Work out how many crates of food a voyage needs.
+
+Two constants: three meals per day, and 24 rations per crate. Ask for the crew size and the number of days at sea, then work out the meals needed and the crates to load. A part-full crate still has to be loaded, so round up. Finish by saying either how many rations the last crate has spare, or that every crate is full.
+
+A sample run, where the person typed **5** and then **10**:
+
+```
+Crew size:
+Days at sea:
+Meals needed: 150
+Rations per crate: 24
+Crates to load: 7
+The last crate will have 18 rations spare
+```
+
+Rounding up is the whole exercise, and it is the seating plan from Lesson 3.7 again: `//` gives the full crates, `%` gives the remainder, and a remainder above zero means one more crate. Do not reach for `/` and `round()` — that rounds to nearest, which loads six crates for 150 meals and leaves six people hungry.
+
+The spare capacity is `RATIONS_PER_CRATE - spare`, which is worth thinking about for a moment rather than copying: if six rations spill into the last crate, that crate has eighteen empty slots.
+
+The second test case comes out exactly even, and takes the other branch.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Voyage Log
+
+The big one. Four things tracked at once, across a loop of unknown length.
+
+One constant defines a good day: 100 km. Then keep asking for a day's distance until somebody types `done`. For each day, log it — with the words `a good day` appended if it met the mark — and keep track of the running total, the best day's distance, and which day that was.
+
+When the log closes, report the number of days, the total, the best day, and the average distance rounded to one decimal place.
+
+A sample run, where the person typed **120**, **80**, **150** and then **done**:
+
+```
+Distance for the next day (or 'done'):
+Day 1: 120 km - a good day
+Distance for the next day (or 'done'):
+Day 2: 80 km
+Distance for the next day (or 'done'):
+Day 3: 150 km - a good day
+Distance for the next day (or 'done'):
+Days sailed: 3
+Total distance: 350 km
+Best day was day 3 with 150 km
+Average: 116.7 km per day
+```
+
+Four things to think about, in the order you will meet them:
+
+1. **The sentinel comes before the conversion.** The answer is text. Test it against `"done"` and break, and only then call `int()` on it.
+2. **Finding the best is a pattern worth learning.** Keep a `best` starting at `0` and a `best_day` alongside it. Each day, if this distance beats the current best, replace both. At the end, `best` holds the largest number you saw and `best_day` holds when. Two variables that must always be updated together — forget the second and the report is confidently wrong.
+3. **The average needs `/`, and the answer is a float.** `round(total / day, 1)` gives `116.7`. That is Lesson 3.2's advice in action: count in integers all the way through, and divide once, at the end, for display.
+4. **A voyage with no days would divide by zero.** `350 / 0` is a `ZeroDivisionError` and it crashes the program. The second test case types `done` immediately, so the report has to be guarded by an `if day == 0:` that prints `Nothing to report` instead.
+
+That last point is the difference between a program that works and a program that works *when nothing goes wrong*. Getting into the habit of asking "what if there are none?" is worth more than any single piece of syntax in this chapter.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned in Chapter 3
+
+Look at what Exercise 3 needed. Every one of these was a lesson:
+
+- **Variables** — a label on a value, reassigned as the program runs, and four of them updated together (3.1)
+- **Integers and floats** — counting in whole numbers, dividing once at the end, and rounding for display (3.2)
+- **Strings** — `len()`, indexing from nought, and building text up one character at a time (3.3)
+- **Booleans and decisions** — comparisons producing values, and `if`/`elif`/`else` acting on them (3.4)
+- **Loops that ask** — `while True:` with a sentinel and `break`, running an unknown number of times (3.5)
+- **Type conversion** — `int()` on what a person typed, and the `ValueError` waiting if you convert too soon (3.6)
+- **Constants and style** — the good-day threshold named once at the top, where it can be found and changed (3.7)
+
+## What Comes Next
+
+**Chapter 4: Functions & Parameters.**
+
+You have written functions before — Karel was full of them. But a Karel function could only ever *do* something: it took nothing in, gave nothing back, and communicated purely by changing the world around it. Every program in this chapter has been one long block of code for exactly that reason.
+
+Chapter 4 opens the data path in both directions. Functions take **parameters**, so the same function can work on different values, and they **return** results, so a function can answer a question rather than just perform an action. That is what turns decomposition from a tidying exercise into the main tool you have for building anything large.
+
+You will also find out that the functions you have been calling all along — `print()`, `input()`, `len()`, `int()`, `range()` — were never special. They are ordinary functions, and by the end of that chapter you will be able to write your own versions of most of them.
+
+</LessonShell>

@@ -1,0 +1,268 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
+
+  const typeConfig: PythonConfig = {
+    initialCode: `# type() answers one question: what kind of thing is this?
+
+print(type(7))
+print(type(7.0))
+print(type("7"))
+`,
+    editorLines: 8,
+    showVisualizer: false
+  };
+
+  const divisionConfig: PythonConfig = {
+    initialCode: `# Two of these come out whole. Watch what Python calls them.
+
+print(6 / 3)
+print(7 / 2)
+print(6 // 3)
+print(7 // 2)
+print(6 / 3, type(6 / 3))
+print(6 // 3, type(6 // 3))
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  const imprecisionConfig: PythonConfig = {
+    initialCode: `# The most famous surprise in programming.
+# Run it. The answer is not the one from school.
+
+print(0.1 + 0.2)
+print(0.1 + 0.2 - 0.3)
+print(1 / 3)
+`,
+    editorLines: 9,
+    showVisualizer: false
+  };
+
+  const bigNumberConfig: PythonConfig = {
+    initialCode: `# One of these is exact. The other gave up and rounded.
+
+print(2 ** 100)
+print(2.0 ** 100)
+`,
+    editorLines: 7,
+    showVisualizer: false
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '3/2/exercise-1',
+    tests: testsFor('3/2/exercise-1'),
+    initialCode: `# The Divider
+# Ask for two whole numbers, then report all three kinds of
+# division, each one alongside the type of its answer.
+
+`,
+    editorLines: 14,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '3/2/exercise-2',
+    tests: testsFor('3/2/exercise-2'),
+    initialCode: `# The Tenth Problem
+# Add a tenth ten times and watch what happens. Then do the
+# same job with whole numbers and compare.
+
+`,
+    editorLines: 16,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '3/2/exercise-3',
+    tests: testsFor('3/2/exercise-3'),
+    initialCode: `# The Ticket Machine
+# Work entirely in pence. Only the very last line is allowed
+# to produce a decimal.
+
+`,
+    editorLines: 16,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={3} lessonNumber={2}>
+
+## The `.0` You Were Told Not to Worry About
+
+Chapter 2 asked you to notice something and then let it go. `10 / 2` came out as `5.0` rather than `5`, and the lesson said the proper explanation belonged to Chapter 3.
+
+This is Chapter 3. Python has two kinds of number, they are genuinely different things, and that trailing `.0` is Python telling you which one you are holding.
+
+## Two Kinds of Number
+
+- An **integer** — `int` — is a whole number. `7`, `0`, `-3`, `1000000`. No decimal point anywhere.
+- A **float** — `float` — is a number with a decimal point. `7.0`, `3.14`, `-0.5`.
+
+`7` and `7.0` are the same quantity and not the same value. One is a count; the other is a measurement.
+
+That distinction is not Python being fussy. It matches how you already think: you have **three** children, not 3.0 of them, and you are **1.83** metres tall, not 1 metre. Counting and measuring are different jobs, and things you count behave differently from things you measure.
+
+## Asking Python What Something Is
+
+`type()` is a function that takes any value and hands back what kind of thing it is.
+
+<PythonEnvironment config={typeConfig} />
+
+The answers come out looking like `<class 'int'>`, which is more machinery than you need right now — read it as "int" and ignore the rest. The word **class** is a preview of Chapter 9; it is Python's general word for "kind of thing", and every value you ever meet has one.
+
+The third line shows `str`, which is the type of text. That is Lesson 3.3's subject, and it is the same distinction that bit you in Chapter 2 when `"12" + "12"` came out as `"1212"`. It was never a quirk of `+`. It was two different types, behaving differently, exactly as they should.
+
+> `type()` is a debugging tool, not something you sprinkle through finished programs. When a program does something inexplicable with a number, printing its type is very often the fastest way to find out why.
+
+## Which Operators Give Which Type
+
+Here is the rule that explains the `.0`:
+
+**`/` always produces a float. Always, with no exceptions.**
+
+<PythonEnvironment config={divisionConfig} />
+
+`6 / 3` is `2.0`, not `2`, even though the division came out exactly. Python does not inspect the answer and decide afterwards — it decides based on the operator alone, before it knows how the sum will turn out. `/` is the measuring kind of division, so it hands back a measuring kind of number.
+
+The rest follow from that:
+
+- **`//` gives an `int`** when both sides are ints. It is the counting kind of division — "how many whole ones fit" — and that answer is always a count.
+- **`%` gives an `int`** when both sides are ints, for the same reason.
+- **`+`, `-`, `*` give an `int`** when both sides are ints.
+- **Mix an int and a float, and you get a float.** `3 + 0.5` is `3.5`; `4 * 2.0` is `8.0`. The float wins, because every int can be written as a float and not the other way round. Widening loses nothing; narrowing would.
+
+So `//` on two floats gives a float: `7.0 // 2` is `3.0`. It is still the counting question — how many whole twos fit — but asked with measuring numbers, so the answer comes back as one.
+
+## Floats Are Approximations
+
+This is the part of the lesson that will save you an afternoon one day.
+
+Run this before reading on:
+
+<PythonEnvironment config={imprecisionConfig} />
+
+`0.1 + 0.2` is `0.30000000000000004`.
+
+Nothing is broken, and this is not a bug in Python. Every mainstream programming language gives you that same answer, because they all store floats the same way.
+
+Here is why. Write a third as a decimal and you get `0.333333...` — it never finishes, so any written-down version is slightly wrong. Computers store numbers in binary, in twos rather than tens, and **a tenth in binary is a number that never finishes**, exactly as a third in decimal never finishes. Python stores as much of it as fits and the rest is lost. Add three of those slightly-wrong numbers together and the wrongness shows up in the sixteenth decimal place.
+
+Two rules follow, and you should adopt both today:
+
+- **Never test two floats for exact equality.** `0.1 + 0.2 == 0.3` is `False`. You will meet `==` properly in Lesson 3.4; when you do, remember that floats are the one place it lies to you.
+- **Count in whole numbers where you can.** Money is the classic case: work in pence, not in pounds, and divide only at the very end when you are ready to print. That way every sum along the way is exact. Exercise 3 is this idea, in full.
+
+`round()` is how you make a float presentable: `round(0.1 + 0.2, 2)` is `0.3`. It is a display tool. Rounding does not make the underlying arithmetic exact; it makes the output readable.
+
+## Integers Have No Limit. Floats Do.
+
+One more difference, and it runs the other way — here it is the int that is better behaved.
+
+<PythonEnvironment config={bigNumberConfig} />
+
+`2 ** 100` is a thirty-one digit number, and Python prints every digit of it exactly. **Python integers have no maximum size**; they grow to fit whatever you put in them, limited only by memory. Most languages cannot do this, and it is a genuinely nice thing about Python.
+
+The float answer is the same number with a `e+30` on the end, which means "shift the decimal point thirty places right" — an approximation, because a float has a fixed amount of room and that number needs more digits than fit.
+
+**Whole numbers stay exact forever. Decimals do not.** That is the whole lesson in one line.
+
+---
+
+## Exercise 1: The Divider
+
+Chapter 2 gave you three ways to divide. Now find out what each one hands back.
+
+Ask for two whole numbers, then print all three results — `/`, `//` and `%` — with the type of each one beside it.
+
+A sample run, where the person typed **17** and then **5**:
+
+```
+Top number:
+Bottom number:
+Divided: 3.4 <class 'float'>
+Whole times it fits: 3 <class 'int'>
+Left over: 2 <class 'int'>
+```
+
+Print the value and its type on the same line, as shown — a `print()` takes as many things as you want to give it, and `type(...)` is just another one of them.
+
+There is a second test case where the numbers divide exactly. It is there to check the thing this lesson is about: `/` still hands back a float even when the answer comes out whole.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Tenth Problem
+
+Add a tenth, ten times. You know what the answer should be. Find out what it is.
+
+Start a total at `0.0`, then loop ten times, adding `0.1` and reporting the running total each trip. Afterwards, do the same counting job with whole numbers instead — count ten tenths as the integer `10` — and divide only at the end.
+
+The expected run:
+
+```
+Tenths added: 1, total: 0.1
+Tenths added: 2, total: 0.2
+Tenths added: 3, total: 0.30000000000000004
+Tenths added: 4, total: 0.4
+Tenths added: 5, total: 0.5
+Tenths added: 6, total: 0.6
+Tenths added: 7, total: 0.7
+Tenths added: 8, total: 0.7999999999999999
+Tenths added: 9, total: 0.8999999999999999
+Tenths added: 10, total: 0.9999999999999999
+Counting in whole tenths instead:
+Tenths counted: 10
+Which is 1.0 of a unit
+```
+
+Yes, really — copy those long numbers exactly, because that is what the program prints. Notice that the error appears at step 3, vanishes at step 4, and comes back at step 8. It is not accumulating steadily; each printed value is just the nearest float to the true total, and sometimes the nearest float happens to be the tidy one.
+
+The second half is the fix. Ten additions of the integer `1` give exactly `10`, and one division at the end gives exactly `1.0`. Same arithmetic, no error, because the counting was done in a type that cannot be slightly wrong.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Ticket Machine
+
+Money, done properly.
+
+Ask for a ticket price **in pence** and a number of tickets. Work out the total, then report it three ways: the raw total in pence, the same total split into pounds and pence, and finally as a decimal.
+
+A sample run, where the person typed **1250** and then **3**:
+
+```
+Ticket price in pence:
+How many tickets?
+Total in pence: 3750
+That is 37 pounds and 50 pence
+As a decimal: 37.5
+```
+
+Everything up to the last line is integer arithmetic — multiply, then `//` and `%` to split the total into pounds and the remainder, exactly the matched pair from Lesson 2.4. Every one of those numbers is exact.
+
+Only the final line uses `/`, and only because a decimal is what a person wants to read. That is the shape to remember: **count in integers, divide once, at the end, for display.**
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- Python has two kinds of number: `int` for counting, `float` for measuring
+- `7` and `7.0` are the same quantity and different values
+- `type()` tells you what kind of thing any value is
+- **`/` always gives a float**, even when the division comes out exactly — that was the `.0`
+- `//` and `%` on two ints give ints; mixing an int with a float gives a float
+- **Floats are approximations.** `0.1 + 0.2` is `0.30000000000000004`, in every language, because a tenth in binary never finishes
+- Never compare floats with `==`; count in whole numbers and divide at the end
+- `round(value, places)` is for making output readable, not for making arithmetic exact
+- Python integers have no maximum size and stay exact forever; floats do not
+
+Next lesson: the other type you have been using since your very first program. Text has a type too — `str` — and it comes with tools of its own: `len()`, and the ability to reach in and take a piece out.
+
+</LessonShell>

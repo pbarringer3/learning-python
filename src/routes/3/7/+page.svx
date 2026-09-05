@@ -1,0 +1,255 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
+
+  const magicConfig: PythonConfig = {
+    initialCode: `# Read this and work out what 0.15 means. Then work out
+# whether the two of them mean the same thing.
+
+bill = 4000
+service = bill * 0.15
+tip = bill * 0.15
+
+print("Service charge:", service)
+print("Tip:", tip)
+print("Total:", bill + service + tip)
+`,
+    editorLines: 13,
+    showVisualizer: false
+  };
+
+  const namedConfig: PythonConfig = {
+    initialCode: `# The same program with the numbers named.
+# One of the two rates can now be changed on its own.
+
+SERVICE_RATE = 0.15
+TIP_RATE = 0.15
+
+bill = 4000
+service = bill * SERVICE_RATE
+tip = bill * TIP_RATE
+
+print("Service charge:", service)
+print("Tip:", tip)
+print("Total:", bill + service + tip)
+`,
+    editorLines: 15,
+    showVisualizer: false
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '3/7/exercise-1',
+    tests: testsFor('3/7/exercise-1'),
+    initialCode: `# The Receipt
+# The VAT rate is a constant. It appears in the sum and in
+# the output, and it is written down exactly once.
+
+`,
+    editorLines: 20,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '3/7/exercise-2',
+    tests: testsFor('3/7/exercise-2'),
+    initialCode: `# The Seating Plan
+# One constant, used three times. A part-full row still
+# needs a whole row.
+
+`,
+    editorLines: 20,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '3/7/exercise-3',
+    tests: testsFor('3/7/exercise-3'),
+    initialCode: `# The Temperature Guard
+# Two constants define the safe range. Readings arrive until
+# somebody types done.
+
+`,
+    editorLines: 24,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={3} lessonNumber={7}>
+
+## No New Syntax
+
+This lesson teaches you nothing you can do that you could not do yesterday. Every idea in it is about making the code you already write possible to come back to.
+
+That sounds like a lesson to skim. It is the opposite. The gap between programmers who can maintain their own work and programmers who quietly rewrite it every few months is mostly made of the habits below, and they are cheap to acquire now and expensive to retrofit later.
+
+## Magic Numbers
+
+Read this program before you run it, and answer two questions: what does `0.15` mean, and do the two of them mean the same thing?
+
+<PythonEnvironment config={magicConfig} />
+
+You cannot tell. One is a service charge and one is a tip, and the fact that they are both fifteen percent today is a coincidence — a coincidence that will be silently destroyed the first time somebody changes "the rate" and changes both.
+
+A bare number sitting in the middle of a program like that is called a **magic number**: magic because it works, and nobody knows why.
+
+## Constants
+
+The fix is to give the number a name:
+
+<PythonEnvironment config={namedConfig} />
+
+Two things improved, and the second is the one that matters:
+
+1. **It says what it means.** `bill * SERVICE_RATE` needs no comment.
+2. **The two rates are now separate things that happen to be equal.** Change `TIP_RATE` to `0.10` and the service charge is untouched. In the first version there was no way to express that intention at all.
+
+A **constant** is a variable you do not intend to change once it is set. By convention it is named in `UPPER_CASE_WITH_UNDERSCORES`, and that capitalisation is the entire mechanism.
+
+> **Python does not enforce constants.** There is no keyword for one, and nothing stops you assigning to `SERVICE_RATE` later — the interpreter will not even blink. The capitals are a message to human readers: *this is set once at the top and not touched again.* It works because programmers honour it, which is a weaker guarantee than a compiler and a surprisingly effective one.
+
+Put your constants at the top of the program, above the code that uses them. That is where readers look for them, and it means the things most likely to need changing are the things easiest to find.
+
+**When is a number worth naming?** A useful test: if it appears twice, or if a reader would have to stop and work out what it is, name it. `total // 100` to convert pence to pounds needs no constant — everybody knows what 100 pence is. `bill * 0.15` does.
+
+## The Conventions Python Programmers Share
+
+Python has a style guide, **PEP 8**, and the whole language community broadly follows it. That shared style is worth more than any individual rule in it: code written by strangers looks like code written by you.
+
+The parts that matter at this stage:
+
+- **`snake_case` for variables**, as Lesson 3.1 said. `crew_count`, not `crewCount` or `CrewCount`.
+- **`UPPER_CASE` for constants.** `MAX_SPEED`, `VAT_PERCENT`.
+- **Spaces around operators.** `total = price * quantity`, not `total=price*quantity`. It reads as words rather than as a barcode.
+- **No space just inside brackets.** `print(name)`, not `print( name )`.
+- **A space after each comma.** `print(a, b)`, not `print(a,b)`.
+- **Blank lines to group related lines** into paragraphs. Programs, like prose, are easier to read in chunks than as a wall.
+- **Keep lines reasonably short.** PEP 8 says 79 characters; the spirit is that a reader should not have to scroll sideways.
+
+> **One place this site differs from PEP 8, on purpose.** All the code here is indented with **two spaces**, because the editors on these pages are narrow and deeply nested code would run off the side. Real PEP 8 says **four**, and that is what you will see in almost every Python project you meet outside this curriculum. Neither is wrong and the difference is cosmetic — but be aware of it, and when you write Python elsewhere, use four. The rule that actually matters is that a file is consistent with itself.
+
+## Comments Say Why
+
+You have used comments since Karel, so this is short. What changes now is the standard you hold them to.
+
+A comment that restates the code is noise:
+
+```python
+count = count + 1   # add one to count
+```
+
+A comment that explains **why** is worth writing:
+
+```python
+count = count + 1   # the sentinel itself is not crew
+```
+
+The code can always tell a reader *what* happens — that is what code is. What it can never tell them is what you were thinking, which alternative you rejected, or which apparently-arbitrary number came from somebody else's specification. Write those down.
+
+Two more habits:
+
+- **A wrong comment is worse than no comment.** When you change code, change the comment above it. A stale comment actively misleads, and readers trust it right up until it costs them an afternoon.
+- **If a line needs a paragraph of explanation, consider whether better names would do the job instead.** `if not is_valid:` needs no comment. `if not v:` needs one, and would rather have been renamed.
+
+## Readable Beats Clever
+
+The last habit is an attitude. There is nearly always a shorter way to write any piece of code, and it is nearly always worse.
+
+You will not be judged on how few lines you used. You — specifically you, in six months, having forgotten all of this — will be the person who has to read it. Write for that person.
+
+---
+
+## Exercise 1: The Receipt
+
+A shop till, with the tax rate named.
+
+Ask for a price per item in pence and a quantity. Work out the subtotal, add VAT at 20 percent, and print a receipt that ends with the total in pounds and pence.
+
+A sample run, where the person typed **450** and then **3**:
+
+```
+Price per item in pence:
+How many?
+Subtotal: 1350 pence
+VAT at 20 percent: 270 pence
+Total: 1620 pence
+That is 16 pounds and 20 pence
+```
+
+The rate must be a named constant at the top, and it is used **twice** — once in the arithmetic and once in the output line that reports it. That is the whole argument for constants in miniature: change the number in one place and both the sum and the label follow.
+
+Keep it all in whole pence, per Lesson 3.2. `subtotal * VAT_PERCENT // 100` stays exact where a float rate would not.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Seating Plan
+
+Fit passengers into rows of six.
+
+Ask how many passengers there are. Report the seats per row, how many rows fill completely, how many passengers are left over, and how many rows are needed in total.
+
+A sample run, where the person typed **20**:
+
+```
+Passengers to seat:
+Seats per row: 6
+Full rows: 3
+Passengers left over: 2
+Rows needed: 4
+```
+
+The last line is the interesting one: two leftover passengers still need a whole row, so the answer is four, not three. That needs an `if` — and the second test case, an exact fit of eighteen, is there to catch a solution that always adds one.
+
+`SEATS_PER_ROW` is used three times. Write it once.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Temperature Guard
+
+Monitor a stream of readings against a safe range.
+
+Two constants define the range: 15 at the low end, 25 at the high end. Keep asking for temperatures until somebody types `done`, judging each one as too cold, too hot or fine. At the end, report how many readings arrived, how many raised an alert, and what the safe range was.
+
+A sample run, where the person typed **20**, **30**, **10** and then **done**:
+
+```
+Temperature (or 'done'):
+20 is fine
+Temperature (or 'done'):
+30 is too hot
+Temperature (or 'done'):
+10 is too cold
+Temperature (or 'done'):
+Readings: 3
+Alerts: 2
+Safe range was 15 to 25
+```
+
+This is the chapter so far in one program: constants from this lesson, the sentinel loop and `break` from 3.5, the `if`/`elif`/`else` chain from 3.4, two accumulators from 3.1, and a conversion from 3.6 that has to happen *after* the sentinel check — because `int("done")` is a `ValueError`, and the order of those two lines is the difference between a working program and a crash.
+
+Both constants appear in the sum and again in the final report. The second test case types `done` immediately and expects zeroes.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- A **magic number** is a bare value whose meaning a reader has to guess
+- A **constant** is a variable set once and named in `UPPER_CASE`, declared at the top of the program
+- Python does not enforce constants — the capitals are a message to humans, and they work anyway
+- Naming a number separates two values that happen to be equal from one value used twice
+- Name a number if it appears twice, or if a reader would have to stop and work it out
+- **PEP 8** is the shared style guide: `snake_case`, spaces around operators, a space after each comma, no space inside brackets, blank lines to group
+- This site indents with two spaces for its narrow editors; the rest of the Python world uses four
+- Comments should say **why**, not what — and a stale comment is worse than none
+- Readable beats clever, because the next person to read it will be you
+
+Next lesson is the last of the chapter: a capstone that uses everything. Variables, both number types, strings, booleans, decisions, a loop that asks, conversion and constants — one program, built a piece at a time.
+
+</LessonShell>

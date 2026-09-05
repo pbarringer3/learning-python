@@ -1,0 +1,313 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
+
+  // Visualizer on: seeing True sitting in a frame is the point of the section.
+  const boolValueConfig: PythonConfig = {
+    initialCode: `# Two values you have never been able to hold before.
+
+ready = True
+aborted = False
+
+print(ready)
+print(type(ready))
+print(aborted)
+`,
+    editorLines: 11,
+    showVisualizer: true
+  };
+
+  const compareConfig: PythonConfig = {
+    initialCode: `# Every one of these lines produces a value.
+
+print(7 == 7)
+print(7 != 7)
+print(3 < 10)
+print(3 > 10)
+print(3 <= 3)
+print(3 >= 4)
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  const gotchaConfig: PythonConfig = {
+    initialCode: `# Three comparisons that surprise people. Two of them
+# are Chapter 3 coming back to collect.
+
+print("Yes" == "yes")
+print(0.1 + 0.2 == 0.3)
+print("10" == 10)
+`,
+    editorLines: 9,
+    showVisualizer: false
+  };
+
+  const storedConfig: PythonConfig = {
+    initialCode: `# A condition is an expression. It has a value.
+# So a name can hold it, exactly like any other value.
+
+age = 17
+old_enough = age >= 18
+
+print("old_enough is", old_enough)
+
+if old_enough:
+  print("Come in")
+else:
+  print("Not tonight")
+`,
+    editorLines: 14,
+    showVisualizer: true
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '3/4/exercise-1',
+    tests: testsFor('3/4/exercise-1'),
+    initialCode: `# True or False
+# Ask for two numbers, then report all six comparisons.
+# Print the booleans themselves - no if statements needed.
+
+`,
+    editorLines: 16,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '3/4/exercise-2',
+    tests: testsFor('3/4/exercise-2'),
+    initialCode: `# The Gatekeeper
+# Four bands, one number. Order matters more than you think.
+
+`,
+    editorLines: 18,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '3/4/exercise-3',
+    tests: testsFor('3/4/exercise-3'),
+    initialCode: `# The Access Check
+# Store each condition in its own name, report both, then
+# decide. One extra line fires only for an unknown name.
+
+`,
+    editorLines: 20,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={3} lessonNumber={4}>
+
+## The Answers Karel Threw Away
+
+`front_is_clear()` handed something back every time you called it. So did `beepers_present()`, and every other sensor. You fed those answers straight into a `while` or an `if` and never once kept one.
+
+You could not have kept one. There was nowhere to put it and no way to look at it.
+
+Now there is. Those answers were values, of a type, and this lesson is about that type — the last of the four you need, and the one that unlocks everything Chapter 2 kept promising.
+
+## `True` and `False`
+
+The type is called `bool`, short for **boolean**, after George Boole, who worked out the algebra of true and false a century before there were computers to run it on.
+
+It has exactly two values: `True` and `False`. Both capitalised — `true` will get you a `NameError`.
+
+<PythonEnvironment config={boolValueConfig} />
+
+Look at the panel. `ready` holds `True` the same way a name holds `7` or `"Karel"`. It is not a special kind of name or a magic marker; it is an ordinary variable holding an ordinary value, and everything you learned in Lesson 3.1 applies to it unchanged.
+
+That is the whole idea of this lesson, and everything else follows from it: **a condition is an expression, and expressions have values.**
+
+## The Six Comparison Operators
+
+Karel's sensors were written for you. In Python you build your own, out of six operators that take two values and hand back a boolean:
+
+| Operator | Asks                       |
+| -------- | -------------------------- |
+| `==`     | are these equal?           |
+| `!=`     | are these different?       |
+| `<`      | is the left one smaller?   |
+| `>`      | is the left one bigger?    |
+| `<=`     | smaller than or equal to?  |
+| `>=`     | bigger than or equal to?   |
+
+<PythonEnvironment config={compareConfig} />
+
+Every line printed `True` or `False`. Nothing was compared *for* anything — no `if` in sight. The comparison happened, produced a value, and `print` showed it to you. That is worth sitting with, because it is the thing beginners most often fail to see: `age >= 18` is not a special piece of `if` grammar. It is an expression, like `2 + 2`, and its answer happens to be a boolean.
+
+### `==` Is Not `=`
+
+Lesson 3.1 promised this one would arrive here.
+
+- `=` **assigns**. It is an instruction: work out the right side, put the name on the answer.
+- `==` **asks**. It is a question: are these two things equal? It changes nothing.
+
+```python
+fuel = 50    # fuel now holds 50
+fuel == 50   # True - and fuel is untouched
+```
+
+Typing one where you meant the other is the most common beginner bug in every language that has both. In Python you usually get away with it loudly: `if fuel = 50:` is a `SyntaxError`, so the program refuses to start rather than misbehaving quietly. That is a kindness, and not every language offers it.
+
+### Three Comparisons That Surprise People
+
+<PythonEnvironment config={gotchaConfig} />
+
+**`"Yes" == "yes"` is `False`.** String comparison is exact, and capital letters are different characters from small ones. Any program that asks a person a yes-or-no question has to deal with this. Chapter 5 gives you the tidy fix; until then, either state the exact wording you expect or check for more than one spelling with `or`.
+
+**`0.1 + 0.2 == 0.3` is `False`.** Lesson 3.2 warned you this was coming, and now you have the operator that proves it. The sum really is `0.30000000000000004`, and `==` is exact, so it says no. **Never compare floats with `==`.** Compare integers, or compare with a tolerance — round both sides first if you must.
+
+**`"10" == 10` is `False`, and it is not an error.** A string is not a number, so they are not equal, and Python says so calmly rather than complaining. This is the one that bites hardest with `input()`, because `input()` always hands back text: `if answer == 10:` will be `False` for ever, no matter what the person types. Convert first — `int(answer) == 10` — and Lesson 3.6 goes through the conversions properly.
+
+> `<` and `>` work on strings too, comparing alphabetically: `"apple" < "banana"` is `True`. The catch is that **every capital letter sorts before every small one**, so `"Zebra" < "apple"` is also `True`. Useful once you know it, baffling until you do.
+
+## `and`, `or`, `not` — and Why `not` Finally Matters
+
+You met all three in Lesson 1.6, combining Karel's sensors. They work exactly as they did:
+
+- `and` is `True` only when **both** sides are true
+- `or` is `True` when **either** side is true
+- `not` flips whatever follows it
+
+What changes is `not`. Lesson 1.6 told you that you would hardly ever need it, because every Karel sensor came with a ready-made opposite — `front_is_blocked()` already meant `not front_is_clear()`. And it closed with a promise:
+
+> Those twins are a courtesy of Karel's world, not a feature of Python. In the next chapter you will start asking questions that nobody wrote an opposite for, and `not` is how you flip _any_ condition at all.
+
+This is that chapter. Nobody has written an opposite for `len(name) > 3`, or for `name == "Ada"`. You write `not` in front of it, and now you have one.
+
+```python
+if not name == "Ada":
+  print("No record of that name")
+```
+
+Though where an operator has a natural opposite, prefer it — `name != "Ada"` reads better than `not name == "Ada"`. Save `not` for the conditions that have no twin.
+
+## Conditions Are Values, So Name Them
+
+Here is the payoff for the whole lesson. If a condition is an expression with a value, a variable can hold it:
+
+<PythonEnvironment config={storedConfig} />
+
+`old_enough = age >= 18` works out the comparison and stores the answer. The `if` then reads `if old_enough:` — which says what it means in English.
+
+This is not a trick. It is ordinary good style, and it earns its keep the moment a condition gets long enough to be hard to read, or gets used twice. Exercise 3 does exactly this.
+
+Notice too that `if old_enough:` has no `== True` on the end. It does not need one — `old_enough` is already a boolean, and `if` wants a boolean. Writing `if old_enough == True:` is not wrong, just redundant, in the way that "is it true that it is true?" is redundant.
+
+## `if`, `elif`, `else` Come Home
+
+You have written all of this before, in Lesson 1.6. Nothing about the syntax has changed:
+
+```python
+if fuel >= 80:
+  print("GO")
+elif fuel >= 40:
+  print("CAUTION")
+else:
+  print("ABORT")
+```
+
+The colon, the indented block, `elif` for the next question, `else` for everything left over — all as it was with Karel.
+
+What has changed is the **conditions**. With Karel you had a fixed menu of about a dozen questions, all of them about walls, beepers or compass direction. Now you can ask about anything you can compute: a number a person typed, the length of a word, whether two names match, whether a total has passed a limit.
+
+Two reminders from 1.6, both of which still bite:
+
+- **Only the first matching branch runs.** In the example above, a fuel level of `90` prints `GO` and never even asks the `elif`. Once a branch matches, the rest of the chain is skipped entirely.
+- **Order matters, and overlapping bands are where it shows.** If you put `elif fuel >= 40:` first, then `90` would match it and print `CAUTION`, and the `fuel >= 80` branch could never run for any value at all. When your bands overlap, go from the most demanding to the least.
+
+---
+
+## Exercise 1: True or False
+
+Get comfortable with comparisons as values before you use one to make a decision.
+
+Ask for two whole numbers, then print the result of all six comparison operators. No `if` statements anywhere — you are printing the booleans themselves.
+
+A sample run, where the person typed **7** and then **10**:
+
+```
+First number:
+Second number:
+Equal: False
+Different: True
+First is smaller: True
+First is bigger: False
+First is smaller or equal: True
+First is bigger or equal: False
+```
+
+There is a second test case where the two numbers are the same. It is worth predicting the answers before you run it: exactly two of the six come out `True`, and knowing which two means you have understood the difference between `<` and `<=`.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Gatekeeper
+
+One number in, one verdict out.
+
+Ask for a fuel level as a percentage, then report a status: **GO** at 80 or above, **CAUTION** at 40 or above, **ABORT** above zero, and **EMPTY** at zero. Finish by echoing the level that was reported.
+
+A sample run, where the person typed **55**:
+
+```
+Fuel level as a percentage:
+Status: CAUTION
+Reported at 55 percent
+```
+
+The bands overlap — 95 satisfies "80 or above" *and* "40 or above" *and* "above zero" — so the order of your `elif` chain is the whole exercise. Most demanding first.
+
+Three test cases run against this one: the sample, a full tank and an empty one. The empty tank is the interesting one, because `0` is the only value that reaches the `else`.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Access Check
+
+Two conditions, named, reported, then combined.
+
+Ask for a name and an access code. The name you accept is `Ada` and the code is `beeper`, both spelled exactly like that. Store each check in its own variable and print both. Then grant or deny access — and if the name was not recognised, say so on an extra line.
+
+A sample run, where the person typed **Ada** and then **beeper**:
+
+```
+Name:
+Access code:
+Name recognised: True
+Code correct: True
+Access granted
+```
+
+Both conditions have to live in named variables, because each one is used twice — once to print and once to decide. That is the "conditions are values" idea doing real work.
+
+The last line needs `not`, and it is a genuine use: there is no ready-made opposite of "the name was recognised" except the one you write. Note that it sits in its own `if`, outside the grant-or-deny decision, so it can fire alongside a denial.
+
+Three test cases: the sample, an unknown name with the right code, and the right name with the wrong code. The middle one is the only one that prints the extra line.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- `bool` is a type with exactly two values, `True` and `False`, both capitalised
+- Karel's sensors were handing you booleans all along; you just had nowhere to keep one
+- **A condition is an expression with a value** — `age >= 18` produces a boolean whether or not an `if` is anywhere near it
+- Six comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=`
+- `=` assigns and `==` asks; in Python, confusing them is usually a `SyntaxError` rather than a silent bug
+- String comparison is exact, so `"Yes" == "yes"` is `False`
+- **Never compare floats with `==`** — `0.1 + 0.2 == 0.3` is `False`
+- `"10" == 10` is `False` and not an error, which is why `input()` needs converting before it is compared
+- `not` finally earns its keep, because your own conditions have no ready-made opposites
+- A variable can hold a condition, and naming one makes the `if` read like English
+- `if` / `elif` / `else` work exactly as they did with Karel; only the first matching branch runs, so order your bands from most demanding to least
+
+Next lesson: `while` comes back too, and with it a loop that keeps asking until a person tells it to stop. You will meet `while True:` — an infinite loop written deliberately — and `break`, the way out of it.
+
+</LessonShell>

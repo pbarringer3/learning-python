@@ -1,0 +1,322 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
+
+  const whileConfig: PythonConfig = {
+    initialCode: `# A while loop with a condition about a number.
+# Nobody knows how many trips this takes until it runs.
+
+total = 1
+trips = 0
+
+while total < 100:
+  total = total * 3
+  trips = trips + 1
+  print("Trip", trips, "total is", total)
+
+print("Took", trips, "trips")
+`,
+    editorLines: 14,
+    showVisualizer: true
+  };
+
+  const duplicatedConfig: PythonConfig = {
+    initialCode: `# This works. Look at how many times the question is asked
+# in the source, and where those two copies are.
+
+answer = input("Say something (or 'stop'): ")
+print()
+
+while answer != "stop":
+  print("You said:", answer)
+  answer = input("Say something (or 'stop'): ")
+  print()
+
+print("Finished")
+`,
+    editorLines: 14,
+    showVisualizer: false
+  };
+
+  const breakConfig: PythonConfig = {
+    initialCode: `# The same program with the question asked once.
+
+while True:
+  answer = input("Say something (or 'stop'): ")
+  print()
+
+  if answer == "stop":
+    break
+
+  print("You said:", answer)
+
+print("Finished")
+`,
+    editorLines: 14,
+    showVisualizer: false
+  };
+
+  // Genuinely never ends. The Stop button is the lesson.
+  const runawayConfig: PythonConfig = {
+    initialCode: `# This one never stops. That is the point.
+# Press Play, watch it go, then press the Stop button.
+
+count = 0
+
+while True:
+  count = count + 1
+  print("Still going:", count)
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '3/5/exercise-1',
+    tests: testsFor('3/5/exercise-1'),
+    initialCode: `# Doubling to Target
+# Keep doubling until the value beats the target, counting
+# the steps. No input() inside the loop for this one.
+
+`,
+    editorLines: 18,
+    showVisualizer: false
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '3/5/exercise-2',
+    tests: testsFor('3/5/exercise-2'),
+    initialCode: `# The Sentinel
+# Keep asking for crew names until somebody types done.
+# Ask the question in exactly one place.
+
+`,
+    editorLines: 18,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '3/5/exercise-3',
+    tests: testsFor('3/5/exercise-3'),
+    initialCode: `# The Validator
+# Refuse to go on until the number makes sense.
+# The loop ends by breaking out of it, not by a condition.
+
+`,
+    editorLines: 18,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={3} lessonNumber={5}>
+
+## The Last Thing Chapter 2 Owed You
+
+Lesson 2.1 listed what Karel had taught you and what Python was temporarily taking away. `while` was on that list, with a reason: it needs a question to ask, and Python had no `front_is_clear()` to ask it.
+
+Lesson 3.4 gave you the questions. Here is the loop.
+
+## `while` Works Exactly As It Did
+
+Nothing about the syntax has changed since Lesson 1.4:
+
+```python
+while condition:
+  do something
+```
+
+Check the condition. If it is `True`, run the body, then check again. Keep going until the check comes back `False`.
+
+What has changed is what you are allowed to ask:
+
+<PythonEnvironment config={whileConfig} />
+
+`while total < 100:` is a question nobody could have asked with Karel. And notice what the loop gives you that a `for` cannot: **nobody knows how many trips it takes until it runs.** You could work it out with a pencil, but the program does not have to.
+
+That is still the dividing line Lesson 1.5 drew, and it has not moved:
+
+- **`for` when you know how many times.** `for i in range(5)` runs five times, full stop.
+- **`while` when you know the condition to stop on, but not the count.**
+
+> **A `while` loop can run zero times.** If the condition is already `False` when the loop is first reached, the body never runs at all. That is not an edge case to guard against; it is often exactly what you want, and Exercise 1 has a test case that relies on it.
+
+## The Problem `break` Solves
+
+Here is a job you cannot do tidily with what you have: keep asking a person for something until they say they are finished.
+
+The difficulty is a real one, and it has a name — the **loop-and-a-half**. To test whether the answer is `"stop"`, you must first *have* an answer, which means asking. But the test lives at the top of the loop, before the body has run. So the question has to be asked once before the loop starts, and then again at the bottom of every trip:
+
+<PythonEnvironment config={duplicatedConfig} />
+
+That program is correct. It is also carrying the same `input()` line twice, and that is a genuine defect, not an aesthetic complaint: change the wording of the prompt and you have to remember to change it in both places. Sooner or later somebody will not.
+
+## `while True:` and `break`
+
+Python's answer is to let the loop run forever on purpose, and to provide a way out from the middle of it.
+
+<PythonEnvironment config={breakConfig} />
+
+Two new pieces:
+
+**`while True:`** is a condition that is permanently satisfied. `True` is just a value — you saw that in Lesson 3.4 — so `while True:` reads as "while this thing that is always true", which is to say: forever.
+
+**`break`** leaves the loop immediately. Not the end of the current trip — the loop. The rest of the body is skipped, no further condition is checked, and execution carries on at the first line after the loop.
+
+Put together, they let the question be asked in exactly one place, with the test sitting directly underneath it where it belongs.
+
+### Yes, This Is the Infinite Loop You Were Warned About
+
+Lesson 1.4 was blunt about this. It called infinite loops "one of the most common bugs in programming" and told you to ask, of every loop you write: *does the loop body make progress toward the condition becoming false?*
+
+`while True:` fails that test by design. The condition never becomes false. It cannot.
+
+The warning was right and it has not been withdrawn — what has changed is that you now have a second way out. A `while True:` loop is correct **precisely because something inside it can escape**. The question to ask has simply moved:
+
+> **Every `while True:` must contain a `break` that can actually be reached.** If there is no `break`, or if it sits behind a condition that never comes true, you have written the bug 1.4 warned you about — you have just written it more confidently.
+
+A runaway loop is worth meeting on purpose, once, in a place where it cannot hurt you:
+
+<PythonEnvironment config={runawayConfig} />
+
+Press **▶ Play** and it prints forever. Press **■ Stop** and it stops — the program runs in a worker that can genuinely be killed, which is why this environment can offer you the button at all. Outside this site, an infinite loop freezes the program and you force-quit it.
+
+### `continue`, Briefly
+
+`break`'s sibling is **`continue`**, which abandons the current trip round the loop and goes straight back to the top for the next one.
+
+```python
+for i in range(5):
+  if i == 2:
+    continue
+  print(i)
+```
+
+That prints `0 1 3 4` — the trip where `i` was `2` was cut short before reaching the `print`.
+
+You will see it in other people's code, so it is worth knowing the name. You will rarely need it: everything `continue` does can be written as an `if` around the rest of the body, and that version is usually easier to read. None of the exercises use it.
+
+## Refusing a Bad Answer
+
+The other job this shape does is **validation**: keep asking until the answer makes sense.
+
+```python
+while True:
+  age = int(input("Your age: "))
+  print()
+
+  if age >= 0:
+    break
+
+  print("Ages are not negative. Try again.")
+
+print("Thank you,", age)
+```
+
+The structure is worth reading twice, because it is slightly inside-out from what people expect: the `break` sits on the **success** path. The loop's job is to keep going while things are wrong, so the way out is being right.
+
+Notice too that `age` is still usable on the last line. A loop does not have its own private memory — a name created inside one goes on existing after it ends, holding whatever it last held. That is the same rule from Lesson 3.1, and it is what makes this pattern work at all.
+
+---
+
+## Exercise 1: Doubling to Target
+
+A loop that runs an unknown number of times, with no input involved.
+
+Ask for a starting number and a target. Then keep doubling the starting number until it beats the target — reporting each step — and finish by saying how many steps it took.
+
+A sample run, where the person typed **3** and then **100**:
+
+```
+Starting number:
+Target to beat:
+Step 1: 6
+Step 2: 12
+Step 3: 24
+Step 4: 48
+Step 5: 96
+Step 6: 192
+Beat 100 after 6 steps
+```
+
+"Beats the target" means strictly greater, so the loop continues while the value is less than **or equal to** the target. Getting `<` and `<=` the right way round is most of the exercise: 96 is not yet a win, so there has to be a sixth step.
+
+Double a **copy** of the starting number, not the starting number itself — Lesson 3.1's cargo hold, again.
+
+The second test case starts above the target, so the loop body never runs and the answer is zero steps. If your program prints a step for that case, your condition is being checked in the wrong place.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: The Sentinel
+
+Keep asking until told to stop.
+
+Ask for crew member names one at a time, logging each with a running number. When somebody types `done`, stop asking and report how many came aboard. The word `done` is the **sentinel** — a value whose job is to mean "no more".
+
+A sample run, where the person typed **Ada**, **Grace** and then **done**:
+
+```
+Crew member (or 'done'):
+Logged 1: Ada
+Crew member (or 'done'):
+Logged 2: Grace
+Crew member (or 'done'):
+Crew aboard: 2
+```
+
+The prompt must appear in your program exactly once. That is the whole point of `while True:` and `break`, and a solution that asks in two places has solved a different exercise.
+
+Look carefully at the third prompt in the transcript: nothing is logged after it. `break` leaves immediately, so the counting line below it never runs for `done`. The sentinel is not crew.
+
+The second test case types `done` straight away and expects `Crew aboard: 0`.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Validator
+
+Refuse to accept nonsense.
+
+Ask for a fuel percentage. If it is below zero or above 100, say what is wrong and ask again. Keep going until the answer is sensible, then accept it.
+
+A sample run, where the person typed **150**, then **-5**, then **72**:
+
+```
+Fuel percentage (0 to 100):
+Above 100 is not a fuel level. Try again.
+Fuel percentage (0 to 100):
+Below zero is not a fuel level. Try again.
+Fuel percentage (0 to 100):
+Accepted: 72 percent
+```
+
+Three branches: too high, too low, and acceptable. Only the third one breaks out, so the `break` belongs in the `else`.
+
+The complaint messages must match exactly, wording and all — they are part of what the tests compare.
+
+The second test case gives a valid answer immediately and expects no complaint at all, just the prompt and the acceptance.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- `while` is unchanged from Lesson 1.4; what changed is that the condition can now ask about anything
+- `for` when you know the count, `while` when you know only the stopping condition
+- A `while` loop whose condition starts out `False` runs zero times
+- The **loop-and-a-half**: testing an answer you have to ask for first forces the question to be written twice
+- **`while True:`** is a deliberate infinite loop, and it is honest — `True` is just a value
+- **`break`** leaves the loop immediately, skipping the rest of the body
+- Lesson 1.4's warning still stands: every `while True:` needs a `break` that can actually be reached, or it is the bug you were warned about
+- `continue` skips the rest of one trip and starts the next; you will rarely want it
+- Validation loops put the `break` on the success path — the loop runs while things are still wrong
+- Names created inside a loop still exist after it ends
+
+Next lesson: conversion, properly. You have been wrapping `input()` in `int()` since Chapter 2 and trusting it. Now you find out what `int()`, `float()`, `str()` and `bool()` really do, which conversions fail, and what happens when somebody types something that is not a number at all.
+
+</LessonShell>

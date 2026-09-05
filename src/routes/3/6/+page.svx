@@ -1,0 +1,322 @@
+<script lang="ts">
+  import LessonShell from '$lib/components/LessonShell.svelte';
+  import PythonEnvironment from '$lib/components/PythonEnvironment.svelte';
+  import type { PythonConfig } from '$lib/python/config';
+  import { testsFor } from '$lib/curriculum/exercise-fixtures';
+
+  // Visualizer on: both names are visible at once, which is the point.
+  const newValueConfig: PythonConfig = {
+    initialCode: `# Conversion builds a new value. Watch both names.
+
+text = "42"
+number = int(text)
+
+print(text, type(text))
+print(number, type(number))
+`,
+    editorLines: 10,
+    showVisualizer: true
+  };
+
+  const intRulesConfig: PythonConfig = {
+    initialCode: `# int() from text, and int() from a float.
+# One of these is not rounding.
+
+print(int("42"))
+print(int("  42  "))
+print(int(7.9))
+print(int(-7.9))
+print(round(7.9))
+print(round(-7.9))
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  // Ends in a ValueError on purpose.
+  const valueErrorConfig: PythonConfig = {
+    initialCode: `# The first two work. The third stops the program.
+
+print(float("3.5"))
+print(float("42"))
+print(int("3.5"))
+`,
+    editorLines: 9,
+    showVisualizer: false
+  };
+
+  const strConfig: PythonConfig = {
+    initialCode: `# str() never fails. Anything can be described as text.
+
+print(str(42) + " beepers")
+print(str(3.5) + " metres")
+print(str(True) + " is what it said")
+`,
+    editorLines: 9,
+    showVisualizer: false
+  };
+
+  const boolConfig: PythonConfig = {
+    initialCode: `# Which values count as True? Guess before you run it.
+
+print(bool(1))
+print(bool(0))
+print(bool(-1))
+print(bool("hello"))
+print(bool(""))
+print(bool("False"))
+`,
+    editorLines: 11,
+    showVisualizer: false
+  };
+
+  const exercise1Config: PythonConfig = {
+    persistenceKey: '3/6/exercise-1',
+    tests: testsFor('3/6/exercise-1'),
+    initialCode: `# The Converter
+# One value, four types, and proof that the original survives.
+
+`,
+    editorLines: 16,
+    showVisualizer: true
+  };
+
+  const exercise2Config: PythonConfig = {
+    persistenceKey: '3/6/exercise-2',
+    tests: testsFor('3/6/exercise-2'),
+    initialCode: `# What Counts as True
+# Seven values through bool(), then the shortcut in action.
+# One test case answers the question by pressing Enter.
+
+`,
+    editorLines: 20,
+    showVisualizer: false
+  };
+
+  const exercise3Config: PythonConfig = {
+    persistenceKey: '3/6/exercise-3',
+    tests: testsFor('3/6/exercise-3'),
+    initialCode: `# The Number Check
+# Decide whether text is safe to convert before converting it.
+# Everything you need is from this chapter.
+
+`,
+    editorLines: 22,
+    showVisualizer: false
+  };
+</script>
+
+<LessonShell chapterNumber={3} lessonNumber={6}>
+
+## The Thing You Have Been Doing Since Chapter 2
+
+You have written `int(input(...))` perhaps thirty times by now, and Chapter 2 told you what it does in one line: it turns text into a number. That was enough to get work done.
+
+Now that you know Python has types, conversion can be described properly — and the description explains all the ways it goes wrong.
+
+## Conversion Builds Something New
+
+The first thing to fix is the word. `int(text)` does not *turn* `text` into a number. Nothing about `text` changes; it cannot, because strings are immutable, as Lesson 3.3 showed.
+
+What `int(text)` does is **read** `text` and **build a brand new value** of a different type, which it hands back.
+
+<PythonEnvironment config={newValueConfig} />
+
+Both names are in the panel, holding two different values of two different types. `text` is exactly what it always was.
+
+This matters in practice more than it sounds. A conversion is only useful if you keep what it gives you:
+
+```python
+answer = input("How many? ")
+int(answer)              # builds a number and throws it away
+answer = int(answer)     # builds a number and keeps it
+```
+
+The middle line is legal, does its work, and has no effect whatsoever, because nothing was assigned. Python will not warn you.
+
+## `int()` — Two Different Jobs
+
+`int()` behaves differently depending on what you hand it, and both behaviours are worth knowing.
+
+<PythonEnvironment config={intRulesConfig} />
+
+**From a string**, `int()` demands something that looks like a whole number. Surrounding spaces are forgiven — `int("  42  ")` is `42`, which is a real convenience when a person types untidily.
+
+**From a float**, `int()` **chops off** everything after the decimal point. It does not round. `int(7.9)` is `7`, and `int(-7.9)` is `-7` — notice that it truncates *toward zero*, so the negative case is not "rounding down" either.
+
+Chapter 2 mentioned this in passing. It is worth stating plainly, because losing 0.9 of something silently is a real bug:
+
+- **`int()` chops.** Use it to discard a fractional part on purpose.
+- **`round()` rounds.** Use it when you want the nearest whole number.
+
+## When Conversion Fails
+
+`int()` is strict about what a whole number looks like, and the failure that surprises everybody is this one:
+
+<PythonEnvironment config={valueErrorConfig} />
+
+`int("3.5")` is a `ValueError`, even though `3.5` is obviously a number. The string does not describe a **whole** number, and `int()` will not quietly discard the `.5` for you — it only chops when given an actual float, never when given text. If you have text like `"3.5"` and want an integer, convert twice: `int(float("3.5"))`, which gives `3`.
+
+The other failures are more predictable, and they all raise `ValueError`:
+
+- `int("hello")` — not a number at all
+- `int("")` — somebody pressed Enter without typing
+- `int("42 beepers")` — a number with anything else attached
+
+### What You Can Do About It, Today
+
+Lesson 2.4 said guarding against this "needs an `if`, which arrives in Chapter 3". That was half true, and here is the honest full version.
+
+An `if` handles the empty case cleanly, and that is by far the most common one:
+
+```python
+answer = input("How many? ")
+
+if answer == "":
+  print("You did not type anything")
+else:
+  count = int(answer)
+```
+
+Checking that a string contains *only digits* is also possible with what you have — it takes a loop over the characters, which is Exercise 3. What you cannot yet do is let the conversion fail and recover from it. That is called **exception handling**, it is what `try` and `except` are for, and it is Chapter 11's subject. Chapter 5 also gives you a one-word way to do Exercise 3's digit check.
+
+Until then: check first, convert second.
+
+## `str()` — The One That Never Fails
+
+`str()` takes any value at all and describes it as text. There is no such thing as a value Python cannot print, so there is no such thing as a `str()` that fails.
+
+<PythonEnvironment config={strConfig} />
+
+You met this in Lesson 2.4 as the fix for pressing a number tight against punctuation, and that is still its main job — `"Day " + str(n) + ":"`. Chapter 5's f-strings make it mostly unnecessary, but `str()` remains the thing they are built on.
+
+Note `str(True)` is `"True"`, with a capital T — the text of what you would type in source code.
+
+## `bool()` — What Counts as True
+
+`bool()` converts anything to `True` or `False`, and the rules are worth memorising because Python uses them behind your back.
+
+<PythonEnvironment config={boolConfig} />
+
+The rule is short: **empty and zero are `False`. Everything else is `True`.**
+
+- `0`, `0.0` and `""` are `False`
+- every other number is `True`, negative ones included
+- every other string is `True`
+
+That last point has a trap in it, and you saw it in the output: **`bool("False")` is `True`.** The string `"False"` is five characters long, so it is not empty, so it is true. If you ask somebody to type `True` or `False` and then call `bool()` on their answer, you get `True` no matter what they typed. Compare the text instead — `answer == "True"`.
+
+### Why This Matters: `if` Does It For You
+
+Python's `if` does not require a boolean. It converts whatever you give it, using exactly these rules. So this works:
+
+```python
+name = input("Your name: ")
+
+if name:
+  print("Hello,", name)
+else:
+  print("You did not type anything")
+```
+
+`if name:` means "if `name` is not empty". It is idiomatic Python, you will see it constantly, and now you know precisely what it is doing rather than having to take it on faith.
+
+It is also the tidy version of the empty-input check from earlier in this lesson.
+
+---
+
+## Exercise 1: The Converter
+
+One value, seen four ways.
+
+Ask for a whole number as text. Convert it to an `int`, halve it, and convert the whole number back to text. Print each of the four values with its type, then prove the original text was never touched.
+
+A sample run, where the person typed **42**:
+
+```
+Type a whole number:
+As text: 42 <class 'str'>
+As a number: 42 <class 'int'>
+Halved: 21.0 <class 'float'>
+Back to text: 42 <class 'str'>
+The original text is still 42
+```
+
+Two things to predict before you run it. The halved value is a `float` even though 42 halves evenly — that is Lesson 3.2's rule about `/`, still holding. And the first and fourth lines look identical, because `str(int("42"))` gets you back exactly where you started.
+
+Keep the panel open. Four names, four values, and the original sitting there untouched at the end.
+
+<PythonEnvironment config={exercise1Config} />
+
+---
+
+## Exercise 2: What Counts as True
+
+Learn the truthiness rules by watching them.
+
+Print `bool()` of seven values — the empty string, some text, the word `False`, zero, one, minus one, and zero point zero — each with a label. Then ask for a name and use the `if name:` shortcut to greet the person or point out that they typed nothing.
+
+A sample run, where the person **pressed Enter without typing anything**:
+
+```
+Empty text: False
+Some text: True
+The word False: True
+Zero: False
+One: True
+Minus one: True
+Zero point zero: False
+Your name (or just press Enter):
+You did not type anything
+```
+
+The third line is the one to remember. `bool("False")` is `True`, and if that still looks wrong, count the characters in `"False"` and apply the rule.
+
+Use `if name:` rather than `if name != "":`. Both work; the first is the one you will read in other people's code.
+
+The second test case types a name and expects `Hello, Ada`.
+
+<PythonEnvironment config={exercise2Config} />
+
+---
+
+## Exercise 3: The Number Check
+
+Decide whether text is safe to convert — before converting it.
+
+Ask for anything. If the person typed nothing, say so. Otherwise, work out whether every character is a digit, report the length and the verdict, and only convert and use the number if the verdict was `True`.
+
+A sample run, where the person typed **1234**:
+
+```
+Type something:
+Characters: 4
+All digits: True
+Twice that is 2468
+```
+
+This is the chapter in one exercise. You need `len()` and indexing from 3.3, `for i in range(len(text))` to visit each character, a comparison on characters — a digit is any character from `"0"` to `"9"`, and string comparison from 3.4 handles that directly — `or` to catch both ends of the range, a boolean flag that starts `True` and gets knocked down to `False` by any bad character, and `if`/`else` to act on it.
+
+The flag is the pattern worth taking away: start optimistic, and let a single failure spoil it. It does not matter how many bad characters there are, and there is no need to stop early.
+
+Three test cases: digits, something containing a letter, and nothing typed at all.
+
+<PythonEnvironment config={exercise3Config} />
+
+---
+
+## What You Learned
+
+- Conversion **builds a new value**; the original is untouched, and the result is lost unless you assign it
+- `int()` from text needs something that looks like a whole number; surrounding spaces are forgiven
+- `int()` from a float **chops toward zero** — `int(-7.9)` is `-7` — while `round()` rounds
+- `int("3.5")` is a `ValueError`; go through `float()` first if you mean it
+- `int("")`, `int("hello")` and `int("42 beepers")` all raise `ValueError`
+- An `if` can guard the empty case today; letting a conversion fail and recovering is Chapter 11
+- `str()` works on anything and never fails; `str(True)` is `"True"`
+- `bool()`: **empty and zero are `False`, everything else is `True`** — including the string `"False"`
+- `if` converts its condition using those same rules, which is why `if name:` means "if name is not empty"
+
+Next lesson: no new syntax at all. Constants, naming conventions and the small set of habits that separate code you can come back to from code you cannot. Short, and worth more than it sounds.
+
+</LessonShell>
